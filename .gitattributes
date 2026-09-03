@@ -1,0 +1,7 @@
+# tools/build.ps1 impone CRLF en .bat y .ps1 (UTF-8 con BOM en .ps1).
+# Estas reglas evitan que un checkout con core.autocrlf=input convierta los
+# .bat a LF, cosa que cmd.exe no siempre ejecuta bien.
+* text=auto
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.md  text eol=lf

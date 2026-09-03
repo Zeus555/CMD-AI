@@ -1,0 +1,22 @@
+# =============================================================================
+#  Solo se publica AI 2.0: AI.bat + bin/ + lib/ + tools/ (+ docs del repo).
+# =============================================================================
+
+# Material antiguo y pruebas locales previas a la 2.0. No forman parte del
+# proyecto publicado y no deben subirse nunca.
+Script/
+
+# Directorio de trabajo local de los scripts (siempre vacio en el repo).
+Temporal/
+
+# Restos de ejecucion y datos temporales.
+*.dat
+*.log
+*.tmp
+search_results.html
+url_result.txt
+
+# Basura del sistema operativo.
+Thumbs.db
+[Dd]esktop.ini
+.DS_Store
