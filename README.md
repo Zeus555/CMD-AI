@@ -147,5 +147,4 @@ parsea).
 
 ## Licencia
 
-Todavía sin licencia formal. Si quieres usar el código para algo más que
-leerlo, abre un issue y la formalizamos (probablemente MIT).
+[MIT](LICENSE).
