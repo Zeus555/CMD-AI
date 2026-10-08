@@ -91,7 +91,7 @@ function Close-AIThinkFilter {
 
 function Get-AIErrorText {
     <#  Traduce un fallo HTTP a una linea legible.
-        Las tres APIs NO comparten forma de error:
+        Las APIs NO comparten forma de error:
           OpenAI / Ollama -> {"error":{"message":"..."}}   (objeto)
           xAI             -> {"code":"...","error":"..."}  (cadena plana)
           xAI con JSON malformado -> texto plano, ni siquiera JSON
@@ -137,7 +137,7 @@ function Get-AIErrorText {
 }
 
 function Invoke-AIChat {
-    <#  Una sola funcion para los tres proveedores.
+    <#  Una sola funcion para todos los proveedores.
         Devuelve [pscustomobject] @{ Text; Model; Ok; Error }
         Si se pasa -OnToken, se invoca por cada fragmento ya filtrado.  #>
     param(
@@ -159,6 +159,11 @@ function Invoke-AIChat {
     }
 
     if (-not $Model) { $Model = $Provider.Model }
+    # Plazo propio del proveedor (campo Timeout de providers.ps1). Un
+    # -TimeoutSec explicito siempre gana.
+    if ($Provider.Timeout -and -not $PSBoundParameters.ContainsKey('TimeoutSec')) {
+        $TimeoutSec = [int]$Provider.Timeout
+    }
     $stream = (-not $NoStream) -and $Provider.Stream
 
     # ---- Cuerpo de la peticion -------------------------------------------
@@ -182,14 +187,15 @@ function Invoke-AIChat {
     $req.Method           = 'POST'
     $req.ContentType      = 'application/json; charset=utf-8'
     $req.ContentLength    = $bytes.Length
-    $req.Timeout          = $TimeoutSec * 1000   # conectar + enviar
+    $req.Timeout          = $TimeoutSec * 1000   # conectar + enviar + esperar el inicio de la respuesta
     $req.ReadWriteTimeout = 600000               # leer: el modelo puede tardar
     $req.UserAgent        = 'PRC-AI/2.0'
     $req.ServicePoint.Expect100Continue = $false
     # La clave vive en una cabecera en memoria. Nunca en el PEB de un proceso,
     # asi que no aparece en Win32_Process.CommandLine como pasaba con curl.
     $req.Headers.Add('Authorization', "Bearer $key")
-    # El proxy del sistema rompe localhost: para Ollama se desactiva.
+    # El proxy del sistema rompe localhost: para los servidores locales
+    # (Ollama, llama-server) se desactiva.
     if ($url -match '^http://(localhost|127\.0\.0\.1)') { $req.Proxy = $null }
 
     $resp = $null
@@ -201,8 +207,15 @@ function Invoke-AIChat {
     }
     catch [System.Net.WebException] {
         # ESTO es lo que `for /F ... in ('curl ...')` jamas pudo detectar.
+        $err = Get-AIErrorText $_
+        # ConnectFailure = nadie escucha en esa direccion. En un servidor local
+        # el arreglo es arrancarlo y el proveedor sabe como (campo Hint de
+        # providers.ps1). Un plazo vencido NO entra aqui: es otro Status.
+        if ($Provider.Hint -and $_.Exception.Status -eq [System.Net.WebExceptionStatus]::ConnectFailure) {
+            $err = "nadie escucha en $($Provider.BaseUrl). $($Provider.Hint)"
+        }
         return [pscustomobject]@{
-            Text = ''; Model = $null; Ok = $false; Error = (Get-AIErrorText $_)
+            Text = ''; Model = $null; Ok = $false; Error = $err
         }
     }
     catch {
@@ -214,6 +227,11 @@ function Invoke-AIChat {
     # ---- Lectura ----------------------------------------------------------
     $sb        = New-Object System.Text.StringBuilder
     $realModel = $null
+    # Un flujo SSE bien terminado trae finish_reason y/o 'data: [DONE]'. Si el
+    # servidor cierra la conexion antes (un llama-server en modo router que
+    # descarga el modelo porque otro cliente pidio el otro), el flujo acaba
+    # limpio y a medias: sin esta marca se daba por buena una respuesta cortada.
+    $completo  = $false
     $filtro    = if ($Provider.HideThink) { New-AIThinkFilter } else { $null }
 
     # StreamReader con UTF8 mantiene el estado del decodificador entre
@@ -227,7 +245,7 @@ function Invoke-AIChat {
                 if ([string]::IsNullOrWhiteSpace($line))  { continue }
                 if (-not $line.StartsWith('data:'))       { continue }
                 $d = $line.Substring(5).Trim()
-                if ($d -eq '[DONE]') { break }
+                if ($d -eq '[DONE]') { $completo = $true; break }
 
                 $ev = $null
                 try { $ev = $d | ConvertFrom-Json } catch { continue }
@@ -235,8 +253,12 @@ function Invoke-AIChat {
                 # El modelo REAL se lee de la respuesta, nunca se da por hecho
                 # el que se pidio: xAI sustituye nombres retirados en silencio.
                 if (-not $realModel -and $ev.model) { $realModel = $ev.model }
+                # Un evento de error en mitad del flujo no trae choices:
+                # indexar $null lanzaria 'Cannot index into a null array'.
+                $ch = @($ev.choices)[0]
+                if ($ch.finish_reason) { $completo = $true }
 
-                $tok = $ev.choices[0].delta.content
+                $tok = $ch.delta.content
                 if ($tok) {
                     if ($filtro) { $tok = Invoke-AIThinkFilter $filtro $tok }
                     if ($tok) {
@@ -274,6 +296,16 @@ function Invoke-AIChat {
         if ($resp) { $resp.Close() }
     }
 
+    if ($stream -and -not $completo) {
+        $corte = 'la respuesta se corto: el servidor cerro el flujo sin terminarla.'
+        if ($Provider.Hint) {
+            $corte += ' Pasa si otro cliente pide el otro modelo (solo cabe uno en memoria): repite la pregunta.'
+        }
+        return [pscustomobject]@{
+            Text = $sb.ToString(); Model = $realModel; Ok = $false; Error = $corte
+        }
+    }
+
     return [pscustomobject]@{
         Text  = $sb.ToString()
         Model = $realModel
@@ -283,7 +315,8 @@ function Invoke-AIChat {
 }
 
 function Test-AIProvider {
-    <#  Diagnostico barato: dice si hay clave y si el extremo contesta.  #>
+    <#  Diagnostico barato: dice si hay clave, si el extremo contesta y, en los
+        proveedores locales, si ofrece el modelo de la entrada.  #>
     param([hashtable]$Provider)
 
     $key = Get-AIKey $Provider
@@ -301,7 +334,7 @@ function Test-AIProvider {
     }
     if (-not $key) { $r.Estado = 'sin clave'; return [pscustomobject]$r }
 
-    # /v1/models responde en los tres y no gasta tokens.
+    # /v1/models responde en todos y no gasta tokens.
     $url = $Provider.BaseUrl.TrimEnd('/') + '/models'
     try {
         $req = [System.Net.HttpWebRequest]::Create($url)
@@ -309,10 +342,31 @@ function Test-AIProvider {
         $req.Headers.Add('Authorization', "Bearer $key")
         if ($url -match '^http://(localhost|127\.0\.0\.1)') { $req.Proxy = $null }
         $resp = $req.GetResponse()
-        $resp.Close()
         $r.Estado = 'OK'
+        # Solo en los locales: que el servidor conteste no dice que ofrezca el
+        # modelo de ESTA entrada (dos entradas pueden compartir servidor, y en
+        # ese puerto puede haber un llama-server de un solo modelo, que ignora
+        # el campo model y contesta con el suyo sin avisar). /models lista lo
+        # que hay y, en llama-server, no despierta al modelo dormido.
+        if (-not $Provider.NeedsKey) {
+            $lista = $null
+            $sr = New-Object System.IO.StreamReader($resp.GetResponseStream(), [Text.Encoding]::UTF8)
+            try { $lista = ($sr.ReadToEnd() | ConvertFrom-Json).data } catch { } finally { $sr.Close() }
+            if ($lista) {
+                $m = @($lista | Where-Object { $_.id -ceq $Provider.Model -or @($_.aliases) -ccontains $Provider.Model })
+                if ($m.Count -eq 0)             { $r.Estado = "contesta, pero no ofrece '$($Provider.Model)'" }
+                elseif ($m[0].status.value)     { $r.Estado = "OK ($($m[0].status.value))" }
+            }
+        }
+        $resp.Close()
     }
-    catch [System.Net.WebException] { $r.Estado = (Get-AIErrorText $_) }
+    catch [System.Net.WebException] {
+        $r.Estado = (Get-AIErrorText $_)
+        # Igual que en Invoke-AIChat: si nadie escucha, decir como arrancarlo.
+        if ($Provider.Hint -and $_.Exception.Status -eq [System.Net.WebExceptionStatus]::ConnectFailure) {
+            $r.Estado = "parado. $($Provider.Hint)"
+        }
+    }
     catch                           { $r.Estado = $_.Exception.Message }
 
     return [pscustomobject]$r

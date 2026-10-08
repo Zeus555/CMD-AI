@@ -1,7 +1,7 @@
 ﻿#requires -Version 5.1
 <#
 .SYNOPSIS
-    PRC AI 2.0 - cliente de chat para OpenAI, xAI y Ollama.
+    PRC AI 2.0 - cliente de chat para OpenAI, xAI, Ollama y llama-server.
 .DESCRIPTION
     Dos modos, un solo nucleo:
       AI                        -> REPL interactivo con memoria e historial
@@ -76,7 +76,6 @@ if (Test-Path $ConfFile) {
 
 if (-not $Provider) { $Provider = $conf.provider }
 if (-not $System)   { $System   = $conf.system }
-if (-not $Model -and $conf.model) { $Model = $conf.model }
 
 # ---- Salida limpia automatica cuando alguien nos entuba --------------------
 # Si la salida va a un fichero o a otro programa, nadie quiere secuencias ANSI.
@@ -90,7 +89,7 @@ if ($Plain) { foreach ($k in @($AI_COLOR.Keys)) { $AI_COLOR[$k] = '' } }
 function Show-AIHelp {
     $c = $AI_COLOR
     @"
-$($c.Head)PRC AI 2.0$($c.Off)  - OpenAI / xAI / Ollama sobre PowerShell puro.
+$($c.Head)PRC AI 2.0$($c.Off)  - OpenAI / xAI / Ollama / llama-server sobre PowerShell puro.
 
 $($c.Bullet)USO$($c.Off)
   AI                          modo interactivo
@@ -98,7 +97,8 @@ $($c.Bullet)USO$($c.Off)
   type notas.txt | AI "resume esto"
 
 $($c.Bullet)OPCIONES$($c.Off)
-  -Provider  openai|xai|ollama   (alias: gpt, grok, deepseek)
+  -Provider  openai|xai|ollama|gemma|qwen   (alias: gpt, grok, deepseek, llama)
+             gemma y qwen son locales: un mismo llama-server, dos modelos
   -Model     nombre del modelo
   -System    instruccion de sistema
   -Context   fichero que se adjunta como contexto
@@ -106,12 +106,12 @@ $($c.Bullet)OPCIONES$($c.Off)
   -NoStream  pide la respuesta completa en vez de token a token
   -Plain     sin color ni markdown (automatico al redirigir)
   -SetKey    VAR    guarda una clave de forma interactiva
-  -Check     diagnostico de los tres proveedores
+  -Check     diagnostico de los proveedores
 
 $($c.Bullet)EN EL MODO INTERACTIVO$($c.Off)
   bye / exit     salir             cls          limpiar pantalla
   /new           olvidar memoria   /model X     cambiar de modelo
-  /provider X    cambiar proveedor /save ruta   guardar la conversacion
+  /provider X    cambiar proveedor /save [ruta] guardar la conversacion
 "@ | Write-Host
 }
 
@@ -126,8 +126,8 @@ if ($Check) {
     Write-Host ""
     foreach ($id in $AI_PROVIDERS.Keys) {
         $r = Test-AIProvider (Resolve-AIProvider $id)
-        $col = if ($r.Estado -eq 'OK') { $AI_COLOR.Bot } else { $AI_COLOR.Err }
-        Write-Host ("  {0,-16} {1,-18} {2,-24} {3}{4}{5}" -f `
+        $col = if ($r.Estado -like 'OK*') { $AI_COLOR.Bot } else { $AI_COLOR.Err }
+        Write-Host ("  {0,-20} {1,-18} {2,-24} {3}{4}{5}" -f `
             $r.Proveedor, $r.Variable, $r.Clave, $col, $r.Estado, $AI_COLOR.Off)
     }
     Write-Host ""
@@ -140,6 +140,15 @@ if ($Check) {
 try { $prov = Resolve-AIProvider $Provider }
 catch { Write-AIError $_.Exception.Message; exit 1 }
 
+# El "model" de settings.json es el modelo del "provider" de settings.json.
+# Con otro proveedor (-Provider, AI_PROVIDER) no se arrastra: 'grok-4.3' no
+# existe en un servidor local, y llama-server en modo router lo rechaza con
+# HTTP 400 "model 'grok-4.3' not found".
+if (-not $Model -and $conf.model) {
+    $confId = $null
+    try { $confId = (Resolve-AIProvider $conf.provider).Id } catch { }
+    if ($confId -eq $prov.Id) { $Model = $conf.model }
+}
 if (-not $Model) { $Model = $prov.Model }
 
 # La memoria vive aqui: se acumulan los turnos y se mandan enteros.
@@ -160,6 +169,9 @@ function Invoke-AITurn {
                          -OnToken $cb -NoStream:$NoStream
 
     if (-not $res.Ok) {
+        # Si el flujo se corto a medias ya hay texto pintado: se cierra la
+        # linea para que el ERROR no se pegue a la respuesta parcial.
+        if ($res.Text) { Close-AIRenderer $rend }
         # El turno fallido se retira para no envenenar la memoria.
         # RemoveAt es el idioma seguro aqui: un rango 0..($n-2) con $n=1 da
         # 0..-1, que en PowerShell devuelve el array invertido, no vacio.
@@ -170,7 +182,9 @@ function Invoke-AITurn {
 
     Close-AIRenderer $rend
     [void]$messages.Add(@{ role = 'assistant'; content = $res.Text })
-    if ($res.Model) { $script:LastModel = $res.Model }
+    # Sin condicion: si este servidor no dice que modelo sirvio, LastModel
+    # tiene que quedar vacio y no con el nombre de un turno anterior.
+    $script:LastModel = $res.Model
     return $true
 }
 
@@ -277,12 +291,15 @@ while ($true) {
         # se le pasa su ancho al renderizador: al reformatear debe saltar a esa
         # columna en vez de borrar la fila entera.
         [Console]::Out.Write("$($c.Dim)$rotulo$($c.Off)$($c.Bot)")
-        [void](Invoke-AITurn $line $rotulo.Length)
+        $bien = Invoke-AITurn $line $rotulo.Length
         [Console]::Out.Write("$($c.Off)")
         # El modelo REAL puede no ser el pedido: xAI sustituye en silencio los
         # nombres retirados (grok-3-mini se sirve como grok-4.3). Esto es el
         # sensor que faltaba y que dejo pasar el bug del desplazamiento 179.
-        if ($script:LastModel -and $script:LastModel -ne $Model) {
+        # Solo se mira tras un turno BUENO: si fallo, LastModel es el de un
+        # turno anterior (quiza de otro proveedor) y copiarlo a $Model mandaria
+        # 'grok-4.3' al servidor local en la pregunta siguiente.
+        if ($bien -and $script:LastModel -and $script:LastModel -ne $Model) {
             Write-Host "$($c.Dim)   [servido por $($script:LastModel)]$($c.Off)"
             $Model = $script:LastModel
         }
