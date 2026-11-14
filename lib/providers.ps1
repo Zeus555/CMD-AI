@@ -9,13 +9,13 @@
 #  de primera clase, asi que no hace falta un segundo parser para el modo
 #  local.
 #
-#  Una entrada no tiene por que ser un servidor distinto: 'gemma' y 'qwen'
+#  Una entrada no tiene por que ser un servidor distinto: 'gemma', 'gemma3' y 'qwen'
 #  son el MISMO llama-server en modo router. Comparten BaseUrl y solo cambia
 #  Model, que es el campo con el que el router elige que modelo cargar.
 # ============================================================================
 
 # Un solo llama-server (llama.cpp) en modo router (--models-preset) sirve los
-# dos modelos locales por el mismo puerto. Los nombres de modelo son las
+# modelos locales por el mismo puerto. Los nombres de modelo son las
 # secciones de su fichero de modelos. Si el servicio cambia de puerto,
 # se cambia aqui y solo aqui.
 $AI_LLAMA_URL  = 'http://127.0.0.1:8080/v1'
@@ -71,8 +71,12 @@ $AI_PROVIDERS = [ordered]@{
         Extra    = @{}
     }
 
+    # Desde el 2026-11-14 'gemma' es Gemma 4 E4B: en la comparacion de Gemma
+    # Portable (181 preguntas con respuesta libre) acerto el 96,7 % con 1 dato
+    # falso, frente al 63,5 % con 57 de Gemma 3 4B. Cuesta ~7,6 s por turno en
+    # vez de 4-5. Gemma 3 4B sigue disponible como 'gemma3'.
     gemma = @{
-        Label    = 'Gemma 3 4B (local)'
+        Label    = 'Gemma 4 E4B (local)'
         BaseUrl  = $AI_LLAMA_URL
         # OJO: no llamarla LLAMA_API_KEY. Esa variable la lee el propio
         # llama-server como su --api-key: guardarla con -SetKey le pondria clave
@@ -80,11 +84,11 @@ $AI_PROVIDERS = [ordered]@{
         KeyVar   = 'LOCAL_AI_API_KEY'
         # En modo router el campo model ELIGE el modelo. Tiene que ser, letra
         # por letra y con las mismas mayusculas, el nombre de la seccion
-        # [gemma-3-4b] del fichero de --models-preset: con otro nombre el
+        # [gemma-4-e4b] del fichero de --models-preset: con otro nombre el
         # router contesta HTTP 400 "model '...' not found". La respuesta trae
         # ese mismo nombre, asi que el modo interactivo no avisa
         # "[servido por ...]".
-        Model    = 'gemma-3-4b'
+        Model    = 'gemma-4-e4b'
         NeedsKey = $false          # sin --api-key el Bearer se ignora
         Stream   = $true
         HideThink = $true
@@ -92,6 +96,19 @@ $AI_PROVIDERS = [ordered]@{
         # que el plazo de core.ps1 cubre despertar el modelo o cambiarlo (el
         # router descarga uno y carga el otro) MAS la lectura de TODA la
         # entrada. Los 30 s por defecto no llegan con un fichero entubado largo.
+        Timeout  = 300
+        Hint     = $AI_LLAMA_HINT
+        Extra    = @{}
+    }
+
+    gemma3 = @{
+        Label    = 'Gemma 3 4B (local)'
+        BaseUrl  = $AI_LLAMA_URL
+        KeyVar   = 'LOCAL_AI_API_KEY'
+        Model    = 'gemma-3-4b'    # seccion [gemma-3-4b] del preset
+        NeedsKey = $false
+        Stream   = $true
+        HideThink = $true
         Timeout  = 300
         Hint     = $AI_LLAMA_HINT
         Extra    = @{}
@@ -122,13 +139,14 @@ $AI_PROVIDERS = [ordered]@{
 
 # Alias para no romper la memoria muscular de los tres comandos de siempre.
 # OJO: Resolve-AIProvider mira los alias ANTES que la tabla, asi que un alias
-# con el nombre de una entrada la tapa. Por eso 'gemma' y 'qwen' NO estan
-# aqui: son entradas.
+# con el nombre de una entrada la tapa. Por eso 'gemma', 'gemma3' y 'qwen' NO
+# estan aqui: son entradas.
 $AI_ALIASES = @{
     gpt      = 'openai'; chatgpt = 'openai'; oai = 'openai'
     grok     = 'xai';    x       = 'xai'
     deepseek = 'ollama'; local   = 'ollama'; ds = 'ollama'
-    gemma3   = 'gemma';  llama   = 'gemma';  llamacpp = 'gemma'
+    gemma4   = 'gemma';  e4b     = 'gemma'
+    llama    = 'gemma';  llamacpp = 'gemma'
     qwen3    = 'qwen'
 }
 

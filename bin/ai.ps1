@@ -97,8 +97,9 @@ $($c.Bullet)USO$($c.Off)
   type notas.txt | AI "resume esto"
 
 $($c.Bullet)OPCIONES$($c.Off)
-  -Provider  openai|xai|ollama|gemma|qwen   (alias: gpt, grok, deepseek, llama)
-             gemma y qwen son locales: un mismo llama-server, dos modelos
+  -Provider  openai|xai|ollama|gemma|gemma3|qwen   (alias: gpt, grok, deepseek, llama, e4b)
+             gemma (Gemma 4 E4B), gemma3 (Gemma 3 4B) y qwen son locales:
+             un mismo llama-server, varios modelos
   -Model     nombre del modelo
   -System    instruccion de sistema
   -Context   fichero que se adjunta como contexto

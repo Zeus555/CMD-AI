@@ -84,7 +84,8 @@ AI "que es un BOM UTF-8"        una respuesta y sale
 type informe.txt | AI "resume"  la entrada estandar entra como contexto
 type informe.txt | AI           sin pregunta: todo stdin es la pregunta
 AI "pregunta" -Provider gpt     elige proveedor (alias: gpt, grok, deepseek...)
-AI "pregunta" -Provider gemma   modelo local rapido (Gemma 3 4B)
+AI "pregunta" -Provider gemma   modelo local (Gemma 4 E4B)
+AI "pregunta" -Provider gemma3  modelo local mas rapido (Gemma 3 4B)
 AI "pregunta" -Provider qwen    modelo local mas capaz y mas lento (Qwen3 8B)
 AI "pregunta" -Provider gpt -m gpt-4o -Temp 0.2 -NoStream -Plain
 AI -Check                       diagnostico de los proveedores
@@ -128,7 +129,8 @@ Para que un modelo local sea el de por defecto: `{ "provider": "qwen" }`.
 | `openai`    | OpenAI               | `OPENAI_API_KEY`  | `gpt-4o-mini`      | `gpt`, `chatgpt`, `oai`       |
 | `xai`       | xAI                  | `XAI_API_KEY`     | `grok-4.3`         | `grok`, `x`                   |
 | `ollama`    | Ollama (local)       | *(no necesita)*   | `qwen3:4b`         | `deepseek`, `local`, `ds`     |
-| `gemma`     | llama-server (local) | *(no necesita)*   | `gemma-3-4b`       | `gemma3`, `llama`, `llamacpp` |
+| `gemma`     | llama-server (local) | *(no necesita)*   | `gemma-4-e4b`      | `gemma4`, `e4b`, `llama`, `llamacpp` |
+| `gemma3`    | llama-server (local) | *(no necesita)*   | `gemma-3-4b`       | |
 | `qwen`      | llama-server (local) | *(no necesita)*   | `qwen3-8b`         | `qwen3`                       |
 
 Todos hablan el mismo dialecto (`POST /v1/chat/completions`), así que
@@ -137,7 +139,7 @@ añadir un proveedor compatible es añadir una entrada a la tabla de
 
 ### Modelos locales con llama-server
 
-`gemma` y `qwen` son dos entradas que apuntan al **mismo** `llama-server` en
+`gemma`, `gemma3` y `qwen` son tres entradas que apuntan al **mismo** `llama-server` en
 modo router (`--models-preset fichero.ini`): un puerto, varios modelos.
 
 Para levantar el tuyo hace falta un llama.cpp reciente, con modo router (el
@@ -152,6 +154,11 @@ version = 1
 ctx-size = 4096
 parallel = 1
 sleep-idle-seconds = 120
+
+[gemma-4-e4b]
+model = models\gemma-4-E4B-it-Q4_K_M.gguf
+; entero en la grafica hacen falta mas de 4 GB; con 4 GB, unas 32 capas
+n-gpu-layers = 99
 
 [gemma-3-4b]
 model = models\gemma-3-4b-it-Q4_K_M.gguf
@@ -173,7 +180,7 @@ Los `.gguf` pueden ser otros: lo que tiene que coincidir con
 
 - El modelo se elige con el campo `model` de la petición, que tiene que
   coincidir letra por letra con una sección del fichero de modelos
-  (`[gemma-3-4b]`, `[qwen3-8b]`). Con otro nombre el servidor contesta
+  (`[gemma-4-e4b]`, `[gemma-3-4b]`, `[qwen3-8b]`). Con otro nombre el servidor contesta
   `HTTP 400 -> model '...' not found`.
 - `AI` no arranca el servidor. Si no está en marcha, el error lo dice
   (`nadie escucha en http://127.0.0.1:8080/v1`) y añade el texto de
@@ -183,7 +190,7 @@ Los `.gguf` pueden ser otros: lo que tiene que coincidir con
 - Con `--models-max 1` solo hay un modelo en memoria: la primera pregunta tras
   cambiar de modelo tarda bastante más (de 11 a 18 s en el equipo del autor) y,
   tras el reposo por inactividad, unos 5 s más.
-- Plazo de espera hasta que el servidor empieza a contestar: 300 s con `gemma`
+- Plazo de espera hasta que el servidor empieza a contestar: 300 s con `gemma` y `gemma3`
   y 600 s con `qwen` (campo `Timeout` de `lib/providers.ps1`), porque antes de
   la primera palabra el servidor puede tener que cargar o cambiar el modelo y
   leer toda la entrada. En los demás proveedores son 30 s.
