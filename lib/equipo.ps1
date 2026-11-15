@@ -293,7 +293,7 @@ function Format-AIEquipo {
                 if ($c.mbps -gt 0) { $s += "; velocidad del enlace: $($c.mbps) Mbps" }
                 $l += $s + '.'
             }
-            $l += '- La IP pública (la que ven los sitios de internet, que asigna el proveedor) no se puede leer desde el equipo; la de arriba es la IP local.'
+            $l += '- La IP pública (la que ven los sitios de internet) no está en el equipo: la asigna el proveedor de internet. La de arriba es la IP local.'
         }
         'equipo' {
             $s = "- Nombre de este equipo: $($D.nombre). Usuario de Windows: $($D.usuario)."

