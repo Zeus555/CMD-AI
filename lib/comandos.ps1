@@ -436,7 +436,7 @@ function Invoke-AIComandoPlan {
 
         if (-not $out) {
             if ($errores.Count) { return @{ Ok = $false; Salida = ''; Motivo = ($errores -join ' / ') } }
-            return @{ Ok = $true; Salida = '(el comando no devolvió nada)'; Motivo = '' }
+            return @{ Ok = $true; Salida = '(el comando no devolvió nada)'; Motivo = ''; Vacio = $true }
         }
         # Salida a medias: lo que fallo tambien se dice.
         if ($errores.Count) { $out += "`n[el comando también dio errores: $($errores -join ' / ')]" }
@@ -601,4 +601,132 @@ function Get-AIComandoDocUrl {
     $mod = (([string]$e.Llamada) -split '\\')[0].ToLowerInvariant()
     if ($mod -eq 'configdefender') { $mod = 'defender' }
     return "https://learn.microsoft.com/es-es/powershell/module/$mod/$($e.Nombre.ToLowerInvariant())"
+}
+
+# ---------------------------------------------------------------------------
+#  Pedirlo con una frase: "agregame un comando para ver mi IP publica".
+#
+#  Aqui solo se RECONOCE la peticion y se saca lo que traiga (el comando tras
+#  dos puntos, un nombre, el dato que se quiere). La conversacion (el chat
+#  pregunta, propone, pide confirmacion, prueba y da el resultado) esta en
+#  bin\ai.ps1. Nada de esto relaja las reglas: lo que proponga el modelo pasa
+#  por Get-AIComandoPlan igual que lo que teclea el usuario.
+#
+#  Solo con "agrega", "anade", "guarda" o "registra": "crea un comando de git
+#  para deshacer un commit" pide que se ESCRIBA un comando, no que se guarde.
+# ---------------------------------------------------------------------------
+$AI_CMD_PIDE = '^\W*(?:por favor,? )?(?:oye,? )?(?:agrega(?:me|le)?|anade(?:me|le)?|guarda(?:me)?|registra(?:me)?|(?:quiero|quisiera|necesito|puedes|podrias|me puedes|me podrias|ayudame a) (?:agregar|anadir|guardar|registrar)(?:me)?)\b.{0,60}?\b(?:comando|comandos)\b'
+
+function Test-AIPareceComando {
+    <#  El texto tiene pinta de comando (y no de una descripcion)?  #>
+    param([string]$Texto)
+    $t = ([string]$Texto).Trim()
+    if (-not $t) { return $false }
+    $uno = ($t -split '\s+')[0]
+    if ($uno -match '^[A-Za-z]+-[A-Za-z]+$') { return $true }                 # Verbo-Nombre
+    if ($uno -match '\.(?:exe|ps1|bat|cmd)$' -or $uno -match '^[.\\/]|^[A-Za-z]:\\') { return $true }
+    $corto = $uno -replace '\.exe$', ''
+    if ($AI_CMD_EXES.ContainsKey($corto) -or $AI_CMD_ALIAS.ContainsKey($corto)) { return $true }
+    return ($t -match '\s\|\s*[A-Za-z]+-[A-Za-z]+')
+}
+
+function ConvertTo-AIComandoNombre {
+    <#  De "IP publica" o "Top CPU!" a un nombre valido: ip-publica, top-cpu.  #>
+    param([string]$Texto)
+    $n = (ConvertTo-AIPlano ([string]$Texto)) -replace '[^a-z0-9]+', '-'
+    $n = $n.Trim('-')
+    if ($n.Length -gt 30) { $n = $n.Substring(0, 30).Trim('-') }
+    return $n
+}
+
+function Get-AIComandoPeticion {
+    <#  $null si la linea no pide guardar un comando. Si lo pide,
+        @{ Comando; Nombre; Dato } con lo que traiga (cadenas vacias si no).
+          "guarda este comando como ver-dns: Get-DnsClientServerAddress"
+             -> Comando y Nombre
+          "agregame un comando para ver mi IP publica"
+             -> Dato = "ver mi IP publica"  #>
+    param([string]$Linea)
+    $Linea = ([string]$Linea).Trim()
+    if ($Linea.Length -gt 400) { return $null }
+    if ((ConvertTo-AIPlano $Linea) -notmatch $AI_CMD_PIDE) { return $null }
+
+    $izq = $Linea; $cmd = ''
+    $i = $Linea.IndexOf(':')
+    # Los dos puntos de "https://" no separan nada.
+    if ($i -ge 0 -and $Linea.Substring(0, $i) -match '(?i)comandos?' -and $Linea.Substring(0, $i) -notmatch '(?i)https?$') {
+        $izq = $Linea.Substring(0, $i).Trim()
+        $cmd = $Linea.Substring($i + 1).Trim()
+    }
+    # lo que va detras de la palabra "comando"
+    $resto = ''
+    if ($izq -match '(?i)\bcomandos?\b\s*(.*)$') { $resto = $Matches[1].Trim() }
+    $nombre = ''
+    $m = [regex]::Match($resto, '(?i)(?:^|\s)(?:como|llamado|de nombre|con (?:el )?nombre(?: de)?|que se llame)\s+["«]?([\p{L}0-9][\p{L}0-9 _-]{0,40}?)["»]?\s*[?.!]*\s*$')
+    if ($m.Success) {
+        $nombre = ConvertTo-AIComandoNombre $m.Groups[1].Value
+        $resto  = $resto.Substring(0, $m.Index).Trim()
+    }
+    $dato = ($resto -replace '(?i)^(?:nuevo\s+)?(?:para|que(?:\s+me)?|de|del|con el que|y que)\s+', '').Trim(' ', '.', ',', '?', '¿')
+    if ($dato.Length -lt 3) { $dato = '' }
+    return @{ Comando = $cmd; Nombre = $nombre; Dato = $dato }
+}
+
+function Get-AIComandoGuia {
+    <#  Lo que se le dice al modelo cuando tiene que PROPONER un comando: las
+        reglas resumidas y la lista. Es una ayuda para que acierte a la
+        primera; la barrera siguen siendo las reglas de Get-AIComandoPlan.  #>
+    $fuentes = (@($AI_CMD_CMDLETS.Keys | Where-Object { $AI_CMD_CMDLETS[$_].Lugar -eq 'fuente' } | Sort-Object) -join ', ')
+    $filtros = (@($AI_CMD_CMDLETS.Keys | Where-Object { $AI_CMD_CMDLETS[$_].Lugar -eq 'filtro' } | Sort-Object) -join ', ')
+    return @"
+Propones UN comando de Windows PowerShell 5.1, de solo lectura, que de el dato que pide el usuario. Un programa lo revisara con estas reglas y rechazara lo que no las cumpla:
+- Una sola linea y una sola canalizacion (comandos unidos con |).
+- El primer comando tiene que ser uno de estos, con su nombre completo: $fuentes.
+- O uno de estos programas de Windows, tal cual: ipconfig /all, hostname, whoami, systeminfo, getmac, arp -a, route print, tasklist, driverquery, powercfg /list, netsh wlan show interfaces, ping -n 2 SERVIDOR, nslookup SERVIDOR.
+- Detras del primero solo pueden ir: $filtros.
+- Argumentos fijos. Prohibido: variables, parentesis, llaves, punto y coma, redirecciones, alias (irm, select, where, sort), ForEach-Object, Get-Content, Get-ChildItem y cualquier comando que escriba, borre o cambie algo.
+- Where-Object solo en la forma: Where-Object Propiedad -eq Valor.
+- Para quedarte con un solo campo: Select-Object -ExpandProperty Campo.
+- Lo que sale a internet: solo Invoke-RestMethod -Uri https://... a un servicio publico conocido, y como PRIMER comando.
+Ejemplos:
+  la IP publica -> Invoke-RestMethod -Uri https://api.ipify.org
+  los procesos que mas procesador gastan -> Get-Process | Sort-Object CPU -Descending | Select-Object -First 5 Name, CPU
+  si el antivirus esta activo -> Get-MpComputerStatus | Select-Object AntivirusEnabled, RealTimeProtectionEnabled
+Responde SOLO con estas dos lineas, sin explicaciones ni comillas:
+COMANDO: el comando
+NOMBRE: una o dos palabras que nombren el dato, sin verbos, en minusculas y unidas con guion (ip-publica, top-cpu, antivirus)
+Si el dato no se puede obtener con un comando de solo lectura asi (por ejemplo, porque habria que borrar, cambiar o instalar algo), responde solo:
+IMPOSIBLE: el motivo, en pocas palabras
+"@
+}
+
+function ConvertFrom-AIComandoPropuesta {
+    <#  De la respuesta del modelo a @{ Comando; Nombre; Imposible }.  #>
+    param([string]$Texto)
+    $t = ([string]$Texto) -replace '(?m)^\s*```\w*\s*$', '' -replace '`', ''
+    $r = @{ Comando = ''; Nombre = ''; Imposible = '' }
+    $m = [regex]::Match($t, '(?im)^\W*IMPOSIBLE\W*:\s*(.+?)\s*$')
+    if ($m.Success) { $r.Imposible = $m.Groups[1].Value.Trim() }
+    $m = [regex]::Match($t, '(?im)^\W*COMANDO\W*:\s*(.+?)\s*$')
+    # Fuera los adornos de Markdown que algunos modelos ponen alrededor.
+    if ($m.Success) { $r.Comando = $m.Groups[1].Value.Trim().Trim('*', '_', ' ', '"', "'").Trim(); $r.Imposible = '' }
+    $m = [regex]::Match($t, '(?im)^\W*NOMBRE\W*:\s*(.+?)\s*$')
+    if ($m.Success) {
+        # El nombre es tambien lo que dispara el atajo: hacen falta TODAS sus
+        # palabras en la pregunta. Con "ip-publica-obtener" (lo que proponia
+        # Gemma 4 E4B), "cual es mi IP publica" no lo dispararia. Fuera los
+        # verbos y el relleno, y como mucho dos palabras.
+        $relleno = 'obtener', 'ver', 'mostrar', 'consultar', 'listar', 'leer', 'saber', 'dar', 'comando', 'dato', 'datos', 'info',
+                   'informacion', 'estado', 'actual', 'actuales', 'sistema', 'equipo', 'windows', 'de', 'del', 'la', 'el', 'los', 'las', 'mi', 'mis', 'uso', 'activo', 'activa'
+        $pal = @((ConvertTo-AIComandoNombre $m.Groups[1].Value) -split '-' | Where-Object { $_ })
+        $utiles = @($pal | Where-Object { $relleno -notcontains $_ })
+        if ($utiles.Count -eq 0) { $utiles = $pal }
+        $r.Nombre = (@($utiles | Select-Object -First 2) -join '-')
+    }
+    # Un modelo que contesta solo con el comando, sin la etiqueta.
+    if (-not $r.Comando -and -not $r.Imposible) {
+        $filas = @(($t -split "\r?\n") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+        if ($filas.Count -eq 1 -and (Test-AIPareceComando $filas[0])) { $r.Comando = $filas[0] }
+    }
+    return $r
 }

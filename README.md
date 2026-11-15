@@ -35,10 +35,11 @@ que lo genera, y el cliente lo pinta segun llega.
   enlace, DNS, si hay internet), Windows, el procesador, la memoria, los
   discos y la gráfica se leen del propio equipo cuando se pregunta por ellos.
   Ver «Datos de este equipo».
-- **Comandos de solo lectura que guardas tú**: `/comando agregar ip-publica
-  Invoke-RestMethod -Uri https://api.ipify.org` y desde entonces «¿cuál es mi
-  IP pública?» se contesta sola. Unas reglas fijas, no el modelo, deciden si
-  el comando es de solo lectura. Ver «Comandos guardados».
+- **Comandos de solo lectura que guardas tú**, pidiéndolo en la conversación:
+  «agrégame un comando para ver mi IP pública». El chat pregunta, propone el
+  comando, pide confirmación, lo prueba y enseña el resultado; desde entonces
+  «¿cuál es mi IP pública?» se contesta sola. Unas reglas fijas, no el
+  modelo, deciden si el comando es de solo lectura. Ver «Comandos guardados».
 - **Diagnóstico** con `AI -Check`: estado de clave y conectividad de los
   proveedores sin gastar tokens.
 
@@ -124,7 +125,8 @@ Dentro del modo interactivo:
 | `/web on|off` | dejar o no que el modelo busque solo |
 | `/equipo [X]`  | enseñar los datos de este equipo sin preguntar al modelo (X: `bateria`, `red`, `equipo`, `sistema`, `procesador`, `memoria`, `disco`, `grafica`) |
 | `/equipo on|off` | dejar o no que se lean los datos de este equipo al preguntar |
-| `/comando agregar N C` | revisar el comando `C` y guardarlo con el nombre `N` |
+| `agrégame un comando para ...` | guardar un comando conversando: el chat pregunta, propone, pide confirmación, lo prueba y enseña el resultado |
+| `/comando agregar N C` | lo mismo de una vez: revisar el comando `C` y guardarlo con el nombre `N` |
 | `/comando`     | lista de los comandos guardados |
 | `/comando N`   | ejecutar el comando guardado `N` y enseñar su salida, sin modelo |
 | `/comando quitar N` | borrarlo |
@@ -376,6 +378,70 @@ una línea: la IP pública, los procesos que más procesador han gastado, si el
 antivirus está activo. Se guardan desde el propio chat, con un nombre, y
 desde entonces el modelo puede pedirlos por ese nombre.
 
+### Pidiéndolo en la conversación
+
+Basta con pedirlo: «agrégame un comando para ver mi IP pública», «quiero
+guardar un comando», «guarda este comando como ver-dns:
+Get-DnsClientServerAddress». El chat pregunta y tú respondes:
+
+```
+Ariel > agrégame un comando para ver mi IP pública
+ia > Vamos a guardar un comando de solo lectura. Yo pregunto y tú respondes; escribe «cancelar» para dejarlo.
+ia > Busco un comando de solo lectura para: ver mi IP pública
+ia > Este es el comando:
+
+  comando:  Invoke-RestMethod -Uri https://api.ipify.org
+  reglas:   pasa (Invoke-RestMethod)
+  red:      sale a internet, a api.ipify.org (https, solo lee)
+  modelo, con la documentacion de Microsoft a la vista:
+    El comando realiza una solicitud web a la API de ipify.org. Lee la
+    dirección IP pública del equipo desde esa API. No envía datos ni modifica
+    nada en el equipo local.
+
+ia > ¿Te vale así? Responde «sí», o dime qué le cambio.
+Ariel > sí
+ia > ¿Con qué nombre lo guardo? Pulsa Enter para «ip-publica». Cuando preguntes con esas palabras, lo ejecutaré.
+Ariel >
+ia > ¿Para qué sirve, en una frase? La leeré para saber cuándo usarlo. Pulsa Enter para «ver mi IP pública».
+Ariel >
+ia > Ya no tengo más preguntas. Esto es lo que voy a guardar:
+
+  nombre:   ip-publica
+  comando:  Invoke-RestMethod -Uri https://api.ipify.org
+  sirve:    ver mi IP pública
+  red:      sale a internet, a api.ipify.org
+
+ia > ¿Lo pruebo ahora y, si funciona, lo dejo guardado? («sí» o «no»)
+Ariel > sí
+ia > Probando...
+ia > Resultado de la prueba (0.3 s):
+
+  203.0.113.7
+
+ia > Funcionó y quedó guardado como «ip-publica». Pregúntame con las palabras «ip publica» y lo ejecuto, o tecléalo tú con /comando ip-publica.
+```
+
+- **Si no das el comando, lo propone el modelo**, y lo que propone pasa por
+  las mismas reglas que lo que tecleas tú. Si no las pasa, se le dice por qué
+  y lo corrige (tres intentos). Si pides algo que no es de solo lectura
+  («para borrar los temporales»), dice que no se puede.
+- **Puedes pedir cambios** («que sean cinco», «solo la fecha») o pegar tú otro
+  comando en cualquier respuesta.
+- **Las preguntas se cierran con un resumen y una sola confirmación.** Hasta
+  ese «sí» no se ejecuta ni se guarda nada.
+- **Se prueba antes de guardar.** Si la prueba falla o no devuelve ningún
+  dato, no se guarda, y puedes cambiarlo o dejarlo.
+- **«cancelar»** corta en cualquier momento.
+- Las preguntas son fijas, no las redacta el modelo: el diálogo no depende de
+  que el modelo se acuerde de pedir confirmación.
+- Lo abren las frases que empiezan por «agrega», «añade», «guarda» o
+  «registra» (o «quiero agregar…») y nombran un comando. «Crea un comando de
+  git para…» no: eso pide que se escriba uno, y lo contesta el modelo.
+
+### De una vez, con `/comando agregar`
+
+Si ya tienes el comando y el nombre:
+
 ```
 Ariel > /comando agregar ip-publica Invoke-RestMethod -Uri https://api.ipify.org
 
@@ -407,9 +473,11 @@ tú, viendo el comando exacto y a qué servidor sale.
 
 Las reglas (`Get-AIComandoPlan`, en `lib/comandos.ps1`):
 
-1. **El comando lo tecleas tú** tras `/comando agregar`, en el modo
-   interactivo. Lo que escribe el modelo o trae una página no puede agregar
-   nada.
+1. **Nada se guarda sin tu «sí»**, y solo en el modo interactivo. El comando
+   lo tecleas tú o lo propone el modelo cuando se lo pides; lo que propone
+   no vale por venir del modelo, sino si pasa las reglas siguientes, las
+   mismas en los dos casos. Una página de internet o la salida de otro
+   comando no pueden agregar nada.
 2. **Se analiza con el analizador del propio PowerShell**, no con expresiones
    regulares. Tiene que ser una sola canalización de comandos con argumentos
    fijos. Se rechazan las variables, las cadenas con sustitución, los

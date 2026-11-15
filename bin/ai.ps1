@@ -152,7 +152,11 @@ $($c.Bullet)EN EL MODO INTERACTIVO$($c.Off)
   /equipo [X]    ensenar los datos de este equipo sin preguntar al modelo
                  (X: bateria red equipo sistema procesador memoria disco grafica)
   /equipo on|off dejar o no que el modelo lea los datos de este equipo
-  /comando agregar N C   revisar el comando C y guardarlo con el nombre N.
+  agregame un comando para ...   guardar un comando conversando: el chat
+                 pregunta, propone el comando, pide confirmacion, lo prueba
+                 y ensena el resultado
+  /comando agregar N C   lo mismo de una vez: revisar el comando C y guardarlo
+                 con el nombre N.
                  Solo lectura: lo deciden unas reglas fijas, no el modelo
                  (ej.: /comando agregar ip-publica Invoke-RestMethod -Uri https://api.ipify.org)
   /comando       lista de los guardados     /comando N   ejecutar N
@@ -505,6 +509,44 @@ function Get-AIComandoOpinion {
     return @{ Texto = $txt; ConDoc = [bool]$doc }
 }
 
+function Show-AIComandoRevision {
+    <#  Ensena un comando ya validado: el texto exacto, lo que dicen las
+        reglas, a donde sale y la segunda opinion del modelo.  #>
+    param([string]$Texto, [hashtable]$Plan)
+    $c = $AI_COLOR
+    $sale = if ($Plan.Servidores.Count) { "sale a internet, a $($Plan.Servidores -join ', ') (https, solo lee)" }
+            elseif ($Plan.Red) { 'usa la red (ping o DNS); no envia datos del equipo' }
+            else { 'no sale del equipo' }
+    Write-Host ''
+    Write-Host "  $($c.Dim)comando:$($c.Off)  $Texto"
+    Write-Host "  $($c.Dim)reglas:$($c.Off)   pasa ($($Plan.Resumen))"
+    Write-Host "  $($c.Dim)red:$($c.Off)      $sale"
+    Write-Host "  $($c.Dim)revisando con el modelo...$($c.Off)"
+    $op = Get-AIComandoOpinion $Texto $Plan
+    if ($op.Texto) {
+        $con = if ($op.ConDoc) { ', con la documentacion de Microsoft a la vista' } else { '' }
+        Write-Host "  $($c.Dim)modelo$($con):$($c.Off)"
+        foreach ($l in ($op.Texto -split "`r?`n")) { if ($l.Trim()) { Write-Host "    $($c.Bot)$($l.Trim())$($c.Off)" } }
+        if ($op.Texto -match '(?i)^\W*RIESGO') { Write-Host "  $($c.Err)El modelo ve un riesgo. Leelo antes de decidir.$($c.Off)" }
+    } else {
+        Write-Host "  $($c.Dim)modelo:   no respondio. Las reglas ya lo revisaron; decide con el comando a la vista.$($c.Off)"
+    }
+    Write-Host ''
+}
+
+function Save-AIComandoNuevo {
+    <#  Escribe el comando en comandos.json (sustituye al del mismo nombre) y
+        recarga la lista. Devuelve $true si quedo guardado.  #>
+    param([string]$Nombre, [string]$Texto, [string]$Descripcion)
+    $nuevo = [pscustomobject]@{ Nombre = $Nombre; Comando = $Texto; Descripcion = $Descripcion; Creado = (Get-Date -Format 'yyyy-MM-dd') }
+    $lista = @($script:Comandos | Where-Object { $_.Nombre -ne $Nombre }) + @($nuevo)
+    try { Save-AIComandos $CmdFile $lista } catch { Write-AIError "no pude escribir $($CmdFile): $($_.Exception.Message)"; return $false }
+    $carga = Read-AIComandos $CmdFile -SinReglas
+    $script:Comandos      = @($carga.Lista)
+    $script:ComandosMalos = @($carga.Rechazados)
+    return $true
+}
+
 function Add-AIComando {
     <#  /comando agregar: reglas, segunda opinion, descripcion, confirmacion,
         guardado y primera ejecucion. El texto es el que tecleo el usuario:
@@ -526,40 +568,207 @@ function Add-AIComando {
         Write-Host "$($c.Dim)Solo valen comandos de solo lectura de Windows, con argumentos fijos. La lista esta en el README.$($c.Off)"
         return
     }
-    $sale = if ($plan.Servidores.Count) { "sale a internet, a $($plan.Servidores -join ', ') (https, solo lee)" }
-            elseif ($plan.Red) { 'usa la red (ping o DNS); no envia datos del equipo' }
-            else { 'no sale del equipo' }
-    Write-Host ''
-    Write-Host "  $($c.Dim)comando:$($c.Off)  $Texto"
-    Write-Host "  $($c.Dim)reglas:$($c.Off)   pasa ($($plan.Resumen))"
-    Write-Host "  $($c.Dim)red:$($c.Off)      $sale"
-    Write-Host "  $($c.Dim)revisando con el modelo...$($c.Off)"
-    $op = Get-AIComandoOpinion $Texto $plan
-    if ($op.Texto) {
-        $con = if ($op.ConDoc) { ', con la documentacion de Microsoft a la vista' } else { '' }
-        Write-Host "  $($c.Dim)modelo$($con):$($c.Off)"
-        foreach ($l in ($op.Texto -split "`r?`n")) { if ($l.Trim()) { Write-Host "    $($c.Bot)$($l.Trim())$($c.Off)" } }
-        if ($op.Texto -match '(?i)^\W*RIESGO') { Write-Host "  $($c.Err)El modelo ve un riesgo. Leelo antes de decidir.$($c.Off)" }
-    } else {
-        Write-Host "  $($c.Dim)modelo:   no respondio. Las reglas ya lo revisaron; decide con el comando a la vista.$($c.Off)"
-    }
+    Show-AIComandoRevision $Texto $plan
     if ($ya) { Write-Host "  $($c.Dim)ya hay un comando «$Nombre»: se sustituira.$($c.Off)" }
-    Write-Host ''
     $desc = Read-AILine "  $($c.Dim)para que sirve? (una frase; el modelo la lee para saber cuando usarlo) >$($c.Off) " $UsaPRL
     if ($null -eq $desc) { Write-Host "$($c.Dim)no se guardo$($c.Off)"; return }
     $desc = ConvertTo-AIComandoTexto $desc
     $resp = Read-AILine "  $($c.Dim)lo guardo? (s/n) >$($c.Off) " $UsaPRL
-    if ([string]$resp -notmatch '^\s*(?:s|si|s\u00ED|y|yes)\s*$') { Write-Host "$($c.Dim)no se guardo$($c.Off)"; return }
+    if ([string]$resp -notmatch '^\s*(?:s|si|sí|y|yes)\s*$') { Write-Host "$($c.Dim)no se guardo$($c.Off)"; return }
 
-    $nuevo = [pscustomobject]@{ Nombre = $Nombre; Comando = $Texto; Descripcion = $desc; Creado = (Get-Date -Format 'yyyy-MM-dd') }
-    $lista = @($script:Comandos | Where-Object { $_.Nombre -ne $Nombre }) + @($nuevo)
-    try { Save-AIComandos $CmdFile $lista } catch { Write-AIError "no pude escribir $($CmdFile): $($_.Exception.Message)"; return }
-    $carga = Read-AIComandos $CmdFile -SinReglas
-    $script:Comandos      = @($carga.Lista)
-    $script:ComandosMalos = @($carga.Rechazados)
+    if (-not (Save-AIComandoNuevo $Nombre $Texto $desc)) { return }
     Write-Host "$($c.Dim)guardado como «$Nombre». Primera ejecucion:$($c.Off)"
-    $r = Invoke-AIComandoGuardado $nuevo
+    $r = Invoke-AIComandoGuardado ([pscustomobject]@{ Nombre = $Nombre; Comando = $Texto; Descripcion = $desc })
     if ($r.Ok) { Write-Host "$($c.Bot)$($r.Salida)$($c.Off)" } else { Write-AIError "no se pudo ejecutar: $($r.Motivo)" }
+}
+
+function Find-AIComandoPropuesta {
+    <#  Le pide al modelo un comando para $Dato (o un cambio sobre $Anterior)
+        y lo pasa por las reglas. Si no las pasa, se lo dice y le deja
+        corregirlo: tres intentos. Devuelve @{ Ok; Comando; Nombre; Plan;
+        Motivo }. Lo que propone el modelo NO vale por venir del modelo: vale
+        si pasa las mismas reglas que lo que teclea el usuario.  #>
+    param([string]$Dato, [string]$Anterior, [string]$Cambio)
+    $rechazos = @()
+    $ultimo = ''
+    for ($i = 0; $i -lt 3; $i++) {
+        $pide = "Dato que pide el usuario: $Dato"
+        if ($Anterior) { $pide += "`nComando que ya se le propuso: $Anterior`nEl usuario pide este cambio: $Cambio" }
+        if ($rechazos.Count) { $pide += "`nEstos intentos tuyos fueron rechazados. Corrigelo sin repetir el fallo:`n- " + ($rechazos -join "`n- ") }
+        $res = Invoke-AIChat -Provider $prov -Model $Model -Temperature 0.2 -NoStream -Messages @(
+            @{ role = 'system'; content = (Get-AIComandoGuia) },
+            @{ role = 'user'; content = $pide })
+        if (-not $res.Ok) { return @{ Ok = $false; Motivo = "el modelo no respondio ($($res.Error))" } }
+        $p = ConvertFrom-AIComandoPropuesta ([string]$res.Text)
+        if ($p.Imposible) { return @{ Ok = $false; Motivo = "el modelo dice que no se puede con un comando de solo lectura ($($p.Imposible))" } }
+        if (-not $p.Comando) { $rechazos += 'no diste la linea COMANDO:'; $ultimo = 'no propuso ningun comando'; continue }
+        $plan = Get-AIComandoPlan $p.Comando -ComprobarRed
+        if ($plan.Ok) { return @{ Ok = $true; Comando = $p.Comando; Nombre = $p.Nombre; Plan = $plan; Motivo = '' } }
+        $rechazos += "$($p.Comando)  ->  $($plan.Motivo)"
+        $ultimo = "lo que propuso, «$($p.Comando)», no pasa las reglas: $($plan.Motivo)"
+    }
+    return @{ Ok = $false; Motivo = $ultimo }
+}
+
+function Start-AIComandoDialogo {
+    <#  Guardar un comando conversando. El chat pregunta y el usuario
+        responde: que dato quiere, si el comando propuesto le vale, el nombre
+        y para que sirve. Luego cierra las preguntas con un resumen, pide UNA
+        confirmacion, prueba el comando, ensena el resultado y, si la prueba
+        salio bien, lo deja guardado. «cancelar» corta en cualquier momento.
+
+        Las preguntas son fijas (no las redacta el modelo): asi el dialogo no
+        depende de que el modelo se acuerde de pedir confirmacion.  #>
+    param([hashtable]$Peticion, [string]$Original, [bool]$UsaPRL)
+    $c = $AI_COLOR
+    $di  = { param($t) Write-Host "$($c.Dim)$rotulo$($c.Off)$($c.Bot)$t$($c.Off)" }
+    $lee = { $r = Read-AILine "$($c.User)$user$($c.Off) $($c.Dim)>$($c.Off) " $UsaPRL; if ($null -eq $r) { return $null }; return ([string]$r).Trim() }
+    $plano  = { param($t) (ConvertTo-AIPlano ([string]$t)) -replace '^\W+', '' }
+    $cancela = { param($t) ($null -eq $t) -or ((& $plano $t) -match '^(?:cancelar|cancela|cancelalo|cancelado|salir|dejalo|olvidalo)\b') }
+    $esSi = { param($t) (& $plano $t) -match '^(?:s|si|claro|dale|ok|okay|vale|va|y|yes|correcto|de acuerdo|adelante|hazlo|guardalo|pruebalo|asi esta bien|esta bien|perfecto)\b' }
+    $esNo = { param($t) (& $plano $t) -match '^(?:n|no|nop|nel)\b' }
+    $fin  = { & $di 'De acuerdo: no se guardó nada.' }
+
+    if ($script:Comandos.Count -ge $AI_CMD_MAX_GUARDADOS) {
+        & $di "Ya hay $AI_CMD_MAX_GUARDADOS comandos guardados, que es el tope. Quita alguno con /comando quitar y me lo vuelves a pedir."
+        return
+    }
+    & $di 'Vamos a guardar un comando de solo lectura. Yo pregunto y tú respondes; escribe «cancelar» para dejarlo.'
+
+    $cmd = [string]$Peticion.Comando; $nombre = [string]$Peticion.Nombre; $dato = [string]$Peticion.Dato
+    $plan = $null; $anterior = ''; $cambio = ''
+    $cambiado = $false          # se le pidio un cambio: la descripcion del principio ya no vale de sugerencia
+    $preguntar = $true          # hay que hacer la pregunta del dato, o ya se hizo con otro texto
+
+    while ($true) {
+        # ---- 1. Un comando que pase las reglas ------------------------------
+        while (-not $plan) {
+            if (-not $cmd -and -not $dato) {
+                if ($preguntar) { & $di '¿Qué dato quieres que dé? Descríbelo (por ejemplo «mi IP pública») o pega el comando si ya lo tienes.' }
+                $preguntar = $true
+                $r = & $lee
+                if (& $cancela $r) { & $fin; return }
+                if (-not $r) { continue }
+                if (Test-AIPareceComando $r) { $cmd = $r } else { $dato = $r }
+            }
+            if (-not $cmd) {
+                if ($anterior) { & $di 'Lo cambio...' } else { & $di "Busco un comando de solo lectura para: $dato" }
+                $p = Find-AIComandoPropuesta $dato $anterior $cambio
+                if (-not $p.Ok) {
+                    & $di "No encontré uno que valga: $($p.Motivo)."
+                    & $di 'Descríbelo de otra forma, pega tú un comando o escribe «cancelar».'
+                    $dato = ''; $anterior = ''; $cambio = ''; $preguntar = $false
+                    continue
+                }
+                $cmd = $p.Comando; $plan = $p.Plan
+                if (-not $nombre) { $nombre = $p.Nombre }
+            } else {
+                $pl = Get-AIComandoPlan $cmd -ComprobarRed
+                if (-not $pl.Ok) {
+                    & $di "Ese comando no vale: $($pl.Motivo)."
+                    & $di 'Pega otro, descríbeme el dato que buscas o escribe «cancelar».'
+                    $cmd = ''; $dato = ''; $preguntar = $false
+                    continue
+                }
+                $plan = $pl
+            }
+        }
+
+        # ---- 2. Ensenarlo y preguntar si hay que cambiarle algo ------------
+        & $di 'Este es el comando:'
+        Show-AIComandoRevision $cmd $plan
+        & $di '¿Te vale así? Responde «sí», o dime qué le cambio.'
+        $r = & $lee
+        if (& $cancela $r) { & $fin; return }
+        if ((& $esNo $r) -and -not (& $esSi $r)) {
+            & $di '¿Qué le cambio? Dímelo con tus palabras o pega otro comando.'
+            $r = & $lee
+            if ((& $cancela $r) -or -not $r) { & $fin; return }
+        }
+        elseif (-not $r -or (& $esSi $r)) { $r = '' }
+        if ($r) {
+            if (Test-AIPareceComando $r) { $cmd = $r }
+            else { $anterior = $cmd; $cambio = $r; $cmd = ''; if (-not $dato) { $dato = 'lo mismo que da el comando ya propuesto' } }
+            $plan = $null; $cambiado = $true
+            continue
+        }
+
+        # ---- 3. El nombre ----------------------------------------------------
+        $sug = ConvertTo-AIComandoNombre $nombre
+        if (Test-AIComandoNombre $sug) { $sug = '' }
+        $elegido = ''
+        while (-not $elegido) {
+            if ($sug) { & $di "¿Con qué nombre lo guardo? Pulsa Enter para «$sug». Cuando preguntes con esas palabras, lo ejecutaré." }
+            else      { & $di '¿Con qué nombre lo guardo? Dos o tres palabras, como «ip publica». Cuando preguntes con esas palabras, lo ejecutaré.' }
+            $r = & $lee
+            if (& $cancela $r) { & $fin; return }
+            $n = if ($r) { ConvertTo-AIComandoNombre $r } else { $sug }
+            $m = if ($n) { Test-AIComandoNombre $n } else { 'hace falta un nombre' }
+            if ($m) { & $di "Ese nombre no vale: $m."; $sug = ''; continue }
+            if (@($script:Comandos | Where-Object { $_.Nombre -eq $n }).Count) {
+                & $di "Ya hay un comando «$n». ¿Lo sustituyo? («sí» o «no»)"
+                $r2 = & $lee
+                if (& $cancela $r2) { & $fin; return }
+                if (-not (& $esSi $r2)) { $sug = ''; continue }
+            }
+            $elegido = $n
+        }
+
+        # ---- 4. Para que sirve ------------------------------------------------
+        $sugD = if ($dato -and -not $cambiado -and $dato -ne 'lo mismo que da el comando ya propuesto') { ConvertTo-AIComandoTexto $dato } else { '' }
+        $desc = ''
+        while (-not $desc) {
+            if ($sugD) { & $di "¿Para qué sirve, en una frase? La leeré para saber cuándo usarlo. Pulsa Enter para «$sugD»." }
+            else       { & $di '¿Para qué sirve, en una frase? La leeré para saber cuándo usarlo.' }
+            $r = & $lee
+            if (& $cancela $r) { & $fin; return }
+            $desc = if ($r) { ConvertTo-AIComandoTexto $r } else { $sugD }
+        }
+
+        # ---- 5. Cierre: resumen y UNA confirmacion ---------------------------
+        $sale = if ($plan.Servidores.Count) { "sale a internet, a $($plan.Servidores -join ', ')" } elseif ($plan.Red) { 'usa la red' } else { 'no sale del equipo' }
+        & $di 'Ya no tengo más preguntas. Esto es lo que voy a guardar:'
+        Write-Host ''
+        Write-Host "  $($c.Dim)nombre:$($c.Off)   $elegido"
+        Write-Host "  $($c.Dim)comando:$($c.Off)  $cmd"
+        Write-Host "  $($c.Dim)sirve:$($c.Off)    $desc"
+        Write-Host "  $($c.Dim)red:$($c.Off)      $sale"
+        Write-Host ''
+        & $di '¿Lo pruebo ahora y, si funciona, lo dejo guardado? («sí» o «no»)'
+        $r = & $lee
+        if ((& $cancela $r) -or -not (& $esSi $r)) { & $fin; return }
+
+        # ---- 6. La prueba y el resultado --------------------------------------
+        & $di 'Probando...'
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        $t = Invoke-AIComandoGuardado ([pscustomobject]@{ Nombre = $elegido; Comando = $cmd; Descripcion = $desc })
+        $seg = [Math]::Round($sw.Elapsed.TotalSeconds, 1)
+        # Que no devuelva nada tambien es no funcionar: un filtro que no casa
+        # con nada (un texto en ingles en un Windows en espanol) daria un
+        # comando guardado que nunca contesta.
+        if ($t.Ok -and $t.Vacio) { $t = @{ Ok = $false; Motivo = 'se ejecutó, pero no devolvió ningún dato' } }
+        if (-not $t.Ok) {
+            & $di "La prueba falló ($seg s): $($t.Motivo)."
+            & $di 'No lo guardé. Dime qué le cambio, pega otro comando o escribe «cancelar».'
+            $r = & $lee
+            if ((& $cancela $r) -or -not $r) { & $fin; return }
+            if (Test-AIPareceComando $r) { $cmd = $r }
+            else { $anterior = $cmd; $cambio = "al probarlo fallo con: $($t.Motivo). El usuario dice: $r"; $cmd = ''; if (-not $dato) { $dato = $desc } }
+            $nombre = $elegido; $plan = $null; $cambiado = $true
+            continue
+        }
+        & $di "Resultado de la prueba ($seg s):"
+        Write-Host ''
+        foreach ($l in ($t.Salida -split "`n")) { Write-Host "  $($c.Bot)$l$($c.Off)" }
+        Write-Host ''
+        if (-not (Save-AIComandoNuevo $elegido $cmd $desc)) { return }
+        $frase = $elegido -replace '-', ' '
+        & $di "Funcionó y quedó guardado como «$elegido». Pregúntame con las palabras «$frase» y lo ejecuto, o tecléalo tú con /comando $elegido."
+        # Que la conversacion lo recuerde: lo pedido y lo que quedo hecho.
+        [void]$messages.Add(@{ role = 'user'; content = $Original })
+        [void]$messages.Add(@{ role = 'assistant'; content = "Guarde el comando de solo lectura «$elegido» ($desc): $cmd. Lo probe y funciono." })
+        return
+    }
 }
 
 # ===========================================================================
@@ -733,6 +942,10 @@ while ($true) {
             ($messages.ToArray() | ConvertTo-Json -Depth 10),
             (New-Object System.Text.UTF8Encoding $false))
         Write-Host "$($c.Dim)guardado en $dest$($c.Off)"
+    }
+    elseif ($pet = Get-AIComandoPeticion $line) {
+        # "agregame un comando para ver mi IP publica": se guarda conversando.
+        Start-AIComandoDialogo $pet $line $usePRL
     }
     else {
         # El rotulo comparte fila con la primera linea de la respuesta, por eso
