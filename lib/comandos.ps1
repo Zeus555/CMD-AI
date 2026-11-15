@@ -675,7 +675,13 @@ function Get-AIComandoPeticion {
 function Get-AIComandoGuia {
     <#  Lo que se le dice al modelo cuando tiene que PROPONER un comando: las
         reglas resumidas y la lista. Es una ayuda para que acierte a la
-        primera; la barrera siguen siendo las reglas de Get-AIComandoPlan.  #>
+        primera; la barrera siguen siendo las reglas de Get-AIComandoPlan.
+
+        La regla de no buscar textos en la salida de un programa viene de una
+        medida (2026-11-15): para "cuanto lleva encendido el equipo"
+        Gemma 4 E4B proponia systeminfo | Select-String "Fecha de ultimo
+        arranque", que en un Windows en ingles no devuelve nada (3 de 3; la
+        prueba del dialogo lo paraba y no se guardaba).  #>
     $fuentes = (@($AI_CMD_CMDLETS.Keys | Where-Object { $AI_CMD_CMDLETS[$_].Lugar -eq 'fuente' } | Sort-Object) -join ', ')
     $filtros = (@($AI_CMD_CMDLETS.Keys | Where-Object { $AI_CMD_CMDLETS[$_].Lugar -eq 'filtro' } | Sort-Object) -join ', ')
     return @"
@@ -687,11 +693,14 @@ Propones UN comando de Windows PowerShell 5.1, de solo lectura, que de el dato q
 - Argumentos fijos. Prohibido: variables, parentesis, llaves, punto y coma, redirecciones, alias (irm, select, where, sort), ForEach-Object, Get-Content, Get-ChildItem y cualquier comando que escriba, borre o cambie algo.
 - Where-Object solo en la forma: Where-Object Propiedad -eq Valor.
 - Para quedarte con un solo campo: Select-Object -ExpandProperty Campo.
+- No busques un texto dentro de la salida de un programa (Select-String sobre systeminfo o ipconfig): ese texto cambia con el idioma de Windows y el comando no devolveria nada. Pide el dato por su propiedad con Get-CimInstance u otro Get-.
 - Lo que sale a internet: solo Invoke-RestMethod -Uri https://... a un servicio publico conocido, y como PRIMER comando.
 Ejemplos:
   la IP publica -> Invoke-RestMethod -Uri https://api.ipify.org
   los procesos que mas procesador gastan -> Get-Process | Sort-Object CPU -Descending | Select-Object -First 5 Name, CPU
   si el antivirus esta activo -> Get-MpComputerStatus | Select-Object AntivirusEnabled, RealTimeProtectionEnabled
+  cuando arranco Windows -> Get-CimInstance Win32_OperatingSystem | Select-Object -ExpandProperty LastBootUpTime
+  la memoria RAM instalada -> Get-CimInstance Win32_ComputerSystem | Select-Object -ExpandProperty TotalPhysicalMemory
 Responde SOLO con estas dos lineas, sin explicaciones ni comillas:
 COMANDO: el comando
 NOMBRE: una o dos palabras que nombren el dato, sin verbos, en minusculas y unidas con guion (ip-publica, top-cpu, antivirus)
