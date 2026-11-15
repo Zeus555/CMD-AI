@@ -147,7 +147,10 @@ function Invoke-AIChat {
         [double]$Temperature = 0.7,
         [scriptblock]$OnToken,
         [switch]$NoStream,
-        [int]$TimeoutSec = 30
+        [int]$TimeoutSec = 30,
+        # Herramientas que se ofrecen al modelo (ver web.ps1). Si el modelo
+        # pide una, la respuesta trae ToolCalls y normalmente Text vacio.
+        [array]$Tools
     )
 
     $key = Get-AIKey $Provider
@@ -174,6 +177,7 @@ function Invoke-AIChat {
         stream      = $stream
     }
     foreach ($k in $Provider.Extra.Keys) { $body[$k] = $Provider.Extra[$k] }
+    if ($Tools -and $Tools.Count) { $body.tools = @($Tools) }
 
     # -Depth 10 es OBLIGATORIO: con la profundidad por defecto (2)
     # ConvertTo-Json escribe la cadena literal "System.Collections.Hashtable"
@@ -215,12 +219,12 @@ function Invoke-AIChat {
             $err = "nadie escucha en $($Provider.BaseUrl). $($Provider.Hint)"
         }
         return [pscustomobject]@{
-            Text = ''; Model = $null; Ok = $false; Error = $err
+            Text = ''; Model = $null; Ok = $false; Error = $err; ToolCalls = @()
         }
     }
     catch {
         return [pscustomobject]@{
-            Text = ''; Model = $null; Ok = $false; Error = $_.Exception.Message
+            Text = ''; Model = $null; Ok = $false; Error = $_.Exception.Message; ToolCalls = @()
         }
     }
 
@@ -233,6 +237,10 @@ function Invoke-AIChat {
     # limpio y a medias: sin esta marca se daba por buena una respuesta cortada.
     $completo  = $false
     $filtro    = if ($Provider.HideThink) { New-AIThinkFilter } else { $null }
+    # Peticiones de herramienta. En streaming llegan a trozos: el primer
+    # fragmento trae id y nombre, los siguientes solo pedazos de "arguments"
+    # ('{', '"consulta', '":', ...). Se juntan por su "index".
+    $llamadas  = [ordered]@{}
 
     # StreamReader con UTF8 mantiene el estado del decodificador entre
     # lecturas, asi que un caracter multibyte partido entre dos paquetes TCP
@@ -258,6 +266,17 @@ function Invoke-AIChat {
                 $ch = @($ev.choices)[0]
                 if ($ch.finish_reason) { $completo = $true }
 
+                foreach ($tc in @($ch.delta.tool_calls)) {
+                    if (-not $tc) { continue }
+                    $ix = [string]$(if ($null -ne $tc.index) { $tc.index } else { $llamadas.Count })
+                    if (-not $llamadas.Contains($ix)) {
+                        $llamadas[$ix] = @{ Id = ''; Name = ''; Args = (New-Object System.Text.StringBuilder) }
+                    }
+                    if ($tc.id)                 { $llamadas[$ix].Id   = $tc.id }
+                    if ($tc.function.name)      { $llamadas[$ix].Name = $tc.function.name }
+                    if ($tc.function.arguments) { [void]$llamadas[$ix].Args.Append($tc.function.arguments) }
+                }
+
                 $tok = $ch.delta.content
                 if ($tok) {
                     if ($filtro) { $tok = Invoke-AIThinkFilter $filtro $tok }
@@ -279,6 +298,14 @@ function Invoke-AIChat {
             $all = $sr.ReadToEnd()
             $o   = $all | ConvertFrom-Json      # inmune a saltos de linea y sangrado
             $realModel = $o.model
+            $i = 0
+            foreach ($tc in @($o.choices[0].message.tool_calls)) {
+                if (-not $tc) { continue }
+                $a = New-Object System.Text.StringBuilder
+                [void]$a.Append([string]$tc.function.arguments)
+                $llamadas[[string]$i] = @{ Id = $tc.id; Name = $tc.function.name; Args = $a }
+                $i++
+            }
             $tok = $o.choices[0].message.content
             if ($tok) {
                 if ($filtro) {
@@ -302,15 +329,28 @@ function Invoke-AIChat {
             $corte += ' Pasa si otro cliente pide el otro modelo (solo cabe uno en memoria): repite la pregunta.'
         }
         return [pscustomobject]@{
-            Text = $sb.ToString(); Model = $realModel; Ok = $false; Error = $corte
+            Text = $sb.ToString(); Model = $realModel; Ok = $false; Error = $corte; ToolCalls = @()
         }
     }
 
+    $tools = @()
+    $n = 0
+    foreach ($k in $llamadas.Keys) {
+        $l = $llamadas[$k]
+        if (-not $l.Name) { continue }
+        $n++
+        # Algunos servidores no ponen id: se inventa uno, que solo sirve para
+        # emparejar la respuesta de la herramienta con su peticion.
+        $id = if ($l.Id) { $l.Id } else { 'llamada_' + $n }
+        $tools += [pscustomobject]@{ Id = $id; Name = $l.Name; Arguments = $l.Args.ToString() }
+    }
+
     return [pscustomobject]@{
-        Text  = $sb.ToString()
-        Model = $realModel
-        Ok    = $true
-        Error = $null
+        Text      = $sb.ToString()
+        Model     = $realModel
+        Ok        = $true
+        Error     = $null
+        ToolCalls = $tools
     }
 }
 

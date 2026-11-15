@@ -25,6 +25,11 @@ que lo genera, y el cliente lo pinta segun llega.
   ANSI (se desactivan solos al redirigir la salida).
 - **Filtro de `<think>`** para modelos de razonamiento locales: el bloque de
   razonamiento no se muestra, aunque llegue partido entre fragmentos SSE.
+- **Busca en internet cuando hace falta**, sin abrir el navegador: el modelo
+  decide si la pregunta necesita datos actuales (dólar, clima, noticias...) y,
+  solo si la laptop tiene salida a internet, busca en DuckDuckGo, lee las
+  primeras páginas y contesta con eso, citando las fuentes. Ver «Buscar en
+  internet».
 - **Diagnóstico** con `AI -Check`: estado de clave y conectividad de los
   proveedores sin gastar tokens.
 
@@ -88,7 +93,8 @@ AI "pregunta" -Provider gemma   modelo local (Gemma 4 E4B)
 AI "pregunta" -Provider gemma3  modelo local mas rapido (Gemma 3 4B)
 AI "pregunta" -Provider qwen    modelo local mas capaz y mas lento (Qwen3 8B)
 AI "pregunta" -Provider gpt -m gpt-4o -Temp 0.2 -NoStream -Plain
-AI -Check                       diagnostico de los proveedores
+AI "pregunta" -NoWeb            sin buscar en internet
+AI -Check                       diagnostico de los proveedores e internet
 AI -Help                        ayuda completa
 ```
 
@@ -102,6 +108,8 @@ Dentro del modo interactivo:
 | `/model X`     | cambiar de modelo               |
 | `/provider X`  | cambiar de proveedor            |
 | `/save [ruta]` | guardar la conversación en JSON |
+| `/buscar X`    | buscar X en internet y contestar con lo encontrado |
+| `/web on|off` | dejar o no que el modelo busque solo |
 | `/help`        | mostrar la ayuda                |
 
 Sin configurar nada, el proveedor es `xai`: hace falta `XAI_API_KEY`, o elegir
@@ -220,6 +228,43 @@ Los `.gguf` pueden ser otros: lo que tiene que coincidir con
   texto de `$AI_LLAMA_HINT` si nadie escucha. No carga ni despierta ningún
   modelo.
 
+## Buscar en internet
+
+Para las preguntas de todos los días no hace falta abrir el navegador, ir al
+buscador y leer: se pregunta en la consola y `AI` busca si hace falta.
+
+```
+Ariel > a como esta el dolar hoy en Nicaragua?
+ia > buscando: dolar hoy en Nicaragua
+ia > El precio del dólar hoy en Nicaragua es de 36.81 córdobas a la venta...
+   fuentes: https://www.bcn.gob.ni/...  https://www.cotizacion.co/...
+```
+
+- **Quién decide**: el modelo. A cada pregunta se le ofrece una herramienta,
+  `buscar_web` (el campo `tools` de `/chat/completions`, el mismo en OpenAI,
+  xAI, Ollama y llama-server). Lo que no cambia con el tiempo («cuánto es 748
+  por 6», «qué es un BOM») lo contesta solo y al instante; precios, tipo de
+  cambio, clima, noticias o resultados piden la búsqueda. Como mucho dos
+  búsquedas por pregunta.
+- **Solo si hay salida**: antes de cada pregunta se intenta una conexión a
+  `html.duckduckgo.com:443` con un plazo de 2 s (se recuerda 60 s si hay
+  conexión y 15 s si no). Sin conexión la herramienta no se ofrece, el modelo
+  sabe que no puede buscar y contesta con lo que sabe avisando de que puede
+  estar desactualizado. `AI -Check` dice si hay salida.
+- **Qué lee**: los resultados de DuckDuckGo (gratis, sin clave) con su resumen
+  y el texto de las dos primeras páginas que se dejen leer, recortado para
+  que quepa en los 4096 tokens del servidor local. Nunca pide direcciones de
+  la red de casa (127.0.0.1, 192.168.x.x...), aunque un resultado apunte ahí.
+  Tras buscar, el modelo contesta con temperatura 0,2 para ceñirse a lo leído.
+- **Memoria**: se guarda la pregunta y la respuesta, no las páginas leídas.
+- **Apagarla**: `-NoWeb` en una pregunta, `/web off` en el modo interactivo o
+  `"web": false` en `settings.json`. `/buscar X` busca siempre, sin esperar a
+  que lo decida el modelo.
+- **Límites**: las páginas que se cargan con JavaScript (muchas de resultados
+  deportivos, la del tipo de cambio del BCN) llegan sin el dato; entonces el
+  modelo se apoya en los resúmenes de los resultados o dice que no lo
+  encontró. Si DuckDuckGo toma la consulta por un robot, lo dice.
+
 ## Estructura del código
 
 ```
@@ -231,6 +276,8 @@ lib/core.ps1        nucleo HTTP (HttpWebRequest), streaming SSE, filtro de
                     <think>, parser de errores de las distintas APIs
 lib/providers.ps1   tabla declarativa de proveedores y alias
 lib/ui.ps1          colores ANSI, render incremental de Markdown, PSReadLine
+lib/web.ps1         buscar en internet: hay salida?, DuckDuckGo, lectura de
+                    paginas y la herramienta buscar_web
 tools/Set-AIKey.ps1 guardado seguro de claves en HKCU\Environment
 tools/build.ps1     normaliza codificacion: UTF-8 con BOM en .ps1, CRLF en .bat
 ```
@@ -243,8 +290,8 @@ parsea).
 ## Limitaciones conocidas
 
 - Pensado para Windows; no se ha probado en PowerShell para Linux/macOS.
-- Sin soporte de imágenes, herramientas/función-calling ni ficheros adjuntos
-  más allá del contexto por stdin / `-Context`.
+- Sin soporte de imágenes ni ficheros adjuntos más allá del contexto por
+  stdin / `-Context`. La única herramienta es `buscar_web`.
 - El coste de la memoria del REPL crece con la conversación (se envía entera
   en cada turno): usa `/new` en conversaciones largas.
 
