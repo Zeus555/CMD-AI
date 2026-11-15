@@ -112,6 +112,16 @@ $AI_PROVIDERS = [ordered]@{
         Timeout  = 300
         Hint     = $AI_LLAMA_HINT
         Extra    = @{}
+        # Tools = $false: a este modelo no se le ofrecen herramientas
+        # (buscar_web, datos_equipo). Gemma 3 4B no sabe pedirlas: con ellas
+        # a la vista no llamaba a ninguna y contestaba como si lo hubiera
+        # hecho. Medido el 2026-11-15, sin que se hiciera ninguna busqueda:
+        # "Segun busqueda web, el dolar esta a 37 cordobas", "la temperatura
+        # en Managua es de 32 C", "el Real Madrid gano 3-0" (3 de 3), y con
+        # datos_equipo una IP y un porcentaje de bateria inventados. Sin
+        # herramientas dice que no puede buscar. /buscar y el atajo de los
+        # datos del equipo no dependen de esto y siguen funcionando.
+        Tools    = $false
     }
 
     qwen = @{

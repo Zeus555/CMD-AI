@@ -19,6 +19,7 @@ param(
     [switch]$NoStream,
     [switch]$Plain,
     [switch]$NoWeb,
+    [switch]$NoEquipo,
     [string]$SetKey,
     [switch]$Check,
     [switch]$Help,
@@ -60,6 +61,7 @@ $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $root 'lib\core.ps1')
 . (Join-Path $root 'lib\ui.ps1')
 . (Join-Path $root 'lib\web.ps1')
+. (Join-Path $root 'lib\equipo.ps1')
 
 Initialize-AIConsole
 
@@ -76,6 +78,7 @@ if (Test-Path $ConfFile) {
         # "web": false se lee aparte: con el "if ($j.$k)" de arriba un false
         # no se distingue de una clave ausente.
         if ($j.PSObject.Properties['web']) { $conf.web = [bool]$j.web }
+        if ($j.PSObject.Properties['equipo']) { $conf.equipo = [bool]$j.equipo }
     } catch { Write-AIError "settings.json ilegible, se usan los valores por defecto." }
 }
 
@@ -84,6 +87,9 @@ if (-not $System)   { $System   = $conf.system }
 # Buscar en internet: encendido salvo -NoWeb o "web": false. Aun encendido,
 # solo se ofrece al modelo si en ese momento hay salida (Test-AIInternet).
 $script:Web = (-not $NoWeb) -and ($conf.web -ne $false)
+# Datos del equipo (bateria, red, discos...): encendido salvo -NoEquipo o
+# "equipo": false. No depende de internet: se leen de la propia laptop.
+$script:Equipo = (-not $NoEquipo) -and ($conf.equipo -ne $false)
 # Proveedores que rechazaron la herramienta con un HTTP 4xx: no se les vuelve
 # a ofrecer en esta sesion.
 $script:SinHerramientas = @{}
@@ -120,6 +126,8 @@ $($c.Bullet)OPCIONES$($c.Off)
   -Plain     sin color ni markdown (automatico al redirigir)
   -NoWeb     no buscar en internet (por defecto el modelo busca cuando hace
              falta, solo si hay conexion)
+  -NoEquipo  no leer datos de este equipo (por defecto el modelo puede leer
+             bateria, red, Windows, procesador, memoria, discos y grafica)
   -SetKey    VAR    guarda una clave de forma interactiva
   -Check     diagnostico de los proveedores
 
@@ -129,6 +137,9 @@ $($c.Bullet)EN EL MODO INTERACTIVO$($c.Off)
   /provider X    cambiar proveedor /save [ruta] guardar la conversacion
   /buscar X      buscar X en internet y contestar con lo encontrado
   /web on|off    dejar o no que el modelo busque cuando lo necesite
+  /equipo [X]    ensenar los datos de este equipo sin preguntar al modelo
+                 (X: bateria red equipo sistema procesador memoria disco grafica)
+  /equipo on|off dejar o no que el modelo lea los datos de este equipo
 "@ | Write-Host
 }
 
@@ -152,6 +163,12 @@ if ($Check) {
     $est = if ($net) { 'OK (el modelo puede buscar)' } else { 'sin salida: se contesta sin buscar' }
     if (-not $script:Web) { $est += ' - busqueda apagada (-NoWeb o settings.json)' }
     Write-Host ("  {0,-20} {1,-18} {2,-24} {3}{4}{5}" -f 'Internet', $AI_WEB_HOST, 'no hace falta', $col, $est, $AI_COLOR.Off)
+    $eq  = Get-AIEquipoText $AI_EQUIPO_GRUPOS
+    $col = if ($eq.Fallidos.Count -eq 0) { $AI_COLOR.Bot } else { $AI_COLOR.Err }
+    $est = "OK ($($eq.Leidos.Count) de $($AI_EQUIPO_GRUPOS.Count) lecturas)"
+    if ($eq.Fallidos.Count) { $est = "$($eq.Leidos.Count) de $($AI_EQUIPO_GRUPOS.Count) lecturas; Windows no dio: $($eq.Fallidos -join ', ')" }
+    if (-not $script:Equipo) { $est += ' - apagado (-NoEquipo o settings.json)' }
+    Write-Host ("  {0,-20} {1,-18} {2,-24} {3}{4}{5}" -f 'Datos del equipo', 'este equipo', 'no hace falta', $col, $est, $AI_COLOR.Off)
     Write-Host ""
     exit 0
 }
@@ -198,27 +215,48 @@ function Write-AINote {
 
 function Get-AITurnMessages {
     <#  La memoria tal cual, con una nota al final de la instruccion de
-        sistema: la fecha (sin ella "hoy" no significa nada para el modelo) y
-        si puede buscar. La nota no se guarda: se recalcula en cada peticion
-        porque la conexion va y viene.  #>
-    param([bool]$Ofrece, [bool]$Red)
+        sistema: la fecha y la hora del reloj del equipo (sin ellas "hoy" y
+        "ahora" no significan nada para el modelo), si puede buscar y si puede
+        leer los datos del equipo. La nota no se guarda: se recalcula en cada
+        peticion porque el reloj avanza y la conexion va y viene.
+        Con -Anexo, lo que el programa ya leyo del equipo para esta pregunta
+        viaja pegado al mensaje del usuario (el de la posicion -Indice), solo
+        en la peticion: en la memoria queda la pregunta tal como se escribio.
+        Va en el mensaje y no como herramienta para que sirva igual con los
+        modelos que no saben pedirlas.  #>
+    param([bool]$Ofrece, [bool]$Red, [bool]$OfreceEquipo, [string]$Anexo, [int]$Indice = -1, [bool]$SinHerramientas)
     $arr  = $messages.ToArray()
-    $nota = "Hoy es $(Get-Date -Format 'yyyy-MM-dd')."
+    $nota = Get-AIClockNote
+    if ($OfreceEquipo) {
+        $nota += ' Tienes la herramienta datos_equipo, que lee los datos del equipo del usuario y de su red local (bateria, internet, wifi, direccion IP, Windows, procesador, memoria, discos, grafica). Usala cuando el usuario pregunte por los datos de su propio equipo: esos no te los sabes, asi que no los des de memoria. Lo demas, incluidos los datos de cualquier otro aparato, se contesta como siempre.'
+    }
     if ($Ofrece) {
         $nota += ' Tienes la herramienta buscar_web para buscar en internet. Usala cuando la pregunta necesite datos actuales o que no conoces con seguridad. Cuando la uses, contesta con lo que digan los resultados y no inventes lo que no digan.'
     }
     elseif ($script:Web -and -not $Red) {
         $nota += ' Este equipo no tiene conexion a internet ahora mismo: no puedes buscar. Si te piden datos actuales, dilo y contesta con lo que sepas avisando de que puede estar desactualizado.'
     }
+    elseif ($SinHerramientas) {
+        # Un modelo al que no se le ofrecen herramientas (campo Tools de
+        # providers.ps1, o un servidor que las rechazo): que lo sepa, para
+        # que no conteste como si hubiera buscado.
+        $nota += ' No puedes buscar en internet ni consultar nada fuera de esta conversacion. Si te piden datos actuales (precios, clima, noticias, resultados), di que no puedes buscarlos y no los inventes.'
+    }
     $sys = @{ role = 'system'; content = ([string]$arr[0].content + "`n" + $nota).Trim() }
-    return @($sys) + @($arr | Select-Object -Skip 1)
+    $resto = @($arr | Select-Object -Skip 1)
+    if ($Anexo -and $Indice -ge 1 -and $Indice -lt $arr.Count) {
+        $resto[$Indice - 1] = @{ role = 'user'; content = ([string]$arr[$Indice].content + "`n`n" + $Anexo) }
+    }
+    return @($sys) + $resto
 }
 
 function Invoke-AITurn {
     <#  Un turno completo: manda, pinta y guarda en memoria.
         Si el modelo pide buscar_web, se busca, se le pasan los resultados y
-        se le vuelve a preguntar (como mucho dos busquedas por turno). Con
-        -ForceQuery (/buscar) se busca antes de preguntarle.  #>
+        se le vuelve a preguntar (como mucho dos busquedas por turno). Si pide
+        datos_equipo, se lee de la laptop y se le pasa lo leido (como mucho
+        dos lecturas por turno); esa no necesita internet. Con -ForceQuery
+        (/buscar) se busca antes de preguntarle.  #>
     param([string]$UserText, [int]$PrefixWidth = 0, [string]$ForceQuery)
 
     [void]$messages.Add(@{ role = 'user'; content = $UserText })
@@ -230,10 +268,36 @@ function Invoke-AITurn {
     $retirar = { while ($messages.Count -ge $base) { $messages.RemoveAt($messages.Count - 1) } }
 
     $red     = if ($script:Web -or $ForceQuery) { Test-AIInternet } else { $false }
-    $ofrece  = $script:Web -and $red -and -not $script:SinHerramientas[$prov.Id]
+    # Sin herramientas: el servidor las rechazo en esta sesion, o el modelo
+    # no sabe pedirlas (Tools = $false en providers.ps1).
+    $sinHerr = [bool]$script:SinHerramientas[$prov.Id] -or ($prov.Tools -eq $false)
+    $ofrece  = $script:Web -and $red -and -not $sinHerr
+    # Los datos del equipo se ofrecen haya o no internet: no salen a ningun
+    # sitio. Salvo si la pregunta es sobre otro aparato (ver $AI_EQUIPO_AJENO).
+    $ofreceEq = $script:Equipo -and -not $sinHerr -and -not (Test-AIEquipoAjeno $UserText)
     $fuentes = @()
     $buscas  = 0
+    $lecturas = 0      # lecturas del equipo en este turno (la del atajo cuenta)
+    $rondas  = 0       # vueltas con herramienta: tope para no dar vueltas sin fin
     $avisoEnFila = $PrefixWidth -gt 0   # el primer aviso sale en la fila de "ia > "
+
+    # El atajo: si la pregunta pide a las claras datos de este equipo, se leen
+    # ya y viajan con ella. Ni espera a que el modelo los pida ni depende de
+    # que sepa pedirlos.
+    $anexo = ''
+    if ($script:Equipo -and -not $ForceQuery) {
+        $pre = Find-AIEquipoGroups $UserText
+        if ($pre.Count) {
+            Write-AINote "leyendo de este equipo: $($pre -join ', ')" $PrefixWidth -Reprefix:$avisoEnFila
+            $avisoEnFila = $false
+            $anexo = (Get-AIEquipoText $pre -ParaModelo).Text
+            $lecturas = 1
+            # Ya esta leido: en este turno no se ofrece ademas la herramienta.
+            # Ofrecida, Gemma 4 E4B la pedia a veces igual y el turno
+            # costaba el doble para leer lo mismo.
+            $ofreceEq = $false
+        }
+    }
 
     if ($ForceQuery) {
         if (-not $red) {
@@ -256,16 +320,22 @@ function Invoke-AITurn {
     }
 
     while ($true) {
-        $herr = if ($ofrece -and $buscas -lt 2) { @($AI_WEB_TOOL) } else { $null }
+        $daWeb = $ofrece -and $buscas -lt 2 -and $rondas -lt 4
+        $daEq  = $ofreceEq -and $lecturas -lt 2 -and $rondas -lt 4
+        $herr  = @()
+        if ($daWeb) { $herr += $AI_WEB_TOOL }
+        if ($daEq)  { $herr += $AI_EQUIPO_TOOL }
+        if ($herr.Count -eq 0) { $herr = $null }
         $rend = New-AIRenderer -Plain:$Plain -PrefixWidth $PrefixWidth
         $cb   = { param($t) Add-AIToken $rend $t }.GetNewClosure()
 
-        # Tras una busqueda se contesta con lo leido: temperatura baja, para
-        # que copie cifras y fechas de las paginas en vez de adornarlas. (Ojo
+        # Tras una busqueda o una lectura del equipo se contesta con lo
+        # leido: temperatura baja, para que copie cifras y fechas en vez de
+        # adornarlas. (Ojo
         # al comprobar: hay paginas que fechan en UTC, y en Nicaragua desde
         # las 18:00 ya dicen "manana".)
-        $tempo = if ($buscas -gt 0) { [Math]::Min($Temp, 0.2) } else { $Temp }
-        $res = Invoke-AIChat -Provider $prov -Messages (Get-AITurnMessages ([bool]$herr) $red) `
+        $tempo = if (($buscas + $lecturas) -gt 0) { [Math]::Min($Temp, 0.2) } else { $Temp }
+        $res = Invoke-AIChat -Provider $prov -Messages (Get-AITurnMessages $daWeb $red $daEq $anexo ($base - 1) $sinHerr) `
                              -Model $Model -Temperature $tempo `
                              -OnToken $cb -NoStream:$NoStream -Tools $herr
 
@@ -274,7 +344,9 @@ function Invoke-AITurn {
         # le vuelve a ofrecer en esta sesion.
         if (-not $res.Ok -and $herr -and -not $res.Text -and $res.Error -match '^HTTP 4\d\d') {
             $script:SinHerramientas[$prov.Id] = $true
+            $sinHerr = $true
             $ofrece = $false
+            $ofreceEq = $false
             continue
         }
 
@@ -292,11 +364,20 @@ function Invoke-AITurn {
             $tcs = @($res.ToolCalls | Select-Object -First 2)
             [void]$messages.Add(@{ role = 'assistant'; content = [string]$res.Text; tool_calls = @($tcs | ForEach-Object {
                 @{ id = $_.Id; type = 'function'; function = @{ name = $_.Name; arguments = $_.Arguments } } }) })
+            $rondas++
             foreach ($tc in $tcs) {
-                $buscas++
-                if ($tc.Name -ne 'buscar_web') {
-                    $txt = "La herramienta '$($tc.Name)' no existe; solo hay buscar_web."
+                if ($tc.Name -eq 'datos_equipo' -and $daEq) {
+                    $lecturas++
+                    $grupos = ConvertTo-AIEquipoGroups $tc.Arguments
+                    Write-AINote "leyendo de este equipo: $($grupos -join ', ')" $PrefixWidth -Reprefix:$avisoEnFila
+                    $avisoEnFila = $false
+                    $txt = (Get-AIEquipoText $grupos -ParaModelo).Text
+                }
+                elseif ($tc.Name -ne 'buscar_web' -or -not $daWeb) {
+                    $txt = if ($tc.Name -eq 'buscar_web') { 'Ahora no se puede buscar en internet. Dilo y contesta con lo que sepas.' }
+                           else { "La herramienta '$($tc.Name)' no esta disponible." }
                 } else {
+                    $buscas++
                     $q = ''
                     try { $q = [string]($tc.Arguments | ConvertFrom-Json).consulta } catch { }
                     if (-not $q.Trim()) { $q = $UserText }
@@ -373,6 +454,7 @@ Clear-Host
 $c = $AI_COLOR
 Write-Host ""
 $estadoWeb = if (-not $script:Web) { 'busqueda apagada' }
+             elseif ($prov.Tools -eq $false) { 'este modelo no busca solo: usa /buscar' }
              elseif (Test-AIInternet) { 'busca en internet si hace falta' }
              else { 'sin internet: contesta sin buscar' }
 Write-Host "  $($c.Head)PRC AI 2.0$($c.Off)  $($c.Dim)$($prov.Label) / $Model  -  $estadoWeb$($c.Off)"
@@ -422,6 +504,16 @@ while ($true) {
                elseif (Test-AIInternet -Force) { 'busqueda encendida: el modelo buscara cuando haga falta' }
                else { 'busqueda encendida, pero ahora no hay conexion a internet' }
         Write-Host "$($c.Dim)$msg$($c.Off)"
+    }
+    elseif ($line -match '^/equipo\s+(on|off|si|no)$') {
+        $script:Equipo = $Matches[1] -in 'on', 'si'
+        $msg = if ($script:Equipo) { 'datos del equipo encendidos: el modelo puede leerlos cuando haga falta' }
+               else { 'datos del equipo apagados: el modelo no los leera (/equipo los sigue ensenando)' }
+        Write-Host "$($c.Dim)$msg$($c.Off)"
+    }
+    elseif ($line -match '^/equipo(\s+(.+))?$') {
+        # Sin modelo: lo leido, tal cual. Funciona sin servidor y sin internet.
+        Write-Host "$($c.Bot)$((Get-AIEquipoText (ConvertTo-AIEquipoGroups ([string]$Matches[2])) -Reloj).Text)$($c.Off)"
     }
     elseif ($line -match '^/buscar\s+(.+)$') {
         $q = $Matches[1].Trim()

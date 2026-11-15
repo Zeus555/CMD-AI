@@ -30,6 +30,11 @@ que lo genera, y el cliente lo pinta segun llega.
   solo si la laptop tiene salida a internet, busca en DuckDuckGo, lee las
   primeras páginas y contesta con eso, citando las fuentes. Ver «Buscar en
   internet».
+- **Sabe lo que la laptop ya sabe**, sin internet: la hora y la fecha salen
+  del reloj del equipo, y la batería, la red (wifi, IP local, puerta de
+  enlace, DNS, si hay internet), Windows, el procesador, la memoria, los
+  discos y la gráfica se leen del propio equipo cuando se pregunta por ellos.
+  Ver «Datos de este equipo».
 - **Diagnóstico** con `AI -Check`: estado de clave y conectividad de los
   proveedores sin gastar tokens.
 
@@ -94,7 +99,8 @@ AI "pregunta" -Provider gemma3  modelo local mas rapido (Gemma 3 4B)
 AI "pregunta" -Provider qwen    modelo local mas capaz y mas lento (Qwen3 8B)
 AI "pregunta" -Provider gpt -m gpt-4o -Temp 0.2 -NoStream -Plain
 AI "pregunta" -NoWeb            sin buscar en internet
-AI -Check                       diagnostico de los proveedores e internet
+AI "pregunta" -NoEquipo         sin leer datos de este equipo
+AI -Check                       diagnostico de los proveedores, internet y el equipo
 AI -Help                        ayuda completa
 ```
 
@@ -110,6 +116,8 @@ Dentro del modo interactivo:
 | `/save [ruta]` | guardar la conversación en JSON |
 | `/buscar X`    | buscar X en internet y contestar con lo encontrado |
 | `/web on|off` | dejar o no que el modelo busque solo |
+| `/equipo [X]`  | enseñar los datos de este equipo sin preguntar al modelo (X: `bateria`, `red`, `equipo`, `sistema`, `procesador`, `memoria`, `disco`, `grafica`) |
+| `/equipo on|off` | dejar o no que se lean los datos de este equipo al preguntar |
 | `/help`        | mostrar la ayuda                |
 
 Sin configurar nada, el proveedor es `xai`: hace falta `XAI_API_KEY`, o elegir
@@ -129,6 +137,9 @@ y `AI_QUESTION` (la usa internamente `AI.bat` para pasar la pregunta intacta).
 El `model` de `settings.json` va con su `provider`: si eliges otro proveedor
 con `-Provider` o `AI_PROVIDER`, se usa el modelo por defecto de ese proveedor.
 Para que un modelo local sea el de por defecto: `{ "provider": "qwen" }`.
+
+En el mismo fichero, `"web": false` apaga la búsqueda en internet y
+`"equipo": false` la lectura de los datos de este equipo.
 
 ## Proveedores soportados
 
@@ -212,6 +223,13 @@ Los `.gguf` pueden ser otros: lo que tiene que coincidir con
   suyo, también a `-Provider qwen`. `AI -Check` lo delata
   (`contesta, pero no ofrece 'qwen3-8b'`).
 - En el modo interactivo, `/provider qwen` cambia de modelo sin salir.
+- A `gemma3` no se le ofrecen herramientas (campo `Tools = $false` de
+  `lib/providers.ps1`): Gemma 3 4B no sabe pedirlas. Con `buscar_web` a la
+  vista no buscaba y contestaba como si lo hubiera hecho («Según búsqueda
+  web, el dólar está a 37 córdobas», inventado; 3 de 3 preguntas el
+  2026-11-15). Sin herramientas dice que no puede buscar. Con `gemma3` sigue
+  habiendo `/buscar X`, y los datos del equipo le llegan por el atajo (ver
+  «Datos de este equipo»).
 - `qwen` pide las respuestas sin razonamiento (`reasoning_budget_tokens = 0` en
   cada petición, campo `Extra`): Qwen3 razona por defecto y `AI` no muestra ese
   razonamiento, así que cada pregunta serían de 1 a 5 minutos en blanco
@@ -263,7 +281,80 @@ ia > El precio del dólar hoy en Nicaragua es de 36.81 córdobas a la venta...
 - **Límites**: las páginas que se cargan con JavaScript (muchas de resultados
   deportivos, la del tipo de cambio del BCN) llegan sin el dato; entonces el
   modelo se apoya en los resúmenes de los resultados o dice que no lo
-  encontró. Si DuckDuckGo toma la consulta por un robot, lo dice.
+  encontró. Si DuckDuckGo toma la consulta por un robot, lo dice. Depende de
+  que el modelo sepa pedir herramientas: Gemma 4 E4B y Qwen3 8B lo hacen;
+  Gemma 3 4B no, y por eso con `gemma3` solo se busca con `/buscar`.
+
+## Datos de este equipo
+
+Hay cosas que no están en internet ni en la memoria del modelo, sino en la
+propia laptop: la hora, la batería, la red a la que está conectada. Preguntar
+eso no necesita conexión.
+
+```
+Ariel > ¿cuál es mi IP?
+ia > leyendo de este equipo: red
+ia > Tu dirección IP en la red local es 192.168.1.23 (por wifi).
+     La IP pública no se puede leer desde el equipo.
+Ariel > ¿qué hora es?
+ia > Son las 11:01 a. m. del domingo 15 de noviembre de 2026.
+```
+
+| Si preguntas por… | Sale de |
+| --- | --- |
+| La hora, la fecha, qué día es mañana | El reloj del equipo |
+| La batería: carga, si está enchufada, tiempo que queda | Windows |
+| Si hay internet, la red wifi y su señal, la IP local, la puerta de enlace, los DNS | Windows y la red local |
+| El nombre del equipo, el usuario de Windows, la marca y el modelo | Windows |
+| La versión de Windows y cuánto lleva encendido | Windows |
+| El procesador, la memoria RAM, los discos y la tarjeta gráfica | Windows |
+
+Funciona con tres piezas (`lib/equipo.ps1`):
+
+- **El reloj** viaja en la instrucción de sistema de cada pregunta: la hora y
+  la fecha se contestan a la primera, con cualquier proveedor.
+- **El atajo**: si la pregunta pide a las claras un dato de este equipo («cuál
+  es mi IP», «cuánta batería me queda», «cuánta RAM tiene esta laptop»), `AI`
+  lo lee antes de preguntar al modelo y se lo pasa junto a la pregunta. Así
+  no depende de que el modelo sepa pedir herramientas y se contesta en una
+  sola vuelta (de 2 a 5 s con Gemma 4 E4B). Para saltar hacen falta dos
+  cosas: el tema y una marca de que se habla de este equipo («mi», «tengo»,
+  «me queda», «esta laptop»).
+- **La herramienta `datos_equipo`**, para lo que el atajo no reconoce: se
+  ofrece al modelo igual que `buscar_web` y él decide. A diferencia de
+  `buscar_web` se ofrece haya o no internet, porque no sale a ningún sitio.
+
+Lo que conviene saber:
+
+- **Solo lectura y lista cerrada.** Son ocho lecturas fijas (`bateria`, `red`,
+  `equipo`, `sistema`, `procesador`, `memoria`, `disco`, `grafica`). Del
+  modelo llega el nombre de una lectura, nunca una orden: ni lo que escribes
+  ni lo que escribe el modelo llega a una línea de comandos. Nada de esto
+  hace peticiones a internet; si hay conexión lo dice el indicador de red de
+  Windows.
+- **No toma por suyo lo que no lo es.** «¿Cuánta batería tiene el iPhone
+  15?», «¿qué procesador trae la Lenovo Legion 5?» o «¿cuánta RAM trae una
+  laptop gamer?» no son de este equipo: no se lee nada y se buscan en
+  internet como siempre. «¿Qué es una dirección IP?» la explica el modelo.
+- **Si no pudo leer un dato, lo dice** y no pone ninguno en su lugar. La IP
+  pública (la que ven los sitios de internet) no se puede leer desde el
+  equipo, y también lo dice.
+- **Sin modelo**: `/equipo` enseña en pantalla todo lo leído, y `/equipo red`
+  o `/equipo disco memoria` solo esa parte. Funciona sin servidor y sin
+  internet.
+- **Con un proveedor en la nube** (OpenAI, xAI), lo leído viaja a ese
+  proveedor junto a la pregunta, como cualquier otro mensaje: el nombre del
+  equipo, el usuario o la red wifi incluidos, si es lo que se preguntó.
+  Solo se lee lo que pide la pregunta.
+- **Apagarlo**: `-NoEquipo` en una pregunta, `/equipo off` en el modo
+  interactivo o `"equipo": false` en `settings.json`. La hora y la fecha se
+  siguen dando.
+- **Límites**: el atajo es una lista de expresiones y no lo reconoce todo;
+  una pregunta sin marca («¿cuánta batería queda?») la decide el modelo, que
+  con Gemma 4 E4B lee el dato o pregunta a qué equipo te refieres. Con un
+  modelo sin herramientas (`gemma3`) solo funciona el atajo: lo que no
+  reconoce se contesta con un «no puedo saberlo». La hora en otra ciudad no
+  sale del reloj: el modelo la busca en internet si hay conexión.
 
 ## Estructura del código
 
@@ -278,6 +369,9 @@ lib/providers.ps1   tabla declarativa de proveedores y alias
 lib/ui.ps1          colores ANSI, render incremental de Markdown, PSReadLine
 lib/web.ps1         buscar en internet: hay salida?, DuckDuckGo, lectura de
                     paginas y la herramienta buscar_web
+lib/equipo.ps1      lo que el equipo ya sabe: el reloj, las ocho lecturas
+                    (bateria, red, Windows, hardware), el atajo y la
+                    herramienta datos_equipo
 tools/Set-AIKey.ps1 guardado seguro de claves en HKCU\Environment
 tools/build.ps1     normaliza codificacion: UTF-8 con BOM en .ps1, CRLF en .bat
 ```
@@ -291,7 +385,8 @@ parsea).
 
 - Pensado para Windows; no se ha probado en PowerShell para Linux/macOS.
 - Sin soporte de imágenes ni ficheros adjuntos más allá del contexto por
-  stdin / `-Context`. La única herramienta es `buscar_web`.
+  stdin / `-Context`. Las únicas herramientas son `buscar_web` y
+  `datos_equipo`.
 - El coste de la memoria del REPL crece con la conversación (se envía entera
   en cada turno): usa `/new` en conversaciones largas.
 
