@@ -40,6 +40,9 @@ que lo genera, y el cliente lo pinta segun llega.
   comando, pide confirmación, lo prueba y enseña el resultado; desde entonces
   «¿cuál es mi IP pública?» se contesta sola. Unas reglas fijas, no el
   modelo, deciden si el comando es de solo lectura. Ver «Comandos guardados».
+- **Preferencias que se recuerdan** de una conversación a otra: «recuerda que
+  las cifras de dinero me las des en dólares». Las escribes tú y el modelo
+  las tiene delante en cada pregunta. Ver «Preferencias».
 - **Diagnóstico** con `AI -Check`: estado de clave y conectividad de los
   proveedores sin gastar tokens.
 - **Local por defecto**: sin configurar nada habla con Gemma 4 E4B en el
@@ -559,10 +562,18 @@ entrada ahí.
 - **Con plazo y tope**: 15 segundos y 4.000 caracteres de salida.
 - **Con los permisos de la consola.** Nunca pide permisos de administrador.
 - **El modelo pide por nombre.** La herramienta `comando_guardado` solo acepta
-  un nombre de la lista; el modelo no puede escribir un comando. Si la
-  pregunta lleva las palabras del nombre («ip pública» para `ip-publica`), se
-  ejecuta sin esperar a que el modelo lo pida, y así sirve también con
-  `gemma3`. `/comando ip-publica` lo ejecuta sin modelo.
+  un nombre de la lista; el modelo no puede escribir un comando.
+- **El atajo.** Si la pregunta lleva todas las palabras del nombre de un
+  comando guardado («ip pública» para `ip-publica`), el programa lo ejecuta sin
+  esperar a que el modelo lo pida, así que el dato es siempre el de ese
+  momento. Sirve también con `gemma3`.
+  - Si la pregunta nombra varios, se ejecutan hasta dos: «dame la fecha y
+    hora, y el precio de btc» ejecuta `fecha-hora` y `precio-btc`.
+  - No salta si la pregunta pide una explicación, un «cómo se hace», código o
+    una compra, ni si habla de otro aparato. Las palabras del propio nombre no
+    cuentan como freno: con `precio-btc` guardado, «precio» no frena «dame el
+    precio de btc».
+  - `/comando ip-publica` lo ejecuta sin pasar por el modelo.
 - **La salida entra como dato**, rotulada con el servidor del que viene. Tras
   ejecutar un comando guardado no se ofrecen más herramientas en ese turno,
   para que una respuesta de fuera no pueda encadenar otra acción.
@@ -584,6 +595,45 @@ entrada ahí.
   `%LOCALAPPDATA%\PRC-CMD-AI\comandos.json`. Se apagan con `-NoComandos`,
   `/comando off` o `"comandos": false` en `settings.json`.
 
+## Preferencias
+
+Lo que quieres que se tenga en cuenta siempre, también en las próximas
+conversaciones:
+
+```
+Ariel > recuerda que las cifras de dinero me las des en dólares
+  preferencia: Las cifras de dinero me las des en dólares
+  ¿La guardo para esta y las próximas conversaciones? (s/n) s
+guardada. La tendré en cuenta en esta y en las próximas conversaciones
+```
+
+- **Cómo se guardan:**
+  - empezando el mensaje con «recuerda que», «recuérdame que», «ten en cuenta
+    que», «toma nota:», «guarda en mis preferencias:», «de ahora en
+    adelante» o «a partir de ahora»;
+  - o con `/preferencia agregar <texto>`.
+- **Siempre se pregunta antes de guardar.** El mensaje se reconoce por cómo
+  empieza, y eso puede equivocarse. Si contestas que no, el mensaje va al
+  modelo como cualquier otro.
+- **Solo las escribes tú.** El modelo no tiene herramienta para guardarlas,
+  así que una página que lea en una búsqueda no puede colarle una
+  «preferencia». Si le pides que recuerde algo de otra forma («para que lo
+  recuerdes la próxima vez»), contesta que no puede y te dice cómo hacerlo.
+  Antes contestaba «lo recordaré», y era falso.
+- **Cómo las usa el modelo:** van en cada pregunta, al final de la
+  instrucción de sistema. Después de una búsqueda en internet se repiten
+  junto a los resultados, porque es lo que el modelo lee al redactar.
+- **Monedas:** con «cifras en dólares» guardado y una página en córdobas, se
+  le pide que busque el tipo de cambio y dé las dos cifras, y que nunca
+  convierta con un cambio de memoria. Gemma 4 E4B no siempre lo hace. A veces
+  da la cifra de la fuente y ofrece convertirla, pero no inventa el cambio.
+- **Comandos:** `/preferencias` las lista, numeradas, y `/preferencia quitar
+  <número>` borra una.
+- **Límites:** hasta 12 preferencias de hasta 200 caracteres, guardadas en
+  `%LOCALAPPDATA%\PRC-CMD-AI\preferencias.json`. El servidor local tiene 4096
+  tokens de contexto y las preferencias viajan en cada petición. Si el
+  fichero se rompe, se avisa y no se sobrescribe.
+
 ## Estructura del código
 
 ```
@@ -603,6 +653,8 @@ lib/equipo.ps1      lo que el equipo ya sabe: el reloj, las ocho lecturas
 lib/comandos.ps1    comandos de solo lectura que guarda el usuario: las
                     reglas (analizador de PowerShell y listas cerradas), la
                     ejecucion por piezas y la herramienta comando_guardado
+lib/preferencias.ps1 lo que el usuario pide recordar: reconocer "recuerda
+                    que...", guardar y cargar, y la nota para el modelo
 tools/Set-AIKey.ps1 guardado seguro de claves en HKCU\Environment
 tools/build.ps1     normaliza codificacion: UTF-8 con BOM en .ps1, CRLF en .bat
 tests/probar.ps1    pasa todas las pruebas y dice cuales fallan
@@ -623,13 +675,14 @@ Después de un cambio, y antes de subirlo:
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\probar.ps1
 ```
 
-Sin modelo y sin internet tarda unos 20 segundos y pasa cuatro pruebas:
+Sin modelo y sin internet tarda unos 20 segundos y pasa cinco pruebas:
 
 | Prueba | Qué mira |
 | --- | --- |
 | `comandos.ps1` | Comandos guardados: 158 comandos de `datos/reglas.txt` que las reglas deben aceptar o rechazar, el plan que se ejecuta, direcciones, nombres, la ejecución, guardar y cargar, lo que ve el modelo y el atajo. |
 | `equipo-frases.ps1` | 58 frases de `datos/equipo-frases.txt` y dos casos más: qué datos del equipo pide cada una, o ninguno. |
 | `equipo.ps1` | Reloj, formatos con un equipo de mentira y la lectura de verdad de este equipo. Esta lectura sale en pantalla y no se guarda. |
+| `preferencias.ps1` | Qué mensajes piden recordar algo y qué se guarda, la limpieza, guardar y cargar, el fichero roto, la nota para el modelo y que el modelo no pueda guardarlas. |
 | `dialogo.ps1 -SoloReconocer` | Reconocer cuándo una frase pide guardar un comando (`datos/peticiones.txt`) y leer lo que propone el modelo. |
 
 Opciones:

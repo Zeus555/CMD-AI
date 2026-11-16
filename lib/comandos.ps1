@@ -576,21 +576,30 @@ function Find-AIComandoAtajo {
         publica" para ip-publica), se ejecuta antes de preguntar al modelo y
         viaja con ella. Con los mismos frenos que el atajo de equipo.ps1: no
         salta si se pide una explicacion, un como se hace, codigo o una compra,
-        ni si se habla de otro aparato.  #>
-    param([string]$Texto, [array]$Lista)
-    if (-not $Lista -or -not $Lista.Count) { return $null }
+        ni si se habla de otro aparato.
+        Los frenos miran la pregunta SIN las palabras del propio nombre: con
+        precio-btc guardado, "precio" no puede frenar "dame el precio de btc"
+        (pasaba: el modelo decidia solo y a veces copiaba el precio y la hora
+        de la respuesta anterior en vez de volver a leerlos).
+        Devuelve todos los que encajen, como mucho $Max ("la fecha y hora, y
+        el precio de btc" son dos).  #>
+    param([string]$Texto, [array]$Lista, [int]$Max = 2)
+    if (-not $Lista -or -not $Lista.Count) { return }
     $plano = ConvertTo-AIPlano $Texto
-    if ($plano.Length -gt 300) { return $null }
-    if ($plano -match $AI_EQUIPO_AJENO) { return $null }
-    foreach ($v in $AI_EQUIPO_VETO) { if ($plano -match $v) { return $null } }
+    if ($plano.Length -gt 300) { return }
+    if ($plano -match $AI_EQUIPO_AJENO) { return }
+    $salen = @()
+    $resto = $plano
     foreach ($c in $Lista) {
-        $todas = $true
-        foreach ($w in ($c.Nombre -split '-')) {
-            if ($plano -notmatch ('(?<![a-z0-9])' + [regex]::Escape($w) + '(?![a-z0-9])')) { $todas = $false; break }
-        }
-        if ($todas) { return $c }
+        $pats = @($c.Nombre -split '-' | Where-Object { $_ } | ForEach-Object { '(?<![a-z0-9])' + [regex]::Escape($_) + '(?![a-z0-9])' })
+        if (@($pats | Where-Object { $plano -notmatch $_ }).Count) { continue }
+        foreach ($p in $pats) { $resto = $resto -replace $p, ' ' }
+        $salen += $c
     }
-    return $null
+    if (-not $salen.Count) { return }
+    # Los frenos, sobre lo que queda quitando los nombres de los que encajan.
+    foreach ($v in $AI_EQUIPO_VETO) { if ($resto -match $v) { return } }
+    return @($salen | Select-Object -First $Max)
 }
 
 function Get-AIComandoDocUrl {

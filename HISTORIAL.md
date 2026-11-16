@@ -8,6 +8,92 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ---
 
+## 2026-11-16 — Una hora inventada, y las preferencias
+
+**La incidencia.** El dueño preguntó tres veces seguidas «dame la fecha y
+hora, y el precio de btc, en un formato json». Tenía guardados `fecha-hora`
+(`Get-Date`, local) y `precio-btc` (la API de Coinbase). La tercera respuesta
+decía «8:04:07 AM» cuando ya eran más de las 8:05: ni se ejecutó el comando
+ni se miró el reloj. El modelo copió su respuesta anterior y cambió los
+segundos. El precio era también el de antes.
+
+**Por qué pasó.**
+
+- **El atajo no saltó.** La pregunta nombraba los dos comandos, pero el atajo
+  tiene un freno para las compras que salta con «precio», y «precio» es parte
+  del nombre `precio-btc`. Además, el atajo solo ejecutaba un comando.
+- **Sin atajo, el modelo decide.** Unas veces pedía los dos comandos y otras
+  no pedía nada. En la memoria solo quedan la pregunta y la respuesta, no lo
+  leído, y la respuesta anterior tenía los datos a la vista.
+
+Se reprodujo con la sesión del dueño (diez turnos): en el décimo, Gemma 4 E4B
+contestó «8:30:19» a una pregunta hecha a las 8:30:30, sin ejecutar nada.
+
+**Qué cambia.**
+
+- **El atajo ejecuta hasta dos comandos por pregunta**, el mismo tope que
+  cuando los pide el modelo.
+- **Los frenos del atajo** miran la pregunta sin las palabras de los nombres
+  que encajan. «Cuál es el mejor precio de btc» sigue frenado por «mejor».
+- **Una nota nueva al modelo** cuando hay turnos anteriores: las horas y los
+  precios de respuestas anteriores eran de aquel momento, así que no se
+  copian. Se vuelven a leer con el reloj de la nota o con la herramienta.
+
+Con el arreglo, la misma sesión de diez turnos ejecuta los dos comandos en
+cada una de las tres preguntas, y la hora es la del momento.
+
+**Las preferencias.** El dueño pidió una memoria de preferencias: el uso de
+comandos, dólares para las cifras y córdobas para la lotería de Nicaragua.
+
+- **Cómo se guardan:** con «recuerda que...» (y otros arranques parecidos) o
+  con `/preferencia agregar`. Siempre se pide confirmación antes de guardar.
+- **Dónde viven:** en `preferencias.json`, como mucho 12 de hasta 200
+  caracteres.
+- **Cómo llegan al modelo:** al final de la instrucción de sistema y, después
+  de una búsqueda, otra vez detrás de los resultados. Solo con la instrucción
+  de sistema, Gemma 4 E4B las pasaba por alto al redactar con una página
+  delante.
+- **El modelo no tiene herramienta para guardarlas**, para que una página web
+  no pueda colarle una preferencia que dure.
+- **Sin preferencias, la nota avisa** de que el modelo no puede recordar nada
+  por su cuenta. A «te lo explico para que lo recuerdes» contestaba como si
+  fuera a recordarlo; ahora dice que no puede y explica cómo guardarlo.
+
+**Lo que se arregló de paso.**
+
+- **Un fallo que la búsqueda dejaba apagado.** Con dos búsquedas en un turno,
+  la petición no cabía en los 4096 tokens del servidor local. El programa
+  tomaba ese HTTP 400 por «el modelo no acepta herramientas» y apagaba la
+  búsqueda el resto de la sesión: las dos preguntas siguientes contestaron
+  «No puedo buscar». Ahora la segunda búsqueda de un turno lee menos (una
+  página de 1200 caracteres). Si aun así no cabe, se recortan a la mitad los
+  resultados del turno y se repite, como mucho dos veces. Se probó con una
+  búsqueda falsa de 26.000 caracteres: contestó con el dato, y la pregunta
+  siguiente volvió a buscar.
+
+**Lo que no se consiguió.** Con «cifras en dólares» guardado y una página en
+córdobas, Gemma 4 E4B casi nunca busca el tipo de cambio:
+
+- da la cifra de la fuente y ofrece convertirla;
+- o, con un precio en dólares a mano, da ese;
+- la vez que sí lo buscó fue la que desbordó el contexto.
+
+En ningún caso inventó un cambio. Con la lotería sí respeta los córdobas.
+
+**Cómo se probó.**
+
+- `tests\probar.ps1 -Red -Modelo`: 6 de 6 pruebas sin fallos. Son 244
+  comprobaciones de comandos (cinco nuevas sobre el atajo), 37 de preferencias
+  (prueba nueva), 41 del diálogo y los nueve casos de `/comando agregar`.
+- Aparte, con un arnés:
+  - la confirmación en el modo interactivo;
+  - el duplicado;
+  - el fichero roto, que no se sobrescribe;
+  - `/preferencia quitar` hasta dejar la lista vacía. La primera versión
+    fallaba al quitar la última.
+
+---
+
 ## 2026-11-15 — Las pruebas, dentro del repositorio
 
 **Qué cambia.** Hay una carpeta `tests/` nueva. `tests\probar.ps1` pasa las

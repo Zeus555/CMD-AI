@@ -117,7 +117,7 @@ Ver 'pedido: otra clave no vale' ($null -eq (Find-AIComandoPedido '{"comando":"i
 Ver 'pedido: json roto' ($null -eq (Find-AIComandoPedido '{"nombre":' $lista))
 
 # ---- el atajo ---------------------------------------------------------------
-function At($t) { $c = Find-AIComandoAtajo $t $lista; if ($c) { $c.Nombre } else { '-' } }
+function At($t, $l = $lista) { $c = @(Find-AIComandoAtajo $t $l); if ($c.Count) { ($c | ForEach-Object { $_.Nombre }) -join ',' } else { '-' } }
 $ip = 'cu' + [char]0xE1 + 'l es mi IP p' + [char]0xFA + 'blica?'
 Ver 'atajo: con acentos y mayusculas' ((At $ip) -eq 'ip-publica')
 Ver 'atajo: con guion' ((At 'dame la ip-publica') -eq 'ip-publica')
@@ -128,6 +128,17 @@ Ver 'atajo: un como se hace no' ((At 'como cambio mi ip publica') -eq '-')
 Ver 'atajo: otro aparato no' ((At 'cual es la ip publica de mi celular') -eq '-')
 Ver 'atajo: nada que ver' ((At 'hola') -eq '-')
 Ver 'atajo: sin comandos guardados' ($null -eq (Find-AIComandoAtajo $ip @()))
+# la incidencia del 2026-11-16: "precio" frenaba el atajo de precio-btc y el
+# modelo, sin el, llego a copiar la hora y el precio de su respuesta anterior
+$tres = @(
+    [pscustomobject]@{ Nombre = 'ip-publica'; Comando = 'Invoke-RestMethod -Uri https://api.ipify.org'; Descripcion = '' }
+    [pscustomobject]@{ Nombre = 'fecha-hora'; Comando = 'Get-Date'; Descripcion = '' }
+    [pscustomobject]@{ Nombre = 'precio-btc'; Comando = 'Invoke-RestMethod -Uri https://api.coinbase.com/v2/prices/BTC-USDC/spot'; Descripcion = '' })
+Ver 'atajo: dos a la vez, en el orden de la lista' ((At 'dame la fecha y hora, y el precio de btc, en un formato json' $tres) -eq 'fecha-hora,precio-btc') (At 'dame la fecha y hora, y el precio de btc, en un formato json' $tres)
+Ver 'atajo: una palabra del nombre no lo frena' ((At 'dame el precio de btc' $tres) -eq 'precio-btc') (At 'dame el precio de btc' $tres)
+Ver 'atajo: una palabra que no es del nombre si' ((At 'cual es el mejor precio de btc' $tres) -eq '-') (At 'cual es el mejor precio de btc' $tres)
+Ver 'atajo: una explicacion sigue frenando' ((At 'que es el precio de btc' $tres) -eq '-') (At 'que es el precio de btc' $tres)
+Ver 'atajo: como mucho dos' (@(Find-AIComandoAtajo 'mi ip publica, la fecha y hora y el precio de btc' $tres).Count -eq 2)
 
 # ---- la pagina de documentacion --------------------------------------------
 Ver 'doc: cmdlet' ((Get-AIComandoDocUrl (Get-AIComandoPlan 'Invoke-RestMethod https://api.ipify.org')) -eq 'https://learn.microsoft.com/es-es/powershell/module/microsoft.powershell.utility/invoke-restmethod')

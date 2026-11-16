@@ -21,6 +21,7 @@ $pruebas = @(
     @{ Nombre = 'comandos guardados'; Fichero = 'comandos.ps1'; Args = @(if ($Red) { '-Red' }) }
     @{ Nombre = 'frases del equipo'; Fichero = 'equipo-frases.ps1'; Args = @() }
     @{ Nombre = 'datos del equipo'; Fichero = 'equipo.ps1'; Args = @() }
+    @{ Nombre = 'preferencias'; Fichero = 'preferencias.ps1'; Args = @() }
 )
 if ($Modelo) {
     $pruebas += @{ Nombre = 'dialogo, con el modelo'; Fichero = 'dialogo.ps1'; Args = @('-Proveedor', $Proveedor) }

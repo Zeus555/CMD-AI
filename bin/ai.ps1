@@ -64,6 +64,7 @@ $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $root 'lib\web.ps1')
 . (Join-Path $root 'lib\equipo.ps1')
 . (Join-Path $root 'lib\comandos.ps1')
+. (Join-Path $root 'lib\preferencias.ps1')
 
 Initialize-AIConsole
 
@@ -104,6 +105,12 @@ $script:ComandosOn = (-not $NoComandos) -and ($conf.comandos -ne $false)
 $carga = Read-AIComandos $CmdFile -SinReglas
 $script:Comandos      = @($carga.Lista)
 $script:ComandosMalos = @($carga.Rechazados)
+# Preferencias que el usuario pidio recordar (ver preferencias.ps1). Viajan en
+# cada peticion; si el fichero esta roto no se usan ni se sobrescribe.
+$PrefFile = Join-Path $DataDir 'preferencias.json'
+$carga = Read-AIPreferencias $PrefFile
+$script:Preferencias   = @($carga.Lista)
+$script:PreferenciaMal = $carga.Error
 # Proveedores que rechazaron la herramienta con un HTTP 4xx: no se les vuelve
 # a ofrecer en esta sesion.
 $script:SinHerramientas = @{}
@@ -164,6 +171,11 @@ $($c.Bullet)EN EL MODO INTERACTIVO$($c.Off)
                  (ej.: /comando agregar ip-publica Invoke-RestMethod -Uri https://api.ipify.org)
   /comando       lista de los guardados     /comando N   ejecutar N
   /comando quitar N   borrarlo              /comando on|off   que el modelo los use o no
+  recuerda que ...   guardar una preferencia para esta y las proximas
+                 conversaciones (ej.: recuerda que las cifras de dinero me
+                 las des en dolares). Pregunta antes de guardarla
+  /preferencias  lista de las guardadas     /preferencia agregar X   guardar X
+  /preferencia quitar N   borrar la numero N
 "@ | Write-Host
 }
 
@@ -258,6 +270,12 @@ function Get-AITurnMessages {
     param([bool]$Ofrece, [bool]$Red, [bool]$OfreceEquipo, [string]$Anexo, [int]$Indice = -1, [bool]$SinHerramientas, [bool]$OfreceComandos)
     $arr  = $messages.ToArray()
     $nota = Get-AIClockNote
+    if ($arr.Count -gt 2) {
+        # Con turnos anteriores en la memoria, Gemma 4 E4B llego a copiar la
+        # hora y el precio de su respuesta anterior (cambiando los segundos)
+        # en vez de volver a leerlos.
+        $nota += ' Las horas, precios y demas datos que aparecen en respuestas anteriores de esta conversacion eran de aquel momento y pueden haber cambiado: si te los vuelven a pedir, no los copies; usa la hora de esta nota o vuelve a pedir la herramienta.'
+    }
     if ($OfreceEquipo) {
         $nota += ' Tienes la herramienta datos_equipo, que lee los datos del equipo del usuario y de su red local (bateria, internet, wifi, direccion IP, Windows, procesador, memoria, discos, grafica). Usala cuando el usuario pregunte por los datos de su propio equipo: esos no te los sabes, asi que no los des de memoria. Lo demas, incluidos los datos de cualquier otro aparato, se contesta como siempre.'
     }
@@ -276,6 +294,8 @@ function Get-AITurnMessages {
         # que no conteste como si hubiera buscado.
         $nota += ' No puedes buscar en internet ni consultar nada fuera de esta conversacion. Si te piden datos actuales (precios, clima, noticias, resultados), di que no puedes buscarlos y no los inventes.'
     }
+    # Las preferencias al final: lo ultimo de la instruccion es lo que mas pesa.
+    $nota += ' ' + (Get-AIPreferenciasNota $script:Preferencias)
     $sys = @{ role = 'system'; content = ([string]$arr[0].content + "`n" + $nota).Trim() }
     $resto = @($arr | Select-Object -Skip 1)
     if ($Anexo -and $Indice -ge 1 -and $Indice -lt $arr.Count) {
@@ -320,6 +340,7 @@ function Invoke-AITurn {
     $buscas  = 0
     $lecturas = 0      # lecturas del equipo en este turno (la del atajo cuenta)
     $rondas  = 0       # vueltas con herramienta: tope para no dar vueltas sin fin
+    $recortes = 0      # veces que se recortaron los resultados por no caber
     $avisoEnFila = $PrefixWidth -gt 0   # el primer aviso sale en la fila de "ia > "
 
     # El atajo: si la pregunta pide a las claras datos de este equipo, se leen
@@ -340,14 +361,17 @@ function Invoke-AITurn {
         }
     }
     # El mismo atajo para los comandos guardados: si la pregunta lleva escrito
-    # el nombre de uno ("ip publica" para ip-publica), se ejecuta ya.
+    # el nombre de uno ("ip publica" para ip-publica), se ejecuta ya. Hasta
+    # dos por pregunta, el mismo tope que cuando los pide el modelo.
     if ($script:ComandosOn -and -not $ForceQuery) {
-        $cg = Find-AIComandoAtajo $UserText $script:Comandos
-        if ($cg) {
+        $cgs = @(Find-AIComandoAtajo $UserText $script:Comandos)
+        foreach ($cg in $cgs) {
             Write-AINote "ejecutando el comando guardado: $($cg.Nombre)" $PrefixWidth -Reprefix:$avisoEnFila
             $avisoEnFila = $false
             $anexo = (@($anexo, (Invoke-AIComandoGuardado $cg).ParaModelo) | Where-Object { $_ }) -join "`n`n"
-            $corridas = 1
+        }
+        if ($cgs.Count) {
+            $corridas = $cgs.Count
             $cerrado = $true
         }
     }
@@ -394,10 +418,27 @@ function Invoke-AITurn {
                              -Model $Model -Temperature $tempo `
                              -OnToken $cb -NoStream:$NoStream -Tools $herr
 
+        # La peticion no cabe en el contexto del servidor (llama-server:
+        # "exceeds the available context size"). Pasaba con dos busquedas en
+        # un turno. Se recortan a la mitad los resultados leidos en este turno
+        # y se repite, como mucho dos veces. Antes caia en el caso de abajo y
+        # la busqueda quedaba apagada el resto de la sesion.
+        $sinSitio = (-not $res.Ok) -and (-not $res.Text) -and ($res.Error -match 'context (?:size|length|window)|exceeds the available context|maximum context|too many tokens')
+        if ($sinSitio -and $recortes -lt 2) {
+            $recortes++
+            for ($k = $base; $k -lt $messages.Count; $k++) {
+                $m = $messages[$k]
+                if ($m.role -eq 'tool' -and ([string]$m.content).Length -gt 600) {
+                    $m.content = ([string]$m.content).Substring(0, [int](([string]$m.content).Length / 2)) + ' [...]'
+                }
+            }
+            continue
+        }
+
         # Un proveedor (o un servidor viejo) que no acepta "tools" contesta
         # 400/422 antes de escribir nada: se repite sin la herramienta y no se
         # le vuelve a ofrecer en esta sesion.
-        if (-not $res.Ok -and $herr -and -not $res.Text -and $res.Error -match '^HTTP 4\d\d') {
+        if (-not $res.Ok -and $herr -and -not $res.Text -and -not $sinSitio -and $res.Error -match '^HTTP 4\d\d') {
             $script:SinHerramientas[$prov.Id] = $true
             $sinHerr = $true
             $ofrece = $false
@@ -455,9 +496,21 @@ function Invoke-AITurn {
                     if (-not $q.Trim()) { $q = $UserText }
                     Write-AINote "buscando: $q" $PrefixWidth -Reprefix:$avisoEnFila
                     $avisoEnFila = $false
-                    $w = Invoke-AIWebSearch $q
+                    # La segunda busqueda del turno lee menos: la primera ya
+                    # ocupa sitio y el servidor local tiene 4096 tokens.
+                    $w = if ($buscas -ge 2) { Invoke-AIWebSearch $q -Pages 1 -CharsPerPage 1200 } else { Invoke-AIWebSearch $q }
                     $fuentes += $w.Sources
                     $txt = $w.Text
+                    # Las preferencias, repetidas detras de los resultados: en
+                    # la instruccion de sistema Gemma 4 E4B las pasaba por alto
+                    # al redactar con una pagina delante (daba cordobas con
+                    # "cifras en dolares" guardado).
+                    if ($script:Preferencias.Count) {
+                        $txt += "`n`nPreferencias guardadas por el usuario, que valen para esta respuesta:`n" +
+                                (@($script:Preferencias | ForEach-Object { "- $($_.Texto)" }) -join "`n") +
+                                $(if ($buscas -lt 2) { "`nSi una cifra viene en otra moneda que la preferida, busca ahora el tipo de cambio (buscar_web) y da las dos cifras con el cambio usado; no conviertas de memoria." }
+                                  else { "`nSi una cifra viene en otra moneda que la preferida y no tienes el tipo de cambio en estos resultados, da la de la fuente y di que no tienes el cambio." })
+                    }
                 }
                 [void]$messages.Add(@{ role = 'tool'; tool_call_id = $tc.Id; content = $txt })
             }
@@ -480,6 +533,40 @@ function Invoke-AITurn {
     # tiene que quedar vacio y no con el nombre de un turno anterior.
     $script:LastModel = $res.Model
     return $true
+}
+
+# ===========================================================================
+#  Preferencias (/preferencia y "recuerda que...")
+# ===========================================================================
+function Confirm-AIPreferencia {
+    <#  "recuerda que..." se reconoce por una expresion fija, que puede
+        equivocarse: antes de guardar se ensena lo que se guardaria y se
+        pregunta. Con "no", el mensaje sigue al modelo.  #>
+    param([string]$Texto, [bool]$UsaPRL)
+    $c = $AI_COLOR
+    Write-Host "  $($c.Dim)preferencia:$($c.Off) $Texto"
+    $r = Read-AILine "  $($c.Dim)¿La guardo para esta y las próximas conversaciones? (s/n)$($c.Off) " $UsaPRL
+    return ([string]$r).Trim().ToLowerInvariant() -match '^(s|si|sí|y|yes|vale|ok)$'
+}
+
+function Add-AIPreferencia {
+    <#  Guarda una preferencia ya limpia en preferencias.json y la recarga.  #>
+    param([string]$Texto)
+    $c = $AI_COLOR
+    if ($script:PreferenciaMal) { Write-AIError $script:PreferenciaMal; return }
+    if (-not $Texto) { Write-AIError 'la preferencia esta vacia.'; return }
+    if (@($script:Preferencias | Where-Object { $_.Texto -eq $Texto }).Count) {
+        Write-Host "$($c.Dim)esa ya estaba guardada.$($c.Off)"; return
+    }
+    if ($script:Preferencias.Count -ge $AI_PREF_MAX) {
+        Write-AIError "ya hay $AI_PREF_MAX preferencias, el maximo. Quita alguna con /preferencia quitar <numero>."; return
+    }
+    $nueva = [pscustomobject]@{ Texto = $Texto; Creado = (Get-Date -Format 'yyyy-MM-dd') }
+    try {
+        Save-AIPreferencias $PrefFile (@($script:Preferencias) + $nueva)
+        $script:Preferencias = @((Read-AIPreferencias $PrefFile).Lista)
+        Write-Host "$($c.Bot)guardada. La tendré en cuenta en esta y en las próximas conversaciones (/preferencias las lista).$($c.Off)"
+    } catch { Write-AIError "no pude escribir $($PrefFile): $($_.Exception.Message)" }
 }
 
 # ===========================================================================
@@ -918,6 +1005,34 @@ while ($true) {
             if ($r.Ok) { Write-Host "$($c.Bot)$($r.Salida)$($c.Off)" } else { Write-AIError "no se pudo ejecutar: $($r.Motivo)" }
         }
     }
+    elseif ($line -match '^/preferencias?(?:\s+(?:lista|listar))?$') {
+        if ($script:PreferenciaMal) { Write-AIError $script:PreferenciaMal }
+        elseif ($script:Preferencias.Count -eq 0) {
+            Write-Host "$($c.Dim)no hay preferencias guardadas. Para guardar una: recuerda que ...   o   /preferencia agregar <texto>$($c.Off)"
+        }
+        $i = 0
+        foreach ($p in $script:Preferencias) { $i++; Write-Host "  $($c.Bot)$i.$($c.Off) $($p.Texto)  $($c.Dim)($($p.Creado))$($c.Off)" }
+    }
+    elseif ($line -match '^/preferencias?\s+(?:agregar|anadir|añadir)\s+(\S.*)$') {
+        Add-AIPreferencia (ConvertTo-AIPreferencia $Matches[1])
+    }
+    elseif ($line -match '^/preferencias?\s+(?:quitar|borrar)\s+(\d+)$') {
+        $n = [int]$Matches[1]
+        if ($script:PreferenciaMal) { Write-AIError $script:PreferenciaMal }
+        elseif ($n -lt 1 -or $n -gt $script:Preferencias.Count) { Write-AIError "no hay preferencia numero $n. /preferencias las lista." }
+        else {
+            $fuera = $script:Preferencias[$n - 1].Texto
+            try {
+                $quedan = @(for ($k = 0; $k -lt $script:Preferencias.Count; $k++) { if ($k -ne ($n - 1)) { $script:Preferencias[$k] } })
+                Save-AIPreferencias $PrefFile $quedan
+                $script:Preferencias = @((Read-AIPreferencias $PrefFile).Lista)
+                Write-Host "$($c.Dim)quitada: $fuera$($c.Off)"
+            } catch { Write-AIError "no pude escribir $($PrefFile): $($_.Exception.Message)" }
+        }
+    }
+    elseif ($line -match '^/preferencias?\b') {
+        Write-Host "$($c.Dim)uso: /preferencias   /preferencia agregar <texto>   /preferencia quitar <numero>$($c.Off)"
+    }
     elseif ($line -match '^/equipo\s+(on|off|si|no)$') {
         $script:Equipo = $Matches[1] -in 'on', 'si'
         $msg = if ($script:Equipo) { 'datos del equipo encendidos: el modelo puede leerlos cuando haga falta' }
@@ -949,6 +1064,12 @@ while ($true) {
     elseif ($pet = Get-AIComandoPeticion $line) {
         # "agregame un comando para ver mi IP publica": se guarda conversando.
         Start-AIComandoDialogo $pet $line $usePRL
+    }
+    elseif (($pref = Get-AIPreferenciaPeticion $line) -and (Confirm-AIPreferencia $pref $usePRL)) {
+        # "recuerda que las cifras me las des en dolares": se guarda sin pasar
+        # por el modelo. Si el usuario dice que no, el mensaje sigue al modelo
+        # como cualquier otro (abajo).
+        Add-AIPreferencia $pref
     }
     else {
         # El rotulo comparte fila con la primera linea de la respuesta, por eso
