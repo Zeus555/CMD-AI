@@ -133,9 +133,11 @@ Dentro del modo interactivo:
 | `/comando on|off` | dejar o no que el modelo use los comandos guardados |
 | `/help`        | mostrar la ayuda                |
 
-Sin configurar nada, el proveedor es `xai`: hace falta `XAI_API_KEY`, o elegir
-otro. Orden de precedencia del proveedor: opción `-Provider`, variable de
-entorno `AI_PROVIDER`, `settings.json` y, si no hay nada, `xai`.
+Sin configurar nada, el proveedor es `gemma`: Gemma 4 E4B en el llama-server
+local (`http://127.0.0.1:8080`), sin clave y sin que nada salga de la laptop.
+Hace falta que ese servidor esté encendido, o elegir otro proveedor. Orden de
+precedencia del proveedor: opción `-Provider`, variable de entorno
+`AI_PROVIDER`, `settings.json` y, si no hay nada, `gemma`.
 
 La configuración por defecto (proveedor, modelo, instrucción de sistema) se
 puede fijar en `%LOCALAPPDATA%\PRC-CMD-AI\settings.json`:
@@ -149,7 +151,7 @@ y `AI_QUESTION` (la usa internamente `AI.bat` para pasar la pregunta intacta).
 
 El `model` de `settings.json` va con su `provider`: si eliges otro proveedor
 con `-Provider` o `AI_PROVIDER`, se usa el modelo por defecto de ese proveedor.
-Para que un modelo local sea el de por defecto: `{ "provider": "qwen" }`.
+Para que el de por defecto sea otro modelo local: `{ "provider": "qwen" }`.
 
 En el mismo fichero, `"web": false` apaga la búsqueda en internet,
 `"equipo": false` la lectura de los datos de este equipo y `"comandos": false`

@@ -164,7 +164,7 @@ function Resolve-AIProvider {
     <#  Devuelve la tabla del proveedor a partir de un nombre o alias.  #>
     param([string]$Name)
 
-    if ([string]::IsNullOrWhiteSpace($Name)) { $Name = 'xai' }
+    if ([string]::IsNullOrWhiteSpace($Name)) { $Name = 'gemma' }
     $k = $Name.Trim().ToLowerInvariant()
     if ($AI_ALIASES.ContainsKey($k)) { $k = $AI_ALIASES[$k] }
 

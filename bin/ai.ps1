@@ -72,7 +72,10 @@ $HistFile = Join-Path $DataDir 'chat_history.txt'
 $ConfFile = Join-Path $DataDir 'settings.json'
 
 # ---- Configuracion opcional (todo tiene valor por defecto) -----------------
-$conf = @{ provider = 'xai'; system = 'Eres un asistente util. Responde en espanol, breve y al grano.' }
+# El proveedor de fabrica es 'gemma' (Gemma 4 E4B en el llama-server local):
+# no pide clave ni saca nada de la laptop. Antes era 'xai', que sin
+# XAI_API_KEY no arrancaba.
+$conf = @{ provider = 'gemma'; system = 'Eres un asistente util. Responde en espanol, breve y al grano.' }
 if (Test-Path $ConfFile) {
     try {
         $j = [IO.File]::ReadAllText($ConfFile, [Text.Encoding]::UTF8) | ConvertFrom-Json
@@ -128,8 +131,8 @@ $($c.Bullet)USO$($c.Off)
 $($c.Bullet)OPCIONES$($c.Off)
   -Provider  openai|xai|ollama|gemma|gemma3|qwen   (alias: gpt, grok, deepseek, llama, e4b)
              gemma (Gemma 4 E4B), gemma3 (Gemma 3 4B) y qwen son locales:
-             un mismo llama-server, varios modelos
-  -Model     nombre del modelo
+             un mismo llama-server, varios modelos. Sin -Provider: gemma
+  -Model    nombre del modelo
   -System    instruccion de sistema
   -Context   fichero que se adjunta como contexto
   -Temp      temperatura (por defecto 0.7)
