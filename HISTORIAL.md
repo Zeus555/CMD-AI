@@ -80,8 +80,8 @@ dispara el atajo igual que los demás.
 órdenes de `/comando` y su orden: ahora son ocho, y se comprueba que
 `/comando web` a medias da el modo de uso y no ejecuta nada.
 
-**Esta rama sale de `hora-y-preferencias`**, que aún no está fusionada:
-toca los mismos ficheros (el atajo, `comandos.ps1`, el README).
+**La rama salió de `hora-y-preferencias`** porque las dos tocan los mismos
+ficheros (el atajo, `comandos.ps1`, el README). Se fusionaron juntas en main.
 
 ---
 
