@@ -40,6 +40,11 @@ que lo genera, y el cliente lo pinta segun llega.
   comando, pide confirmación, lo prueba y enseña el resultado; desde entonces
   «¿cuál es mi IP pública?» se contesta sola. Unas reglas fijas, no el
   modelo, deciden si el comando es de solo lectura. Ver «Comandos guardados».
+- **Consultas web guardadas**: datos concretos de una página, en JSON.
+  «agrégame un comando para el último sorteo de la lotería de Nicaragua de
+  internet»: busca la página en DuckDuckGo, saca los datos y te los enseña
+  antes de guardarla. Desde entonces se lee de nuevo cada vez que preguntas.
+  Ver «Consultas web».
 - **Preferencias que se recuerdan** de una conversación a otra: «recuerda que
   las cifras de dinero me las des en dólares». Las escribes tú y el modelo
   las tiene delante en cada pregunta. Ver «Preferencias».
@@ -595,6 +600,120 @@ entrada ahí.
   `%LOCALAPPDATA%\PRC-CMD-AI\comandos.json`. Se apagan con `-NoComandos`,
   `/comando off` o `"comandos": false` en `settings.json`.
 
+## Consultas web
+
+Una consulta web es un comando guardado de otro tipo: lee siempre la misma
+página y saca de ella unos datos concretos, en JSON. Sirve para lo que una
+página publica y no da ningún servicio en una línea: el último sorteo de la
+lotería, un tipo de cambio publicado, un horario.
+
+```
+Ariel > agrégame un comando para el último sorteo de la lotería de Nicaragua de internet
+ia > Busco en DuckDuckGo: Resultados sorteo lotería Nicaragua página oficial
+ia > ¿De cuál de estas páginas saco los datos?
+
+  1. Resultados | Lotería Nacional
+     https://loterianacional.com.ni/resultados/
+  ...
+
+Ariel >
+ia > Esto es lo que saco ahora mismo de loterianacional.com.ni:
+
+  página:   https://loterianacional.com.ni/resultados/
+  rótulos:  sorteo="Sorteo" ganador="Ganador:" premio="Premio:" fecha="Fecha:" sucursal="Sucursal:"
+
+  {
+    "sorteo": "2304",
+    "ganador": "12010",
+    "premio": "C$8,000,000",
+    "fecha": "10/11/2026",
+    "sucursal": "Tipitapa"
+  }
+
+ia > ¿Te vale así? ...
+```
+
+### Cómo funciona
+
+- **Los rótulos.** Cada dato se define por su rótulo, el texto fijo que en
+  la página va justo antes de él. Si la página dice «Ganador: 12010», el
+  campo `ganador` tiene el rótulo `Ganador:`. El programa busca el rótulo sin
+  mirar mayúsculas ni acentos y se queda con lo que le sigue en esa fila, o
+  con la fila siguiente si la del rótulo no trae nada más.
+- **Los bloques.** Si la página repite los datos (un bloque por sorteo), el
+  rótulo que sale primero marca dónde empieza cada bloque. Los demás datos se
+  buscan solo dentro de su bloque. Si al primer sorteo le falta un dato, sale
+  `null`; nunca se toma el del sorteo siguiente. Con `registros=N` se sacan
+  los N primeros bloques, en una lista.
+- **Páginas que son JSON.** Si la página es JSON, el rótulo es la clave
+  (`drawDate`) y el valor es lo que va entre comillas o la cifra. Un objeto
+  o una lista no cuentan como dato.
+- **El valor es el texto de la página, tal cual.** No se convierte nada: el
+  billete «09065» conserva su cero y el premio, su «C$».
+
+### Pidiéndola en la conversación
+
+Si la petición de un comando habla de internet, de una página, de una web,
+de DuckDuckGo o de curl, o trae una dirección `https://`, se guarda una
+consulta web en vez de un comando de PowerShell:
+
+1. **La página.** Si traes la dirección, se usa esa. Si no, el modelo
+   escribe la búsqueda y se busca en DuckDuckGo. Eliges un resultado con su
+   número, pegas otra dirección o escribes otra búsqueda.
+2. **Los datos.** El modelo lee el principio de la página y propone los
+   rótulos. Cada rótulo tiene que estar en la página y dar un dato: si no,
+   se le dice qué falló y lo corrige (tres intentos). Los campos que no dan
+   nada se quitan, y se dice cuáles.
+3. **Lo ves antes de guardarla.** Sale el JSON con los datos leídos en ese
+   momento. Puedes pedir cambios («quita la sucursal», «dame los últimos 3»)
+   o escribir «otra» para elegir otra página.
+4. **Nombre, para qué sirve y una confirmación**, como con los comandos.
+
+Si un comando normal no sale («No encontré uno que valga»), escribir «web»
+busca el dato en internet.
+
+### De una vez, con `/comando web`
+
+```
+/comando web loteria-nicaragua https://loterianacional.com.ni/resultados/ sorteo=Sorteo ganador="Ganador:" premio="Premio:" fecha="Fecha:"
+```
+
+Los rótulos con espacios van entre comillas, y `registros=5` saca cinco
+bloques. Se lee la página y se enseña lo que sale antes de preguntar si se
+guarda.
+
+### Al usarla
+
+Igual que un comando guardado:
+
+- se lista con `/comando`;
+- `/comando loteria-nicaragua` enseña el JSON sin pasar por el modelo;
+- preguntar con las palabras del nombre («¿cuál fue el último sorteo de la
+  lotería de Nicaragua?») la ejecuta antes de preguntar al modelo;
+- el modelo también puede pedirla por su nombre.
+
+El modelo recibe el JSON rotulado con la página de la que sale. Si le pides
+JSON, lo copia tal cual. Si no, lo cuenta en frases sin cambiar cifras,
+nombres ni fechas.
+
+### Límites
+
+- **La página tiene que traer los datos en su HTML.** Las que los pintan con
+  JavaScript al abrirse llegan casi vacías, y se avisa.
+- **Si la página cambia sus rótulos, la consulta deja de dar datos** y lo
+  dice; no se inventan. Se arregla guardándola de nuevo.
+- **El modelo ve solo el principio de la página** (3500 caracteres) para
+  proponer los rótulos. Si los datos están más abajo, escríbelos tú con
+  `/comando web`.
+- **Mira la lista de resultados antes de elegir.** La búsqueda puede traer
+  páginas de otro país o de otra lotería. Con la frase «...en json», Gemma 4
+  E4B buscó «API lotería Nicaragua JSON» y el primer resultado era una API de
+  la lotería de España. Ahora la búsqueda no lleva el formato, y lo que se
+  saca se enseña antes de guardar.
+- **Las mismas reglas de dirección que los comandos:** solo `https`, servidor
+  público y cada redirección revisada. Hasta 8 campos y 10 bloques. Las
+  consultas cuentan dentro de los 20 comandos guardados.
+
 ## Preferencias
 
 Lo que quieres que se tenga en cuenta siempre, también en las próximas
@@ -653,6 +772,8 @@ lib/equipo.ps1      lo que el equipo ya sabe: el reloj, las ocho lecturas
 lib/comandos.ps1    comandos de solo lectura que guarda el usuario: las
                     reglas (analizador de PowerShell y listas cerradas), la
                     ejecucion por piezas y la herramienta comando_guardado
+lib/consultas.ps1   consultas web guardadas: leer una pagina, sacar los
+                    datos por sus rotulos y darlos en JSON
 lib/preferencias.ps1 lo que el usuario pide recordar: reconocer "recuerda
                     que...", guardar y cargar, y la nota para el modelo
 tools/Set-AIKey.ps1 guardado seguro de claves en HKCU\Environment
@@ -675,7 +796,7 @@ Después de un cambio, y antes de subirlo:
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\probar.ps1
 ```
 
-Sin modelo y sin internet tarda unos 20 segundos y pasa cinco pruebas:
+Sin modelo y sin internet tarda unos 20 segundos y pasa seis pruebas:
 
 | Prueba | Qué mira |
 | --- | --- |
@@ -683,11 +804,12 @@ Sin modelo y sin internet tarda unos 20 segundos y pasa cinco pruebas:
 | `equipo-frases.ps1` | 58 frases de `datos/equipo-frases.txt` y dos casos más: qué datos del equipo pide cada una, o ninguno. |
 | `equipo.ps1` | Reloj, formatos con un equipo de mentira y la lectura de verdad de este equipo. Esta lectura sale en pantalla y no se guarda. |
 | `preferencias.ps1` | Qué mensajes piden recordar algo y qué se guarda, la limpieza, guardar y cargar, el fichero roto, la nota para el modelo y que el modelo no pueda guardarlas. |
+| `consultas.ps1` | Consultas web, con una página de ejemplo (`datos/consulta.html`): buscar rótulos, los bloques y el dato que falta, páginas JSON, el JSON que sale, lo que propone el modelo, guardar y cargar, y qué peticiones son de internet. |
 | `dialogo.ps1 -SoloReconocer` | Reconocer cuándo una frase pide guardar un comando (`datos/peticiones.txt`) y leer lo que propone el modelo. |
 
 Opciones:
 
-- **`-Red`:** añade unas pocas peticiones de verdad a internet, para la IP pública y un servidor que no existe.
+- **`-Red`:** añade unas pocas peticiones de verdad a internet, para la IP pública, un servidor que no existe y la página de la Lotería Nacional de Nicaragua.
 - **`-Modelo`:** necesita el llama-server en marcha y tarda varios minutos. Pasa las once escenas de `datos/escenas.txt` por el diálogo real de `bin/ai.ps1`, con las respuestas del usuario ya escritas, y prueba `/comando agregar` con nueve casos.
 
 Las respuestas del modelo cambian de una vez a otra: si una escena falla, lee su conversación antes de dar el fallo por bueno.

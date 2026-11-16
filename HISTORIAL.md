@@ -8,6 +8,83 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ---
 
+## 2026-11-16 — Consultas web: datos de una página, en JSON
+
+**La petición.** «Agrégame un comando para obtener los datos del último
+sorteo de la lotería de Nicaragua. Podrías usar curl para consultarlo a
+través de DuckDuckGo […] y entregármelos en JSON». Hacía falta una consulta
+fácil de definir que lea el HTML de una página fija y saque datos concretos.
+
+**Por qué no bastaban los comandos guardados.** Las reglas ya dejan
+`Invoke-WebRequest` contra una dirección fija, pero detrás solo pueden ir
+filtros como `Select-String`, que devuelven filas de HTML, no datos. Y un
+comando que trocee HTML necesitaría variables o bloques `{ }`, que las
+reglas prohíben con razón.
+
+**Qué se hizo: un segundo tipo de comando guardado** (`"tipo": "web"` en
+`comandos.json`, código en `lib/consultas.ps1`). Lleva la dirección y una
+lista de campos, cada uno con su **rótulo**: el texto fijo que en la página
+va justo antes del dato («Ganador:» → «12010»). Se lista, se ejecuta y
+dispara el atajo igual que los demás.
+
+**Las decisiones:**
+
+- **Rótulos, no expresiones regulares.** Un rótulo se escribe sin saber
+  programar, el modelo lo copia de la página y el programa comprueba que
+  está en ella. Además, solo se buscan textos: ninguna expresión que venga de
+  fuera puede dejar colgada la consola.
+- **El modelo no saca los datos.** Solo propone los rótulos al guardar la
+  consulta. Los valores los saca el programa, tal cual vienen en la página
+  («09065» conserva su cero), y los ves antes de guardarla. Al ejecutarla, el
+  modelo no interviene hasta redactar la respuesta.
+- **Bloques.** El rótulo que sale primero en la página marca dónde empieza
+  cada bloque, y los demás datos se buscan solo dentro del suyo. Si al
+  primer sorteo le falta un dato, sale `null` en vez del dato del sorteo
+  siguiente. Así lo comprueba la página de prueba (`tests/datos/consulta.html`).
+- **DuckDuckGo se usa para encontrar la página, al guardarla.** Después se
+  va directo a ella. Así es más rápido (1,7 s en leer la página de la
+  lotería y sacar los datos) y la fuente es siempre la misma: si cada vez se
+  tomara el primer resultado de una búsqueda, podría salir otra lotería.
+- **Sin curl.** La página se lee con lo mismo que usa la búsqueda
+  (`Get-AIWebPage`): sin instalar nada, con plazo, tope de tamaño, solo
+  `https` a servidores públicos y cada redirección revisada antes de
+  seguirla.
+- **Cuándo es una consulta web.** Cuando la petición del comando habla de
+  internet, de una página, de una web, de DuckDuckGo o de curl, o trae una
+  dirección. Si un comando de PowerShell no sale, escribir «web» lo intenta
+  en internet.
+
+**Lo que se midió con Gemma 4 E4B y la frase del dueño, tal cual:**
+
+- **Primer intento: un dato falso a un Enter de distancia.** El modelo
+  buscó «API lotería Nicaragua datos sorteo JSON», porque la frase pedía
+  JSON. El primer resultado era `loteriasapi.com`, una API de la lotería de
+  **España**, con fecha 2026-09-26. Además, como esa página es JSON, los
+  valores salían mal cortados (`": "2026-09-26",`).
+  - **Arreglo:** la búsqueda ya no lleva el formato, «API», «curl» ni
+    «DuckDuckGo» (lo pide la instrucción y lo quita el programa).
+  - **Arreglo:** en una página JSON, el valor es lo que va entre comillas.
+- **Después:** buscó «Resultados sorteo lotería Nicaragua página oficial»,
+  y los cinco resultados eran de `loterianacional.com.ni`. Los rótulos
+  propuestos fueron `Sorteo`, `Ganador:`, `Premio:`, `Fecha:` y `Sucursal:`.
+  Sacó el sorteo 2304 exacto y el diálogo duró 19 s.
+- **«Quita la sucursal y dame los últimos 3 sorteos»:** quitó el campo y
+  puso `registros=3`, a la primera.
+- **Al preguntar** «¿cuál fue el último sorteo de la lotería de
+  nicaragua?», el atajo ejecutó la consulta y la respuesta copió los cinco
+  datos con la página de origen (9 s). Pidiéndolo «en json», devolvió el
+  JSON sin tocarlo.
+
+**Pruebas:** `tests/consultas.ps1`, 58 comprobaciones sin red y 6 más con
+`-Red`, contra la página de verdad. `tests/agregar.ps1` ya contaba las
+órdenes de `/comando` y su orden: ahora son ocho, y se comprueba que
+`/comando web` a medias da el modo de uso y no ejecuta nada.
+
+**Esta rama sale de `hora-y-preferencias`**, que aún no está fusionada:
+toca los mismos ficheros (el atajo, `comandos.ps1`, el README).
+
+---
+
 ## 2026-11-16 — Una hora inventada, y las preferencias
 
 **La incidencia.** El dueño preguntó tres veces seguidas «dame la fecha y

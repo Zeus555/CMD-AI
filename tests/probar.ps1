@@ -22,6 +22,7 @@ $pruebas = @(
     @{ Nombre = 'frases del equipo'; Fichero = 'equipo-frases.ps1'; Args = @() }
     @{ Nombre = 'datos del equipo'; Fichero = 'equipo.ps1'; Args = @() }
     @{ Nombre = 'preferencias'; Fichero = 'preferencias.ps1'; Args = @() }
+    @{ Nombre = 'consultas web'; Fichero = 'consultas.ps1'; Args = @(if ($Red) { '-Red' }) }
 )
 if ($Modelo) {
     $pruebas += @{ Nombre = 'dialogo, con el modelo'; Fichero = 'dialogo.ps1'; Args = @('-Proveedor', $Proveedor) }

@@ -29,13 +29,15 @@ $patrones = @($ast.FindAll({ param($n) $n -is [System.Management.Automation.Lang
 function Orden($linea) { $i = 0; foreach ($p in $patrones) { $i++; if ($linea -match $p) { return $i } }; return 0 }
 $mal = 0
 function Ver([string]$que, [bool]$ok, $extra = '') { if ($ok) { Write-Output "  ok   $que" } else { $script:mal++; Write-Output "  MAL  $que  $extra" } }
-Ver 'seis ordenes de /comando' ($patrones.Count -eq 6) $patrones.Count
+Ver 'ocho ordenes de /comando' ($patrones.Count -eq 8) $patrones.Count
 Ver '/comando on            -> interruptor' ((Orden '/comando on') -eq 1)
-Ver '/comando agregar n c   -> agregar'     ((Orden '/comando agregar ip-publica Invoke-RestMethod -Uri https://api.ipify.org') -eq 2)
-Ver '/comando agregar       -> modo de uso' ((Orden '/comando agregar') -eq 3 -and (Orden '/comando agregar solo-nombre') -eq 3)
-Ver '/comando quitar n      -> quitar'      ((Orden '/comando quitar ip-publica') -eq 4)
-Ver '/comando y /comandos   -> lista'       ((Orden '/comando') -eq 5 -and (Orden '/comandos') -eq 5 -and (Orden '/comando lista') -eq 5)
-Ver '/comando n             -> ejecutar'    ((Orden '/comando ip-publica') -eq 6)
+Ver '/comando web n url c   -> consulta web' ((Orden '/comando web loteria https://loterianacional.com.ni/resultados/ sorteo=Sorteo') -eq 2)
+Ver '/comando web (a medias) -> modo de uso' ((Orden '/comando web') -eq 3 -and (Orden '/comando web loteria') -eq 3 -and (Orden '/comando web loteria https://x.com') -eq 3)
+Ver '/comando agregar n c   -> agregar'     ((Orden '/comando agregar ip-publica Invoke-RestMethod -Uri https://api.ipify.org') -eq 4)
+Ver '/comando agregar       -> modo de uso' ((Orden '/comando agregar') -eq 5 -and (Orden '/comando agregar solo-nombre') -eq 5)
+Ver '/comando quitar n      -> quitar'      ((Orden '/comando quitar ip-publica') -eq 6)
+Ver '/comando y /comandos   -> lista'       ((Orden '/comando') -eq 7 -and (Orden '/comandos') -eq 7 -and (Orden '/comando lista') -eq 7)
+Ver '/comando n             -> ejecutar'    ((Orden '/comando ip-publica') -eq 8)
 Ver '/comandante            -> al modelo'   ((Orden '/comandante') -eq 0)
 
 $prov  = Resolve-AIProvider $Proveedor
