@@ -42,6 +42,11 @@ que lo genera, y el cliente lo pinta segun llega.
   modelo, deciden si el comando es de solo lectura. Ver «Comandos guardados».
 - **Diagnóstico** con `AI -Check`: estado de clave y conectividad de los
   proveedores sin gastar tokens.
+- **Local por defecto**: sin configurar nada habla con Gemma 4 E4B en el
+  llama-server de la propia laptop, sin clave y sin mandar la conversación a
+  la nube.
+
+Qué cambió en cada versión y por qué: [HISTORIAL.md](HISTORIAL.md).
 
 ## Requisitos
 
@@ -600,6 +605,7 @@ lib/comandos.ps1    comandos de solo lectura que guarda el usuario: las
                     ejecucion por piezas y la herramienta comando_guardado
 tools/Set-AIKey.ps1 guardado seguro de claves en HKCU\Environment
 tools/build.ps1     normaliza codificacion: UTF-8 con BOM en .ps1, CRLF en .bat
+HISTORIAL.md        que cambio en cada version, por que y como se probo
 ```
 
 Si editas cualquier `.ps1` o `.bat`, pasa después `tools/build.ps1`: Windows
