@@ -1,0 +1,87 @@
+# A. Pide el dato; el modelo propone; todo por defecto
+> agrégame un comando para ver mi IP pública
+< sí
+<
+<
+< sí
+= 1 ip-publica
+
+# B. No dice el dato; pide un cambio; elige el nombre
+> quiero guardar un comando
+< los tres procesos que más memoria usan
+< que sean cinco
+< sí
+< top memoria
+< los cinco procesos que más memoria usan
+< sí
+= 2 top-memoria
+
+# C. Trae el comando y el nombre
+> guarda este comando como ver-dns: Get-DnsClientServerAddress -AddressFamily IPv4
+<
+<
+< los servidores DNS que usa este equipo
+< sí
+= 3 ver-dns
+
+# D. Pide algo que no es de solo lectura
+> agrega un comando para borrar los archivos temporales
+< cancelar
+= 3
+
+# E. Pega un comando dañino cuando se le pregunta el dato
+> añade un comando
+< Get-ChildItem C:\Temp | Remove-Item -Recurse
+< cancelar
+= 3
+
+# F. Dice que no en la confirmación final
+> agrégame un comando para saber si el antivirus está activo
+< sí
+<
+<
+< no
+= 3
+
+# G. Cancela a mitad
+> agrégame un comando para ver la fecha de hoy
+< sí
+< cancelar
+= 3
+
+# H. La prueba falla: no se guarda
+> guarda este comando como proceso-x: Get-Process -Name no-existe-abc123
+< sí
+<
+< ver el proceso x
+< sí
+< cancelar
+= 3
+
+# I. Un nombre que ya existe: pregunta si lo sustituye
+> guarda este comando como ver-dns: Get-DnsClientServerAddress
+< sí
+<
+< sí
+< todos los servidores DNS del equipo
+< sí
+= 3 ver-dns
+
+# J. Dice «no» al comando y luego explica el cambio; da un nombre con mayúsculas y acento
+> agrégame un comando para ver cuánto lleva encendido el equipo
+< no
+< quiero solo la fecha del último arranque
+< sí
+< Último Arranque
+< cuándo arrancó Windows por última vez
+< sí
+= 4 ultimo-arranque
+
+# K. La prueba no devuelve nada: tampoco se guarda
+> guarda este comando como proceso-y: Get-Process | Where-Object Name -eq no-existe-abc123
+< sí
+<
+< ver el proceso y
+< sí
+< cancelar
+= 4

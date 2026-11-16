@@ -24,6 +24,7 @@ $objetivos = @(
     (Join-Path $Root 'bin')
     (Join-Path $Root 'lib')
     (Join-Path $Root 'tools')
+    (Join-Path $Root 'tests')
 )
 
 $ficheros = foreach ($o in $objetivos) {

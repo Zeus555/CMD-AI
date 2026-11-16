@@ -1,0 +1,58 @@
+red|¿cuál es mi IP?
+red|cual es mi ip y a que wifi estoy conectado
+bateria|¿cuánta batería me queda?
+bateria|me alcanza la batería para ver una película de dos horas?
+disco|¿cuánto espacio libre tengo en el disco D?
+memoria,disco|cuanto espacio me queda en C y cuanta memoria tengo libre
+memoria|¿cuánta RAM tiene esta laptop?
+procesador|¿qué procesador tengo?
+red|¿tengo internet?
+red|hay internet?
+red|¿a qué red wifi estoy conectado?
+grafica|¿qué tarjeta gráfica tengo?
+sistema|¿cuánto lleva encendida la laptop?
+equipo|¿cómo se llama mi computadora?
+sistema|¿qué versión de Windows tengo?
+red|¿cuál es la puerta de enlace de mi red?
+equipo,sistema,procesador,memoria,disco,grafica|dame un resumen de esta laptop
+equipo,sistema,procesador,memoria,disco,grafica|que tiene este equipo?
+red|¿cuál es mi IP pública?
+red|mi internet esta lento
+bateria|ESTÁ   ENCHUFADA la laptop?  cuánta batería hay
+-|¿qué hora es?
+-|hola
+-|¿cuánto es 748 por 6?
+-|¿qué es una dirección IP?
+-|¿cuánta batería tiene el iPhone 15?
+-|¿a cómo está el dólar hoy en Nicaragua?
+-|¿cómo cambio mi IP?
+-|¿cómo puedo saber cuánta RAM tengo?
+-|escribe un script de PowerShell que muestre la IP
+-|¿qué procesador es mejor, i5 o Ryzen 5?
+-|¿cuánta RAM necesita Windows 11?
+-|busca en internet el precio del café
+-|datos del equipo de fútbol de Nicaragua
+-|hazme una gráfica de ventas
+-|¿tienes memoria de lo que hablamos?
+-|el disco nuevo de Bad Bunny
+-|mi disco favorito de Queen
+-|explícame cómo funciona el DNS
+-|¿cuánto espacio hay entre la Tierra y la Luna?
+-|¿cuál es la batería de mi celular?
+-|¿qué procesador trae la Lenovo Legion 5?
+-|tengo una duda: ¿qué procesador trae la Lenovo Legion 5?
+-|¿cuánto dura la batería de una laptop Dell XPS 13?
+-|¿cuánta batería tiene la laptop de mi hermano?
+-|¿cuánta RAM trae una laptop gamer normalmente?
+-|¿hay alguna laptop con 64 GB de RAM?
+-|¿cuánta batería queda?
+-|¿cuánta RAM tienen las laptops de oficina?
+-|mi amiga pregunta cuánta RAM tiene su computadora
+-|¿cuánta VRAM tiene la RTX 4060?
+bateria|cuánta batería tiene la laptop?
+red|¿cuál es la IP de esta pc?
+memoria|estoy corto de RAM?
+disco|¿qué discos tengo?
+equipo|¿qué laptop tengo?
+sistema|¿cuánto lleva prendida?
+-|¿cuánto lleva encendida la PlayStation?

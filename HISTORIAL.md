@@ -8,6 +8,45 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ---
 
+## 2026-11-15 — Las pruebas, dentro del repositorio
+
+**Qué cambia.** Hay una carpeta `tests/` nueva. `tests\probar.ps1` pasa las
+pruebas y sale con el número de las que fallan. Sin opciones son cuatro
+pruebas sin modelo, de unos 20 segundos. `-Red` añade peticiones a internet y
+`-Modelo` añade el diálogo y `/comando agregar` con el modelo de verdad. El
+README lo explica en «Pruebas». `tools/build.ps1` también pone el BOM a los
+`.ps1` de `tests/`.
+
+**Por qué.** Las pruebas de los comandos guardados, de los datos del equipo y
+del diálogo se escribieron mientras se hacían esas funciones, pero vivían en
+una carpeta temporal de la sesión de trabajo y se iban a perder. Sin ellas,
+un cambio en las reglas no se podía comprobar sin rehacerlas.
+
+**Qué se tocó al pasarlas.**
+
+- Cada prueba encuentra sola la raíz del repositorio y sus datos.
+- Las tres que no lo hacían salen ahora con su número de fallos.
+- En la salida, el usuario se llama «Usuario».
+- Los ejemplos ya no llevan datos reales: la ruta de la clave SSH es
+  `C:\Users\usuario\` y la frase de la memoria dice «me llamo Ana».
+- La comprobación de `hostname` compara con `$env:COMPUTERNAME`, así que no
+  deja el nombre del equipo en ningún fichero.
+- `tests\agregar.ps1` se había quedado atrás. Cuando el diálogo se partió en
+  piezas, `Add-AIComando` pasó a usar `Show-AIComandoRevision` y
+  `Save-AIComandoNuevo`, y la prueba no las cargaba. Ahora las carga, y si
+  falta una función lo dice en vez de romperse a mitad.
+
+**Cómo se probó.**
+
+- Sin modelo y con `-Red`: cero fallos en las cuatro pruebas. Son 239
+  comprobaciones de comandos (235 sin `-Red`), 60 frases del equipo, los datos
+  del equipo y 23 peticiones.
+- Con `-Modelo` y Gemma 4 E4B: cero fallos en las cinco pruebas.
+  - Las once escenas del diálogo dan 41 comprobaciones bien, en 130 s.
+  - Los nueve casos de `/comando agregar` pasan en 29 s.
+
+---
+
 ## 2026-11-15 — Gemma por defecto
 
 **Commit:** `636d930`

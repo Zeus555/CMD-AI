@@ -605,6 +605,8 @@ lib/comandos.ps1    comandos de solo lectura que guarda el usuario: las
                     ejecucion por piezas y la herramienta comando_guardado
 tools/Set-AIKey.ps1 guardado seguro de claves en HKCU\Environment
 tools/build.ps1     normaliza codificacion: UTF-8 con BOM en .ps1, CRLF en .bat
+tests/probar.ps1    pasa todas las pruebas y dice cuales fallan
+tests/*.ps1         una prueba por parte; sus frases y escenas, en tests/datos/
 HISTORIAL.md        que cambio en cada version, por que y como se probo
 ```
 
@@ -612,6 +614,32 @@ Si editas cualquier `.ps1` o `.bat`, pasa después `tools/build.ps1`: Windows
 PowerShell 5.1 decide la codificación de un script por su BOM, y un `.ps1`
 sin BOM con acentos se lee como cp1252 y acaba en mojibake (o directamente no
 parsea).
+
+## Pruebas
+
+Después de un cambio, y antes de subirlo:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File tests\probar.ps1
+```
+
+Sin modelo y sin internet tarda unos 20 segundos y pasa cuatro pruebas:
+
+| Prueba | Qué mira |
+| --- | --- |
+| `comandos.ps1` | Comandos guardados: 158 comandos de `datos/reglas.txt` que las reglas deben aceptar o rechazar, el plan que se ejecuta, direcciones, nombres, la ejecución, guardar y cargar, lo que ve el modelo y el atajo. |
+| `equipo-frases.ps1` | 58 frases de `datos/equipo-frases.txt` y dos casos más: qué datos del equipo pide cada una, o ninguno. |
+| `equipo.ps1` | Reloj, formatos con un equipo de mentira y la lectura de verdad de este equipo. Esta lectura sale en pantalla y no se guarda. |
+| `dialogo.ps1 -SoloReconocer` | Reconocer cuándo una frase pide guardar un comando (`datos/peticiones.txt`) y leer lo que propone el modelo. |
+
+Opciones:
+
+- **`-Red`:** añade unas pocas peticiones de verdad a internet, para la IP pública y un servidor que no existe.
+- **`-Modelo`:** necesita el llama-server en marcha y tarda varios minutos. Pasa las once escenas de `datos/escenas.txt` por el diálogo real de `bin/ai.ps1`, con las respuestas del usuario ya escritas, y prueba `/comando agregar` con nueve casos.
+
+Las respuestas del modelo cambian de una vez a otra: si una escena falla, lee su conversación antes de dar el fallo por bueno.
+
+Cada prueba sale con su número de fallos, y `probar.ps1` sale con el número de pruebas que fallaron (0 es que todo va bien).
 
 ## Limitaciones conocidas
 
