@@ -48,6 +48,12 @@ que lo genera, y el cliente lo pinta segun llega.
 - **Preferencias que se recuerdan** de una conversación a otra: «recuerda que
   las cifras de dinero me las des en dólares». Las escribes tú y el modelo
   las tiene delante en cada pregunta. Ver «Preferencias».
+- **Aprende de tus documentos**: «aprende de los documentos de D:\MiNegocio».
+  Lee una carpeta (Word, Excel, PowerPoint, OpenDocument, texto, CSV, HTML,
+  RTF) y desde entonces contesta con lo que dicen sobre tu negocio: servicios,
+  empleados, horarios, procedimientos, políticas... Dice de qué documento
+  sale cada dato, y si no viene, lo dice en vez de inventarlo. Todo se queda
+  en el equipo. Ver «Documentos».
 - **Diagnóstico** con `AI -Check`: estado de clave y conectividad de los
   proveedores sin gastar tokens.
 - **Local por defecto**: sin configurar nada habla con Gemma 4 E4B en el
@@ -119,6 +125,7 @@ AI "pregunta" -Provider gpt -m gpt-4o -Temp 0.2 -NoStream -Plain
 AI "pregunta" -NoWeb            sin buscar en internet
 AI "pregunta" -NoEquipo         sin leer datos de este equipo
 AI "pregunta" -NoComandos       sin usar los comandos guardados
+AI "pregunta" -NoDocumentos     sin usar las carpetas de documentos
 AI -Check                       diagnostico de los proveedores, internet, el equipo
                                 y los comandos guardados
 AI -Help                        ayuda completa
@@ -753,6 +760,124 @@ guardada. La tendré en cuenta en esta y en las próximas conversaciones
   tokens de contexto y las preferencias viajan en cada petición. Si el
   fichero se rompe, se avisa y no se sobrescribe.
 
+## Documentos
+
+Una carpeta con los documentos de tu negocio (servicios, precios, empleados,
+horarios, procedimientos, políticas internas...) y la terminal contesta con
+lo que dicen. El ejemplo es una ferretería inventada, la misma de las
+pruebas:
+
+```
+Ariel > aprende de los documentos de D:\MiNegocio
+ia > Voy a leer los documentos de D:\MiNegocio para contestarte con lo que dicen. No los
+     cambio ni los mando a ningún sitio: lo que lea se queda en este equipo.
+ia > Hay 11 que sé leer (2 Word, 2 texto, 2 OpenDocument, 1 Excel, 1 CSV, ...). También hay
+     1 PDF, que todavía no sé leer.
+ia > ¿De qué tratan, en pocas palabras? Así sé cuándo mirarlos; ...
+Ariel > mi ferretería: horarios, empleados, precios, políticas y procedimientos
+ia > Listo: leí 10 documentos (16 fragmentos) en 0.5 s. Pregúntame lo que quieras sobre ...
+Ariel > ¿cuánto cuesta el corte de llaves y desde cuándo?
+consultando tus documentos: precios.xlsx
+ia > El corte de llaves cuesta 50 y está disponible desde el 10/11/2025. Este dato proviene
+     de precios.xlsx (apartado «Hoja: Servicios»).
+Ariel > ¿cuánto gana Luis Mora?
+ia > El documento empleados.csv indica que Luis Mora tiene el cargo de Cajero y su turno es
+     Tarde, pero no especifica su salario.
+```
+
+### Cómo funciona
+
+- **No se entrena el modelo.** En un equipo modesto no se puede, y un modelo
+  «entrenado» con unos documentos los mezcla y rellena los huecos
+  inventando. Lo que se hace es buscar, en cada pregunta, los fragmentos que
+  vienen al caso. Esos fragmentos viajan con la pregunta, cada uno con el
+  nombre de su fichero, y se le pide al modelo que conteste con ellos y diga
+  de qué documento sale el dato. Si no lo dicen, dice que no viene en los
+  documentos.
+- **La búsqueda es por palabras**, sin acentos, sin plurales ni género y con
+  formas verbales recortadas («venden» encuentra «vendemos»). Tiene unos
+  pocos sinónimos de lo que se pregunta en un negocio: horario/abren/
+  atención, empleado/personal, precio/costo/tarifa... Funciona sin
+  dependencias, sin tocar llama-server y en milisegundos.
+- **Cuándo viajan:** solo si la pregunta tiene que ver con los documentos,
+  es decir, si el mejor fragmento trae palabras de la pregunta que no salen
+  en todas partes. «¿Cuál es la capital de Francia?» o «¿qué hora es?» se
+  contestan como siempre. Si no viajan solos, el modelo puede pedirlos con la
+  herramienta `consultar_documentos` («¿tienen sucursal en León?»).
+- **Antes de contestar dice qué consulta** (`consultando tus documentos:
+  precios.xlsx`) y, al terminar, de qué documentos salió.
+- **Las tablas se leen fila a fila.** Si la primera fila es una cabecera
+  segura, cada fila lleva sus rótulos («Nombre: Ana Pérez | Cargo:
+  Gerente»). Es segura cuando es todo texto y alguna columna trae cifras
+  debajo. Si no, va aparte como «Columnas (primera fila)». Una tabla de dos
+  columnas «Gerente | Ana» no se toma por cabecera: emparejar mal un rótulo
+  con un dato sería dar un dato falso.
+- **En Excel, las fechas y horas salen como fechas y horas.** Excel las
+  guarda como números (45971 es el 10/11/2025; 0,3125 son las 07:30), y se
+  convierten según el formato de la celda.
+
+### Qué sabe leer
+
+| Formato | Ficheros |
+| --- | --- |
+| Word | `.docx` (títulos, listas y tablas; sin el texto borrado con control de cambios) |
+| Excel | `.xlsx` (cada hoja con su nombre) |
+| PowerPoint | `.pptx` (cada diapositiva, en orden) |
+| OpenDocument | `.odt`, `.ods`, `.odp` |
+| Texto | `.txt`, `.md`, `.csv`, `.tsv`, `.json`, `.xml`, `.html`, `.rtf`, `.log`, `.ini`, `.yml` |
+
+Los ficheros de texto se leen en UTF-8 o en Windows-1252, que es como
+guardaban el Bloc de notas antiguo y el Excel en español. Los PDF y los
+formatos viejos de Office (`.doc`, `.xls`, `.ppt`) todavía no se leen: se
+dice cuáles son y qué hacer, por ejemplo «guárdalo como Word (.docx)». Las
+imágenes y demás ficheros se ignoran.
+
+### Órdenes
+
+- `aprende de los documentos de D:\MiNegocio`, `lee la carpeta "D:\Mis
+  documentos\Empresa"` o `/documentos agregar <carpeta>`: agrega una
+  carpeta, con sus subcarpetas. Pregunta de qué trata, porque eso le dice al
+  modelo cuándo mirarla.
+- `/documentos`: las carpetas, cuánto se leyó de cada una y lo que no se
+  pudo leer, con el motivo.
+- `/documentos buscar <texto>`: los fragmentos que saldrían para ese texto,
+  sin preguntar al modelo. Sirve para ver por qué contesta lo que contesta.
+- `/documentos actualizar`: vuelve a revisar las carpetas ahora. No suele
+  hacer falta: se revisan solas cada cinco minutos, y solo se lee lo que
+  cambió.
+- `/documentos quitar <nombre>`: deja de leer una carpeta. Sus ficheros
+  siguen donde estaban.
+- `/documentos on|off`: usarlos o no en esta sesión. También se apagan con
+  `-NoDocumentos` o con `"documentos": false` en `settings.json`.
+
+### Privacidad
+
+Los documentos nunca se modifican. Lo leído se guarda en
+`%LOCALAPPDATA%\PRC-CMD-AI\documentos\`, para no releer cada vez lo que no
+cambió. Los fragmentos solo se mandan a los proveedores locales (Gemma, Qwen,
+Ollama). Con un proveedor de internet (xAI, OpenAI) saldrían del equipo, así
+que no se mandan y se avisa una vez. Para permitirlo en una sesión está
+`/documentos nube on`, y para siempre, `"documentos_nube": true` en
+`settings.json`.
+
+### Límites
+
+- **Velocidad:** 400 documentos (2,4 MB de texto) se leen la primera vez en
+  unos 5 s. Al volver a arrancar, el índice guardado se carga en menos de
+  medio segundo. Cada pregunta busca en unos 0,2 s.
+- **Topes:** 10 carpetas, 3000 ficheros, 30 MB por fichero y 1,5 millones
+  de caracteres de texto por fichero. Viajan 4 fragmentos de 700 caracteres
+  como mucho por pregunta, porque el servidor local tiene 4096 tokens de
+  contexto.
+- **Busca palabras, no ideas.** Una pregunta sin ninguna palabra de los
+  documentos («¿de qué color es la ropa de trabajo?» cuando el documento
+  dice «uniforme») puede no encontrarlos. El modelo aún puede pedirlos con
+  la herramienta, o puedes probar con `/documentos buscar`.
+- **Una respuesta solo es tan buena como los fragmentos.** Si dos documentos
+  se contradicen, el modelo ve los dos. Con «¿a qué hora abren los
+  sábados?», Gemma 4 E4B dio la hora de la bodega, que estaba en otra hoja
+  del Excel.
+
 ## Estructura del código
 
 ```
@@ -776,6 +901,9 @@ lib/consultas.ps1   consultas web guardadas: leer una pagina, sacar los
                     datos por sus rotulos y darlos en JSON
 lib/preferencias.ps1 lo que el usuario pide recordar: reconocer "recuerda
                     que...", guardar y cargar, y la nota para el modelo
+lib/documentos.ps1  las carpetas de documentos: lectores de cada formato,
+                    fragmentos, indice y busqueda por palabras, y la
+                    herramienta consultar_documentos
 tools/Set-AIKey.ps1 guardado seguro de claves en HKCU\Environment
 tools/build.ps1     normaliza codificacion: UTF-8 con BOM en .ps1, CRLF en .bat
 tests/probar.ps1    pasa todas las pruebas y dice cuales fallan
@@ -796,7 +924,7 @@ Después de un cambio, y antes de subirlo:
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\probar.ps1
 ```
 
-Sin modelo y sin internet tarda unos 20 segundos y pasa seis pruebas:
+Sin modelo y sin internet tarda unos 25 segundos y pasa siete pruebas:
 
 | Prueba | Qué mira |
 | --- | --- |
@@ -805,6 +933,7 @@ Sin modelo y sin internet tarda unos 20 segundos y pasa seis pruebas:
 | `equipo.ps1` | Reloj, formatos con un equipo de mentira y la lectura de verdad de este equipo. Esta lectura sale en pantalla y no se guarda. |
 | `preferencias.ps1` | Qué mensajes piden recordar algo y qué se guarda, la limpieza, guardar y cargar, el fichero roto, la nota para el modelo y que el modelo no pueda guardarlas. |
 | `consultas.ps1` | Consultas web, con una página de ejemplo (`datos/consulta.html`): buscar rótulos, los bloques y el dato que falta, páginas JSON, el JSON que sale, lo que propone el modelo, guardar y cargar, y qué peticiones son de internet. |
+| `documentos.ps1` | Documentos de una ferretería inventada en todos los formatos, creados al vuelo en una carpeta temporal (en el repositorio no hay binarios). Mira cada lector, los fragmentos, qué se relee y qué no, el índice guardado, 15 preguntas que tienen que encontrar su fragmento y 6 que no deben sacar documentos, las peticiones conversadas y el orden de las órdenes `/documentos`. Con `-Crear <carpeta>` solo crea la ferretería, para probarla a mano. |
 | `dialogo.ps1 -SoloReconocer` | Reconocer cuándo una frase pide guardar un comando (`datos/peticiones.txt`) y leer lo que propone el modelo. |
 
 Opciones:
@@ -820,8 +949,9 @@ Cada prueba sale con su número de fallos, y `probar.ps1` sale con el número de
 
 - Pensado para Windows; no se ha probado en PowerShell para Linux/macOS.
 - Sin soporte de imágenes ni ficheros adjuntos más allá del contexto por
-  stdin / `-Context`. Las únicas herramientas son `buscar_web`,
-  `datos_equipo` y `comando_guardado`.
+  stdin / `-Context` y las carpetas de `/documentos`. Las únicas herramientas
+  son `buscar_web`, `datos_equipo`, `comando_guardado` y
+  `consultar_documentos`.
 - El coste de la memoria del REPL crece con la conversación (se envía entera
   en cada turno): usa `/new` en conversaciones largas.
 

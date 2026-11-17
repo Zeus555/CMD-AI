@@ -8,6 +8,114 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ---
 
+## 2026-11-17 — Documentos: contestar con lo que dicen los del negocio
+
+**La petición.** Que la terminal, a partir de una carpeta de ficheros,
+«pueda aprender acerca de un tema». El motivo del dueño: «permite
+identificar todo acerca de un negocio, sus necesidades, sus servicios, sus
+empleados, su funcionamiento interno, los procedimientos establecidos,
+horarios de servicio, políticas internas».
+
+**Qué se hizo** (`lib/documentos.ps1`, órdenes `/documentos` y la frase
+«aprende de los documentos de D:\...»):
+
+- La carpeta se lee una vez.
+- En cada pregunta se buscan los fragmentos que vienen al caso, y viajan
+  con ella, cada uno con su fichero.
+- El modelo contesta con ellos y dice de qué documento sale el dato.
+
+**Las decisiones:**
+
+- **Buscar, no entrenar.** «Aprender» no puede ser reentrenar el modelo: en
+  un equipo modesto no se puede, y un modelo ajustado con unos documentos
+  los mezcla y rellena los huecos inventando. Eso choca con la primera
+  prioridad del dueño, que es no dar nunca un dato falso. Buscando, cada
+  dato sale de un fichero que se nombra, y lo que no está se dice.
+- **Búsqueda por palabras, sin embeddings.**
+  - Los embeddings habrían exigido arrancar llama-server con `--embeddings`
+    o con un segundo modelo, y ese servidor solo lo reinicia el dueño.
+  - Un modelo de 4B tampoco da buenos vectores.
+  - BM25 sobre las palabras recortadas no pide nada más (sin acentos, sin
+    plural ni género, sin las terminaciones verbales -an/-en/-ar...) y
+    tiene unos pocos sinónimos de negocio.
+- **Cuándo viajan los fragmentos.** El mejor fragmento tiene que traer una
+  palabra de la pregunta que no salga en media colección, y al menos la
+  quinta parte del peso de la pregunta. Se prefirió mandar de más:
+  - unos fragmentos que no vienen al caso cuestan unos segundos, y el
+    modelo los ignora;
+  - una pregunta del negocio contestada sin ellos sale inventada.
+  - El primer umbral, la mitad del peso, dejaba fuera «¿de qué color es el
+    uniforme?», donde «color» no sale en ningún documento.
+- **Las tablas, sin emparejar a ciegas.** Una primera fila solo se toma por
+  cabecera («Precio: 50») si es todo texto y alguna columna trae cifras
+  debajo. Si no, va como «Columnas (primera fila)» y cada fila tal cual.
+  Una tabla de dos columnas «Gerente | Ana Pérez» tomada por cabecera
+  habría dado «Gerente: Cajero». En Excel, las fechas y horas se convierten
+  según el formato de la celda: 45971 tal cual no es «10/11/2025».
+- **Formatos sin instalar nada.** Word, Excel, PowerPoint y OpenDocument son
+  zips con XML, y se leen con lo que trae .NET. RTF, CSV (con punto y coma,
+  como guarda el Excel en español), HTML y texto se leen en UTF-8 o
+  Windows-1252. Los PDF no: sin una biblioteca, sus tipos de letra dan texto
+  roto en muchos ficheros, y un texto roto acabaría en datos falsos. Se
+  dice cuáles no se leyeron y qué hacer.
+- **Solo a los proveedores locales.** Los documentos de un negocio llevan
+  datos de empleados y clientes. A xAI u OpenAI no se mandan salvo
+  `/documentos nube on` o `"documentos_nube": true`.
+
+**Velocidad** (400 documentos inventados, 2,4 MB de texto):
+
+- La primera versión tardaba 13 s en leerlos y otros 11 s en cada arranque,
+  para montar el índice palabra a palabra en PowerShell.
+  - El recorte de palabras pasó a expresiones de .NET sobre el texto
+    entero. Bajó a 7 s.
+  - El índice pasó a ser un solo texto con un fragmento por fila. Cada
+    palabra se busca de una pasada. Bajó a 4 s.
+  - Ahora el índice se guarda, y si nada cambió se carga en 0,3 s.
+- Hoy: 5 s la primera vez, 0,3 s al arrancar, unos 0,2 s por pregunta.
+- **Un fallo de esa prisa:** los fragmentos se armaban con `AppendLine`,
+  que en Windows mete `\r\n`. Al guardar el índice, cada `\r` partía un
+  fragmento en dos líneas y el índice no volvía a cargar. Lo cazó la prueba
+  que compara el índice guardado con el recién hecho.
+
+**Lo que se midió con Gemma 4 E4B:**
+
+- **Las preguntas:** 22 preguntas seguidas sobre la ferretería inventada de
+  las pruebas (`tests\documentos.ps1 -Crear`), entre 3 y 12 s cada una.
+- **Lo que salió bien:**
+  - Horarios, la gerente y su turno, un precio y su fecha, la política de
+    devoluciones, las vacaciones, quién cierra la caja los sábados (una
+    tabla de Word), las existencias (una hoja de OpenDocument) y el
+    proveedor (una página HTML), cada dato con su documento.
+  - «¿y los domingos?» se buscó junto con la pregunta anterior.
+  - «¿Cuánto gana Luis Mora?»: «no especifica su salario», sin inventarlo.
+  - «¿Cuál es la capital de Francia?» no sacó documentos.
+- **Tres arreglos tras la primera vuelta:**
+  - **«¿Qué hora es?»** mandaba fragmentos de horarios y tardaba el doble.
+    Ahora las preguntas del reloj no buscan en los documentos.
+  - **«¿Venden cemento?»** no encontraba «Vendemos», y el modelo, en vez de
+    usar la herramienta, preguntó «¿quieres que use consultar_documentos?».
+    Ahora se recortan también los verbos, y la nota le dice que la use sin
+    preguntar. Contestó «los documentos no indican si venden cemento».
+  - **«¿Qué documentos tienes?»:** dijo que el PDF no se pudo leer «porque
+    está dañado», y no lo está. La lista no llevaba el motivo y lo inventó.
+    Ahora lo lleva.
+- **Abierto:** a «¿a qué hora abren los sábados?» dio la hora de la bodega,
+  que estaba en otra hoja del Excel. La de la tienda también le llegó y
+  coincidía. Con dos horarios distintos podría elegir mal.
+
+**Pruebas:** `tests/documentos.ps1`, 94 comprobaciones sin modelo.
+
+- Cubren cada lector, los fragmentos y lo que se relee y lo que no: un
+  fichero cambiado, uno nuevo, uno borrado y una carpeta que no está.
+- También el índice guardado, 15 preguntas que deben encontrar su
+  fragmento y 6 que no deben sacar ninguno, las peticiones conversadas y el
+  orden de las órdenes `/documentos`.
+- Los documentos se crean al vuelo, así que en el repositorio no hay
+  binarios.
+- La web (Gemma Portable) no tiene documentos: es solo de la terminal.
+
+---
+
 ## 2026-11-16 — Consultas web: datos de una página, en JSON
 
 **La petición.** «Agrégame un comando para obtener los datos del último
