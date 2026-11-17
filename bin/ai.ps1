@@ -21,6 +21,7 @@ param(
     [switch]$NoWeb,
     [switch]$NoEquipo,
     [switch]$NoComandos,
+    [switch]$NoDocumentos,
     [string]$SetKey,
     [switch]$Check,
     [switch]$Help,
@@ -66,6 +67,7 @@ $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $root 'lib\comandos.ps1')
 . (Join-Path $root 'lib\consultas.ps1')
 . (Join-Path $root 'lib\preferencias.ps1')
+. (Join-Path $root 'lib\documentos.ps1')
 
 Initialize-AIConsole
 
@@ -87,6 +89,8 @@ if (Test-Path $ConfFile) {
         if ($j.PSObject.Properties['web']) { $conf.web = [bool]$j.web }
         if ($j.PSObject.Properties['equipo']) { $conf.equipo = [bool]$j.equipo }
         if ($j.PSObject.Properties['comandos']) { $conf.comandos = [bool]$j.comandos }
+        if ($j.PSObject.Properties['documentos']) { $conf.documentos = [bool]$j.documentos }
+        if ($j.PSObject.Properties['documentos_nube']) { $conf.documentos_nube = [bool]$j.documentos_nube }
     } catch { Write-AIError "settings.json ilegible, se usan los valores por defecto." }
 }
 
@@ -112,6 +116,25 @@ $PrefFile = Join-Path $DataDir 'preferencias.json'
 $carga = Read-AIPreferencias $PrefFile
 $script:Preferencias   = @($carga.Lista)
 $script:PreferenciaMal = $carga.Error
+# Carpetas de documentos del usuario (ver documentos.ps1). Aqui solo se lee
+# la lista: los documentos se leen la primera vez que hacen falta, y despues
+# solo lo que cambie.
+$DocFile = Join-Path $DataDir 'documentos.json'
+$DocDir  = Join-Path $DataDir 'documentos'
+$script:DocsOn = (-not $NoDocumentos) -and ($conf.documentos -ne $false)
+# A un proveedor de internet no se le mandan los documentos salvo que el
+# usuario lo permita ("documentos_nube": true o /documentos nube on).
+$script:DocsNube = $conf.documentos_nube -eq $true
+$carga = Read-AIDocCarpetas $DocFile
+$script:DocCarpetas = @($carga.Lista)
+$script:DocMal      = $carga.Error
+# Lo que el usuario pidio olvidar de esos documentos (ver documentos.ps1).
+$OlvFile = Join-Path $DataDir 'documentos-olvidos.json'
+$carga = Read-AIDocOlvidos $OlvFile
+$script:DocOlvidos = @($carga.Lista)
+if ($carga.Error -and -not $script:DocMal) { $script:DocMal = $carga.Error }
+$script:DocEstado   = $null
+$script:DocNubeDicho = $false
 # Proveedores que rechazaron la herramienta con un HTTP 4xx: no se les vuelve
 # a ofrecer en esta sesion.
 $script:SinHerramientas = @{}
@@ -151,6 +174,7 @@ $($c.Bullet)OPCIONES$($c.Off)
   -NoEquipo  no leer datos de este equipo (por defecto el modelo puede leer
              bateria, red, Windows, procesador, memoria, discos y grafica)
   -NoComandos no usar los comandos guardados con /comando agregar
+  -NoDocumentos no usar los documentos de /documentos
   -SetKey    VAR    guarda una clave de forma interactiva
   -Check     diagnostico de los proveedores
 
@@ -185,6 +209,21 @@ $($c.Bullet)EN EL MODO INTERACTIVO$($c.Off)
                  las des en dolares). Pregunta antes de guardarla
   /preferencias  lista de las guardadas     /preferencia agregar X   guardar X
   /preferencia quitar N   borrar la numero N
+  aprende de los documentos de D:\MiNegocio   leer una carpeta de documentos
+                 (Word, Excel, PowerPoint, OpenDocument, texto, CSV, HTML, RTF)
+                 para contestar con lo que dicen: servicios, empleados,
+                 horarios, procedimientos, politicas... Dice de que documento
+                 sale cada dato y no inventa lo que no dicen
+  /documentos    las carpetas y lo leido   /documentos agregar <carpeta>
+  /documentos buscar X   ver que fragmentos salen para X, sin el modelo
+  /documentos quitar N   dejar de leerla   /documentos actualizar   releer
+  olvida lo de los sueldos   olvidar algo de los documentos (un documento,
+                 un apartado o un tema), o "olvida todo lo que aprendiste".
+                 Ensena que se olvida y pregunta antes. Tus ficheros no se tocan
+  /documentos olvidar X  lo mismo       /documentos olvidos   lo olvidado
+  /documentos recordar N volver a usar lo olvidado numero N
+  /documentos on|off     usarlos o no      /documentos nube on|off   mandarlos
+                 o no a un proveedor de internet (por defecto, solo locales)
 "@ | Write-Host
 }
 
@@ -221,6 +260,12 @@ if ($Check) {
     if ($rev.Rechazados.Count) { $est += " - no pasan las reglas: $($rev.Rechazados -join ' / ')" }
     if (-not $script:ComandosOn) { $est += ' - apagados (-NoComandos o settings.json)' }
     Write-Host ("  {0,-20} {1,-18} {2,-24} {3}{4}{5}" -f 'Comandos guardados', 'comandos.json', 'no hace falta', $col, $est, $AI_COLOR.Off)
+    $col = if ($script:DocMal) { $AI_COLOR.Err } else { $AI_COLOR.Bot }
+    $est = if ($script:DocMal) { $script:DocMal } else { "$($script:DocCarpetas.Count) carpetas" }
+    $faltan = @($script:DocCarpetas | Where-Object { -not (Test-Path -LiteralPath $_.Ruta -PathType Container) } | ForEach-Object { $_.Nombre })
+    if ($faltan.Count) { $col = $AI_COLOR.Err; $est += " - no encontradas: $($faltan -join ', ')" }
+    if (-not $script:DocsOn) { $est += ' - apagados (-NoDocumentos o settings.json)' }
+    Write-Host ("  {0,-20} {1,-18} {2,-24} {3}{4}{5}" -f 'Documentos', 'documentos.json', 'no hace falta', $col, $est, $AI_COLOR.Off)
     Write-Host ""
     exit 0
 }
@@ -275,8 +320,11 @@ function Get-AITurnMessages {
         viaja pegado al mensaje del usuario (el de la posicion -Indice), solo
         en la peticion: en la memoria queda la pregunta tal como se escribio.
         Va en el mensaje y no como herramienta para que sirva igual con los
-        modelos que no saben pedirlas.  #>
-    param([bool]$Ofrece, [bool]$Red, [bool]$OfreceEquipo, [string]$Anexo, [int]$Indice = -1, [bool]$SinHerramientas, [bool]$OfreceComandos)
+        modelos que no saben pedirlas.
+        Con -Documentos (de que tratan los documentos del usuario), el aviso
+        de que los tiene; con -OfreceDocumentos, ademas la herramienta.  #>
+    param([bool]$Ofrece, [bool]$Red, [bool]$OfreceEquipo, [string]$Anexo, [int]$Indice = -1, [bool]$SinHerramientas, [bool]$OfreceComandos,
+          [string]$Documentos, [bool]$OfreceDocumentos)
     $arr  = $messages.ToArray()
     $nota = Get-AIClockNote
     if ($arr.Count -gt 2) {
@@ -290,6 +338,14 @@ function Get-AITurnMessages {
     }
     if ($OfreceComandos) {
         $nota += ' Tienes la herramienta comando_guardado, con comandos de solo lectura que el usuario guardo en su equipo. Usala cuando la pregunta pida justo uno de esos datos.'
+    }
+    if ($Documentos) {
+        # La ultima frase hace falta: sin ella, sin internet, a "cual es la
+        # capital de Francia" Gemma 4 E4B contesto "no tengo esa informacion".
+        $nota += " El usuario tiene documentos propios sobre: $Documentos. Cuando su mensaje traiga fragmentos de esos documentos, contesta con lo que dicen y di de qué documento sale el dato; lo que no digan de esos temas, no lo inventes. Las preguntas que no son de esos temas (cultura general, explicaciones, redactar) contéstalas como siempre, con lo que sabes."
+        # Sin el "sin preguntarle", a "venden cemento?" Gemma 4 E4B contesto
+        # "quieres que use la herramienta consultar_documentos?".
+        if ($OfreceDocumentos) { $nota += ' Si te pregunta por esos temas y el mensaje no trae fragmentos, usa la herramienta consultar_documentos antes de contestar, sin preguntarle si quiere que la uses.' }
     }
     if ($Ofrece) {
         $nota += ' Tienes la herramienta buscar_web para buscar en internet. Usala cuando la pregunta necesite datos actuales o que no conoces con seguridad. Cuando la uses, contesta con lo que digan los resultados y no inventes lo que no digan.'
@@ -385,6 +441,43 @@ function Invoke-AITurn {
         }
     }
 
+    # Los documentos del usuario (/documentos). El mismo atajo: si la
+    # pregunta tiene que ver con ellos, los fragmentos viajan con ella, con el
+    # nombre de su fichero; si no, el modelo puede pedirlos con
+    # consultar_documentos. A un proveedor de internet no se le mandan sin
+    # permiso: se dice una vez por sesion.
+    $docs = $null; $docTema = ''; $docFuentes = @(); $docLeidos = 0; $ofreceDoc = $false
+    if ($script:DocsOn -and $script:DocCarpetas.Count -and -not $ForceQuery) {
+        if ((Test-AIDocLocal $prov) -or $script:DocsNube) {
+            $fila = @{ v = $avisoEnFila }
+            $docs = Get-AIDocsEstado { param($t) Write-AINote $t $PrefixWidth -Reprefix:$fila.v; $fila.v = $false }
+            $avisoEnFila = $fila.v
+        } elseif (-not $script:DocNubeDicho) {
+            $script:DocNubeDicho = $true
+            Write-AINote "tus documentos no se mandan a $($prov.Label), que está en internet (para permitirlo: /documentos nube on)" $PrefixWidth -Reprefix:$avisoEnFila
+            $avisoEnFila = $false
+        }
+    }
+    if ($docs -and $docs.Indice.N -and -not (Test-AIDocReloj $UserText)) {
+        $docTema = Get-AIDocTema $script:DocCarpetas
+        $previa = ''
+        for ($k = $base - 2; $k -ge 1; $k--) { if ($messages[$k].role -eq 'user') { $previa = [string]$messages[$k].content; break } }
+        $hall = Find-AIDocTrozos $docs.Indice $UserText $previa
+        $partes = @()
+        if (Test-AIDocCatalogoPedido $UserText) { $partes += Get-AIDocCatalogo $docs }
+        if ($hall.Relevante) { $partes += Get-AIDocAnexo $hall $docTema; $docFuentes += @($hall.Trozos | ForEach-Object { $_.Fichero }) }
+        if ($partes.Count) {
+            $que = if ($docFuentes.Count) { (@($docFuentes | Select-Object -Unique) -join ', ') } else { 'la lista' }
+            Write-AINote "consultando tus documentos: $que" $PrefixWidth -Reprefix:$avisoEnFila
+            $avisoEnFila = $false
+            $anexo = (@($anexo) + $partes | Where-Object { $_ }) -join "`n`n"
+            $docLeidos = 1
+        }
+        # Ya van los fragmentos: en este turno no se ofrece ademas la herramienta.
+        $ofreceDoc = $docLeidos -eq 0 -and -not $sinHerr
+    }
+    $docConsultas = 0
+
     if ($ForceQuery) {
         if (-not $red) {
             & $retirar
@@ -409,10 +502,12 @@ function Invoke-AITurn {
         $daWeb = $ofrece -and $buscas -lt 2 -and $rondas -lt 4 -and -not $cerrado
         $daEq  = $ofreceEq -and $lecturas -lt 2 -and $rondas -lt 4 -and -not $cerrado
         $daCmd = $ofreceCmd -and $corridas -lt 2 -and $rondas -lt 4 -and -not $cerrado
+        $daDoc = $ofreceDoc -and $docConsultas -lt 1 -and $rondas -lt 4 -and -not $cerrado
         $herr  = @()
         if ($daWeb) { $herr += $AI_WEB_TOOL }
         if ($daEq)  { $herr += $AI_EQUIPO_TOOL }
         if ($daCmd) { $herr += (Get-AIComandoTool $script:Comandos) }
+        if ($daDoc) { $herr += (Get-AIDocTool $docTema) }
         if ($herr.Count -eq 0) { $herr = $null }
         $rend = New-AIRenderer -Plain:$Plain -PrefixWidth $PrefixWidth
         $cb   = { param($t) Add-AIToken $rend $t }.GetNewClosure()
@@ -422,8 +517,9 @@ function Invoke-AITurn {
         # adornarlas. (Ojo
         # al comprobar: hay paginas que fechan en UTC, y en Nicaragua desde
         # las 18:00 ya dicen "manana".)
-        $tempo = if (($buscas + $lecturas + $corridas) -gt 0) { [Math]::Min($Temp, 0.2) } else { $Temp }
-        $res = Invoke-AIChat -Provider $prov -Messages (Get-AITurnMessages $daWeb $red $daEq $anexo ($base - 1) $sinHerr $daCmd) `
+        $tempo = if (($buscas + $lecturas + $corridas + $docLeidos + $docConsultas) -gt 0) { [Math]::Min($Temp, 0.2) } else { $Temp }
+        $turno = Get-AITurnMessages $daWeb $red $daEq $anexo ($base - 1) $sinHerr $daCmd -Documentos $docTema -OfreceDocumentos $daDoc
+        $res = Invoke-AIChat -Provider $prov -Messages $turno `
                              -Model $Model -Temperature $tempo `
                              -OnToken $cb -NoStream:$NoStream -Tools $herr
 
@@ -453,6 +549,7 @@ function Invoke-AITurn {
             $ofrece = $false
             $ofreceEq = $false
             $ofreceCmd = $false
+            $ofreceDoc = $false
             continue
         }
 
@@ -494,6 +591,24 @@ function Invoke-AITurn {
                     Write-AINote "leyendo de este equipo: $($grupos -join ', ')" $PrefixWidth -Reprefix:$avisoEnFila
                     $avisoEnFila = $false
                     $txt = (Get-AIEquipoText $grupos -ParaModelo).Text
+                }
+                elseif ($tc.Name -eq 'consultar_documentos' -and $daDoc) {
+                    # Lo pidio el modelo: van los mejores fragmentos aunque el
+                    # atajo no los diera por relevantes; el anexo ya dice que
+                    # si no traen el dato, no se invente.
+                    $docConsultas++
+                    $q = ''
+                    try { $q = [string]($tc.Arguments | ConvertFrom-Json).consulta } catch { }
+                    if (-not $q.Trim()) { $q = $UserText }
+                    Write-AINote "consultando tus documentos: $q" $PrefixWidth -Reprefix:$avisoEnFila
+                    $avisoEnFila = $false
+                    $h = Find-AIDocTrozos $docs.Indice $q $UserText
+                    if (@($h.Trozos).Count) {
+                        $txt = Get-AIDocAnexo $h $docTema
+                        $docFuentes += @($h.Trozos | ForEach-Object { $_.Fichero })
+                    } else {
+                        $txt = "En los documentos del usuario no hay nada sobre «$q». Si la pregunta es sobre ellos, di que no viene en los documentos; no lo inventes."
+                    }
                 }
                 elseif ($tc.Name -ne 'buscar_web' -or -not $daWeb) {
                     $txt = if ($tc.Name -eq 'buscar_web') { 'Ahora no se puede buscar en internet. Dilo y contesta con lo que sepas.' }
@@ -538,10 +653,227 @@ function Invoke-AITurn {
     [void]$messages.Add(@{ role = 'assistant'; content = $res.Text })
     $vistas = @($fuentes | Where-Object { $_ } | Select-Object -Unique -First 3)
     if ($vistas.Count) { Write-AINote ('   fuentes: ' + ($vistas -join '  ')) $PrefixWidth }
+    $vistas = @($docFuentes | Where-Object { $_ } | Select-Object -Unique -First 4)
+    if ($vistas.Count) { Write-AINote ('   documentos: ' + ($vistas -join '  ')) $PrefixWidth }
     # Sin condicion: si este servidor no dice que modelo sirvio, LastModel
     # tiene que quedar vacio y no con el nombre de un turno anterior.
     $script:LastModel = $res.Model
     return $true
+}
+
+# ===========================================================================
+#  Documentos (/documentos y "aprende de los documentos de D:\...")
+# ===========================================================================
+function Get-AIDocsEstado {
+    <#  Los documentos de las carpetas guardadas, leidos y con su indice. La
+        primera vez en la sesion se leen (lo que no cambio sale de lo ya
+        leido) y despues se revisan cada $AI_DOC_REVISION segundos: un
+        fichero nuevo o cambiado en la carpeta se lee solo. $Nota recibe los
+        avisos ("leyendo documentos...").  #>
+    param([scriptblock]$Nota, [switch]$Forzar)
+    if (-not $script:DocCarpetas.Count) { return $null }
+    $vieja = $script:DocEstado
+    if (-not $Forzar -and $vieja -and ((Get-Date) - $vieja.Revisado).TotalSeconds -lt $AI_DOC_REVISION) { return $vieja }
+    $marca = @{ dicho = $false }
+    $aviso = { param($t) if (-not $marca.dicho) { $marca.dicho = $true; if ($Nota) { & $Nota 'leyendo documentos nuevos o cambiados...' } } }
+    try { $e = Update-AIDocIndice $script:DocCarpetas $DocDir $aviso $vieja $script:DocOlvidos }
+    catch {
+        if ($Nota) { & $Nota "no pude leer los documentos: $($_.Exception.Message)" }
+        return $vieja
+    }
+    if ($marca.dicho -and $Nota) { & $Nota "   leídos $($e.Nuevos) en $($e.Segundos) s" }
+    $script:DocEstado = $e
+    return $e
+}
+
+function Add-AIDocCarpeta {
+    <#  Agregar una carpeta de documentos: cuenta lo que hay, pregunta de que
+        tratan (es lo que le dice al modelo cuando mirarlos), los lee y
+        ensena lo que no pudo leer. «cancelar» lo deja.  #>
+    param([string]$Ruta, [string]$Original, [bool]$UsaPRL)
+    $c = $AI_COLOR
+    $di  = { param($t) Write-Host "$($c.Dim)$rotulo$($c.Off)$($c.Bot)$t$($c.Off)" }
+    $lee = { $r = Read-AILine "$($c.User)$user$($c.Off) $($c.Dim)>$($c.Off) " $UsaPRL; if ($null -eq $r) { return $null }; return ([string]$r).Trim() }
+    $cancela = { param($t) ($null -eq $t) -or ((ConvertTo-AIPlano ([string]$t)) -match '^\W*(?:cancelar|cancela|cancelalo|salir|dejalo|olvidalo|no)\W*$') }
+    if ($script:DocMal) { Write-AIError $script:DocMal; return }
+    $Ruta = $Ruta.Trim().Trim('"').TrimEnd('\')
+    if ($Ruta -match '^[a-zA-Z]:$') { $Ruta += '\' }
+    if (-not (Test-Path -LiteralPath $Ruta -PathType Container)) { Write-AIError "no encuentro la carpeta «$Ruta»"; return }
+    $Ruta = (Resolve-Path -LiteralPath $Ruta).ProviderPath.TrimEnd('\')
+    if ($Ruta -match '^[a-zA-Z]:$') { $Ruta += '\' }
+    foreach ($cp in $script:DocCarpetas) {
+        $a = $cp.Ruta.TrimEnd('\') + '\'; $b = $Ruta.TrimEnd('\') + '\'
+        if ($a -eq $b) { & $di "Esa carpeta ya la tengo («$($cp.Nombre)»). Si cambiaste algo, lo leo solo; o escribe /documentos actualizar."; return }
+        if ($b.StartsWith($a, [StringComparison]::OrdinalIgnoreCase)) { & $di "Esa carpeta ya está dentro de «$($cp.Nombre)» ($($cp.Ruta)), que ya leo entera."; return }
+    }
+    if ($script:DocCarpetas.Count -ge $AI_DOC_MAX_CARPETAS) { & $di "Ya tengo $AI_DOC_MAX_CARPETAS carpetas, que es el tope. Quita alguna con /documentos quitar."; return }
+
+    $censo = Get-AIDocCenso $Ruta
+    $no = @($censo.NoLeibles.GetEnumerator() | ForEach-Object { "$($_.Value) $($_.Key.TrimStart('.').ToUpperInvariant())" })
+    if ($censo.Leibles -eq 0) {
+        $extra = if ($no.Count) { " Hay $($no -join ', '), que todavía no sé leer: guarda esos ficheros como Word (.docx) o como texto." } else { '' }
+        & $di "En $Ruta no hay documentos que sepa leer (Word, Excel, PowerPoint, OpenDocument, texto, CSV, HTML o RTF).$extra"
+        return
+    }
+    $tipos = (@($censo.PorTipo.GetEnumerator() | Sort-Object Value -Descending | ForEach-Object { "$($_.Value) $($_.Key)" }) -join ', ')
+    & $di "Voy a leer los documentos de $Ruta para contestarte con lo que dicen. No los cambio ni los mando a ningún sitio: lo que lea se queda en este equipo."
+    $linea = "Hay $($censo.Leibles) que sé leer ($tipos)."
+    if ($no.Count) { $linea += " También hay $($no -join ', '), que todavía no sé leer." }
+    if ($censo.Tope) { $linea += " Son muchos: leeré los primeros $AI_DOC_MAX_FICHEROS." }
+    & $di $linea
+    $sug = Split-Path -Leaf $Ruta
+    if (-not $sug) { $sug = $Ruta }
+    & $di "¿De qué tratan, en pocas palabras? Así sé cuándo mirarlos; por ejemplo «mi ferretería: servicios, empleados, horarios y procedimientos». (Enter: «$sug»; «cancelar» para dejarlo)"
+    $r = & $lee
+    if (& $cancela $r) { & $di 'De acuerdo: no leí nada.'; return }
+    $tema = ([string]$r -replace '[\x00-\x1f\x7f]+', ' ' -replace '\s+', ' ').Trim().Trim('"', [char]0xAB, [char]0xBB).Trim()
+    if ($tema.Length -gt 120) { $tema = $tema.Substring(0, 120).TrimEnd() }
+    if (-not $tema) { $tema = $sug }
+    $nueva = [pscustomobject]@{ Nombre = (ConvertTo-AIDocNombre $Ruta $script:DocCarpetas); Ruta = $Ruta; Tema = $tema; Creado = (Get-Date -Format 'yyyy-MM-dd') }
+    $lista = @($script:DocCarpetas) + @($nueva)
+    $ancho = 70
+    try { $ancho = [Math]::Max(30, [Console]::WindowWidth - 4) } catch { }
+    $avance = { param($t) $t = "  $t"; if ($t.Length -gt $ancho) { $t = $t.Substring(0, $ancho) }; [Console]::Out.Write("`r$($c.Dim)$($t.PadRight($ancho))$($c.Off)") }
+    try { $e = Update-AIDocIndice $lista $DocDir $avance $null $script:DocOlvidos }
+    catch { [Console]::Out.Write("`r" + (' ' * $ancho) + "`r"); Write-AIError "no pude leer los documentos: $($_.Exception.Message)"; return }
+    [Console]::Out.Write("`r" + (' ' * $ancho) + "`r")
+    try { Save-AIDocCarpetas $DocFile $lista }
+    catch { Write-AIError "no pude escribir $($DocFile): $($_.Exception.Message)"; return }
+    $script:DocCarpetas = $lista
+    $script:DocEstado = $e
+    $mios = @($e.Ficheros | Where-Object { $_.Carpeta -eq $nueva.Nombre })
+    $ok = @($mios | Where-Object { $_.Estado -eq 'ok' })
+    $mal = @($mios | Where-Object { $_.Estado -ne 'ok' })
+    $trozos = ($ok | Measure-Object -Property Trozos -Sum).Sum
+    & $di "Listo: leí $($ok.Count) documentos ($trozos fragmentos) en $($e.Segundos) s. Pregúntame lo que quieras sobre $tema y te diré de qué documento sale cada dato. Si cambias o añades ficheros en la carpeta, los vuelvo a leer solo."
+    if ($mal.Count) {
+        & $di "Estos no los pude leer:"
+        foreach ($m in ($mal | Select-Object -First 10)) { Write-Host "  $($c.Dim)$($m.Fichero): $($m.Motivo)$($c.Off)" }
+        if ($mal.Count -gt 10) { Write-Host "  $($c.Dim)y $($mal.Count - 10) más (/documentos los lista)$($c.Off)" }
+    }
+    if (-not (Test-AIDocLocal $prov) -and -not $script:DocsNube) {
+        & $di "Ojo: ahora hablas con $($prov.Label), que está en internet, y a ese no le mando tus documentos. Con /provider gemma los uso; o permítelo con /documentos nube on."
+    }
+    if ($Original) {
+        [void]$messages.Add(@{ role = 'user'; content = $Original })
+        [void]$messages.Add(@{ role = 'assistant'; content = "Leí los documentos de la carpeta $Ruta (sobre $tema): $($ok.Count) documentos. A partir de ahora, cuando preguntes por esos temas, contesto con lo que dicen y digo de qué documento sale cada dato." })
+    }
+}
+
+function Start-AIDocOlvido {
+    <#  Olvidar algo de los documentos: todo, una carpeta, un documento, un
+        apartado o un tema (ver Find-AIDocOlvido). Siempre ensena que se va a
+        olvidar, con ejemplos, y pide un si. Los ficheros del usuario no se
+        tocan: se olvida lo leido.  #>
+    param([string]$Que, [bool]$Todo, [bool]$UsaPRL)
+    $c = $AI_COLOR
+    $di  = { param($t) Write-Host "$($c.Dim)$rotulo$($c.Off)$($c.Bot)$t$($c.Off)" }
+    $lee = { $r = Read-AILine "$($c.User)$user$($c.Off) $($c.Dim)>$($c.Off) " $UsaPRL; if ($null -eq $r) { return $null }; return ([string]$r).Trim() }
+    $esSi = { param($t) (ConvertTo-AIPlano ([string]$t)) -match '^\W*(?:s|si|claro|dale|ok|vale|y|yes|adelante|hazlo|olvidalo|correcto)\b' }
+    $memoria = { if ($messages.Count -gt 1) { & $di 'Lo que ya te dije en esta conversación sigue en su memoria; /new la vacía.' } }
+    if ($script:DocMal) { Write-AIError $script:DocMal; return }
+    if (-not $script:DocCarpetas.Count) { & $di 'No tengo documentos leídos: no hay nada que olvidar.'; return }
+
+    if ($Todo) {
+        $lista = (@($script:DocCarpetas | ForEach-Object { "«$($_.Nombre)»" }) -join ', ')
+        & $di "Voy a olvidar todo lo que leí de tus documentos: $(if ($script:DocCarpetas.Count -eq 1) { "la carpeta $lista" } else { "$($script:DocCarpetas.Count) carpetas ($lista)" }) y lo que guardé de ellas. Tus ficheros no se tocan. ¿Lo olvido? («sí» o «no»)"
+        if (-not (& $esSi (& $lee))) { & $di 'De acuerdo: no olvidé nada.'; return }
+        try {
+            Save-AIDocCarpetas $DocFile @()
+            Save-AIDocOlvidos $OlvFile @()
+            if (Test-Path -LiteralPath $DocDir) { Remove-Item -LiteralPath $DocDir -Recurse -Force }
+        } catch { Write-AIError "no pude borrarlo todo: $($_.Exception.Message)"; return }
+        $script:DocCarpetas = @(); $script:DocOlvidos = @(); $script:DocEstado = $null
+        & $di 'Olvidado: ya no tengo ningún documento.'
+        & $memoria
+        return
+    }
+
+    $e = Get-AIDocsEstado { param($t) Write-Host "$($c.Dim)$t$($c.Off)" }
+    $o = Find-AIDocOlvido $e $Que
+    if (-not $o) { & $di "No encuentro nada sobre «$Que» en tus documentos: no hay nada que olvidar. /documentos lista lo que tengo."; return }
+    & $di "Voy a olvidar $($o.Que). Tus ficheros no se tocan."
+    if ($o.Ejemplos.Count) {
+        Write-Host "  $($c.Dim)por ejemplo:$($c.Off)"
+        foreach ($x in $o.Ejemplos) { Write-Host "  $($c.Dim)- $x$($c.Off)" }
+        if ($o.Trozos -gt $o.Ejemplos.Count) { Write-Host "  $($c.Dim)  y $($o.Trozos - $o.Ejemplos.Count) más$($c.Off)" }
+    }
+    & $di '¿Lo olvido? («sí» o «no»)'
+    if (-not (& $esSi (& $lee))) { & $di 'De acuerdo: no olvidé nada.'; return }
+    try {
+        if ($o.Tipo -eq 'carpeta') {
+            $quedan = @($script:DocCarpetas | Where-Object { $_.Nombre -ne $o.Carpeta })
+            $reglas = @($script:DocOlvidos | Where-Object { $_.Carpeta -ne $o.Carpeta })
+            Save-AIDocCarpetas $DocFile $quedan
+            Save-AIDocOlvidos $OlvFile $reglas
+            $script:DocCarpetas = $quedan; $script:DocOlvidos = $reglas
+            if ($quedan.Count -eq 0 -and (Test-Path -LiteralPath $DocDir)) { Remove-Item -LiteralPath $DocDir -Recurse -Force -ErrorAction SilentlyContinue }
+        } else {
+            $reglas = @($script:DocOlvidos) + @($o.Reglas)
+            Save-AIDocOlvidos $OlvFile $reglas
+            $script:DocOlvidos = $reglas
+        }
+    } catch { Write-AIError "no pude guardarlo: $($_.Exception.Message)"; return }
+    $script:DocEstado = $null
+    $null = Get-AIDocsEstado { param($t) }
+    $deshacer = if ($o.Tipo -eq 'carpeta') { 'Para volver a leerla: /documentos agregar.' } else { 'Si te arrepientes: /documentos olvidos y /documentos recordar <número>.' }
+    & $di "Olvidado. $deshacer"
+    & $memoria
+}
+
+function Show-AIDocsOlvidos {
+    <#  /documentos olvidos: las reglas de lo olvidado, numeradas.  #>
+    $c = $AI_COLOR
+    if (-not $script:DocOlvidos.Count) { Write-Host "$($c.Dim)no has pedido olvidar nada. Para olvidar algo: /documentos olvidar <documento, apartado o tema>   o di «olvida lo de los sueldos»$($c.Off)"; return }
+    $i = 0
+    foreach ($o in $script:DocOlvidos) { $i++; Write-Host "  $($c.Bot)$i.$($c.Off) $(Format-AIDocOlvido $o)  $($c.Dim)($($o.Creado))$($c.Off)" }
+    Write-Host "$($c.Dim)(/documentos recordar <número> deshace uno)$($c.Off)"
+}
+
+function Show-AIDocsLista {
+    <#  /documentos: las carpetas, cuanto se leyo de cada una y lo que no se
+        pudo leer.  #>
+    $c = $AI_COLOR
+    if ($script:DocMal) { Write-AIError $script:DocMal; return }
+    if (-not $script:DocCarpetas.Count) {
+        Write-Host "$($c.Dim)no hay carpetas de documentos. Para agregar una: /documentos agregar D:\MiNegocio   o di «aprende de los documentos de D:\MiNegocio»$($c.Off)"
+        return
+    }
+    $e = Get-AIDocsEstado { param($t) Write-Host "$($c.Dim)$t$($c.Off)" }
+    foreach ($cp in $script:DocCarpetas) {
+        $suyos = @($e.Ficheros | Where-Object { $_.Carpeta -eq $cp.Nombre })
+        $ok = @($suyos | Where-Object { $_.Estado -eq 'ok' })
+        $falta = $e.NoEncontradas -contains $cp.Ruta
+        $cuenta = if ($falta) { 'carpeta no encontrada' } else { "$($ok.Count) documentos, $(($ok | Measure-Object -Property Trozos -Sum).Sum) fragmentos" }
+        Write-Host "  $($c.Bot)$($cp.Nombre)$($c.Off)  $($cp.Tema)$($c.Dim)  [$cuenta]$($c.Off)"
+        Write-Host "      $($c.Dim)$($cp.Ruta)$($c.Off)"
+        foreach ($m in @($suyos | Where-Object { $_.Estado -eq 'mal' } | Select-Object -First 10)) { Write-Host "      $($c.Err)no leído:$($c.Off)$($c.Dim) $($m.Fichero): $($m.Motivo)$($c.Off)" }
+    }
+    if ($script:DocOlvidos.Count) { Write-Host "$($c.Dim)olvidado a petición tuya: $($script:DocOlvidos.Count) (/documentos olvidos los lista)$($c.Off)" }
+    $estado = if (-not $script:DocsOn) { 'apagados: /documentos on' }
+              elseif ((Test-AIDocLocal $prov) -or $script:DocsNube) { 'encendidos: los uso cuando la pregunta va de ellos' }
+              else { "encendidos, pero no se mandan a $($prov.Label) (internet): /documentos nube on" }
+    Write-Host "$($c.Dim)($estado)$($c.Off)"
+}
+
+function Show-AIDocsBusqueda {
+    <#  /documentos buscar X: los fragmentos que viajarian con X, sin
+        preguntar al modelo.  #>
+    param([string]$Texto)
+    $c = $AI_COLOR
+    $e = Get-AIDocsEstado { param($t) Write-Host "$($c.Dim)$t$($c.Off)" }
+    if (-not $e -or -not $e.Indice.N) { Write-Host "$($c.Dim)no hay documentos leídos. /documentos agregar <carpeta>$($c.Off)"; return }
+    $h = Find-AIDocTrozos $e.Indice $Texto
+    if (-not @($h.Trozos).Count) { Write-Host "$($c.Dim)nada en los documentos sobre «$Texto»$($c.Off)"; return }
+    $k = 0
+    foreach ($t in $h.Trozos) {
+        $k++
+        $donde = if ($t.Seccion) { "$($t.Fichero) > $($t.Seccion)" } else { $t.Fichero }
+        Write-Host "  $($c.Bot)$k. $donde$($c.Off)$($c.Dim)  ($($t.Puntos) puntos)$($c.Off)"
+        foreach ($l in ($t.Texto -split "`n")) { Write-Host "     $l" }
+    }
+    $va = if ($h.Relevante) { 'viajarían solos con esa pregunta' } else { 'con esa pregunta no viajarían solos (el modelo puede pedirlos)' }
+    Write-Host "$($c.Dim)($va; cobertura $($h.Cobertura))$($c.Off)"
 }
 
 # ===========================================================================
@@ -1190,6 +1522,8 @@ $estadoWeb = if (-not $script:Web) { 'busqueda apagada' }
 Write-Host "  $($c.Head)PRC AI 2.0$($c.Off)  $($c.Dim)$($prov.Label) / $Model  -  $estadoWeb$($c.Off)"
 Write-Host "  $($c.Dim)bye para salir  -  /help para los comandos$($c.Off)"
 foreach ($malo in $script:ComandosMalos) { Write-Host "  $($c.Err)comando guardado que no se puede usar: $malo$($c.Off)" }
+if ($script:DocMal) { Write-Host "  $($c.Err)$($script:DocMal)$($c.Off)" }
+elseif ($script:DocCarpetas.Count -and $script:DocsOn) { Write-Host "  $($c.Dim)documentos: $(Get-AIDocTema $script:DocCarpetas)$($c.Off)" }
 Write-Host ""
 
 # .Substring(0,1).ToUpper() y punto. La sustitucion de cadenas de CMD es
@@ -1235,6 +1569,76 @@ while ($true) {
                elseif (Test-AIInternet -Force) { 'busqueda encendida: el modelo buscara cuando haga falta' }
                else { 'busqueda encendida, pero ahora no hay conexion a internet' }
         Write-Host "$($c.Dim)$msg$($c.Off)"
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+nube\s+(on|off|si|no)$') {
+        $script:DocsNube = $Matches[1] -in 'on', 'si'
+        $msg = if ($script:DocsNube) { 'documentos para proveedores de internet: permitidos en esta sesión (los fragmentos salen del equipo)' }
+               else { 'documentos para proveedores de internet: no (solo a los locales)' }
+        Write-Host "$($c.Dim)$msg$($c.Off)"
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+(on|off|si|no)$') {
+        $script:DocsOn = $Matches[1] -in 'on', 'si'
+        $msg = if ($script:DocsOn) { 'documentos encendidos: los uso cuando la pregunta va de ellos' } else { 'documentos apagados: no los uso (/documentos buscar sigue funcionando)' }
+        Write-Host "$($c.Dim)$msg$($c.Off)"
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+(?:agregar|anadir|a\u00F1adir|aprender|leer)\s+(\S.*)$') {
+        Add-AIDocCarpeta $Matches[1] '' $usePRL
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+(?:quitar|borrar)\s+(\S+)$') {
+        $n = $Matches[1].ToLowerInvariant()
+        if ($script:DocMal) { Write-AIError $script:DocMal }
+        elseif (@($script:DocCarpetas | Where-Object { $_.Nombre -eq $n }).Count -eq 0) { Write-AIError "no hay ninguna carpeta «$n». /documentos las lista." }
+        else {
+            try {
+                $quedan = @($script:DocCarpetas | Where-Object { $_.Nombre -ne $n })
+                $reglas = @($script:DocOlvidos | Where-Object { $_.Carpeta -ne $n })
+                Save-AIDocCarpetas $DocFile $quedan
+                if ($reglas.Count -ne $script:DocOlvidos.Count) { Save-AIDocOlvidos $OlvFile $reglas }
+                $script:DocCarpetas = $quedan
+                $script:DocOlvidos = $reglas
+                $script:DocEstado = $null
+                # Lo leido de esa carpeta se borra en la siguiente revision.
+                if ($quedan.Count -eq 0 -and (Test-Path -LiteralPath $DocDir)) { Remove-Item -LiteralPath $DocDir -Recurse -Force -ErrorAction SilentlyContinue }
+                Write-Host "$($c.Dim)quitada «$n» (sus ficheros siguen donde estaban; solo dejo de leerlos)$($c.Off)"
+            } catch { Write-AIError "no pude escribir $($DocFile): $($_.Exception.Message)" }
+        }
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+olvidar\s+(\S.*)$') {
+        $q = $Matches[1].Trim()
+        Start-AIDocOlvido $q ((ConvertTo-AIPlano $q) -match '^(?:todo|todos|todo lo que (?:aprendiste|sabes))$') $usePRL
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+olvidos$') {
+        Show-AIDocsOlvidos
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+recordar\s+(\d+)$') {
+        $n = [int]$Matches[1]
+        if ($n -lt 1 -or $n -gt $script:DocOlvidos.Count) { Write-AIError "no hay olvido número $n. /documentos olvidos los lista." }
+        else {
+            $fuera = $script:DocOlvidos[$n - 1]
+            try {
+                $reglas = @(for ($k = 0; $k -lt $script:DocOlvidos.Count; $k++) { if ($k -ne ($n - 1)) { $script:DocOlvidos[$k] } })
+                Save-AIDocOlvidos $OlvFile $reglas
+                $script:DocOlvidos = $reglas
+                $script:DocEstado = $null
+                Write-Host "$($c.Dim)vuelvo a usar $(Format-AIDocOlvido $fuera)$($c.Off)"
+            } catch { Write-AIError "no pude escribir $($OlvFile): $($_.Exception.Message)" }
+        }
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+(?:actualizar|releer|revisar)$') {
+        $e = Get-AIDocsEstado { param($t) Write-Host "$($c.Dim)$t$($c.Off)" } -Forzar
+        if ($e) { Write-Host "$($c.Dim)revisado: $($e.Nuevos) leídos de nuevo, $($e.Reusados) sin cambios$($c.Off)" } else { Show-AIDocsLista }
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+buscar\s+(\S.*)$') {
+        Show-AIDocsBusqueda $Matches[1]
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)(?:\s+(?:lista|listar))?$') {
+        Show-AIDocsLista
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\b') {
+        Write-Host "$($c.Dim)uso: /documentos   /documentos agregar <carpeta>   /documentos quitar <nombre>   /documentos buscar <texto>$($c.Off)"
+        Write-Host "$($c.Dim)     /documentos olvidar <documento, apartado, tema o todo>   /documentos olvidos   /documentos recordar <número>$($c.Off)"
+        Write-Host "$($c.Dim)     /documentos actualizar   /documentos on|off   /documentos nube on|off$($c.Off)"
+        Write-Host "$($c.Dim)  o dilo conversando: aprende de los documentos de D:\MiNegocio$($c.Off)"
     }
     elseif ($line -match '^/comandos?\s+(on|off)$') {
         $script:ComandosOn = $Matches[1] -eq 'on'
@@ -1355,6 +1759,16 @@ while ($true) {
             ($messages.ToArray() | ConvertTo-Json -Depth 10),
             (New-Object System.Text.UTF8Encoding $false))
         Write-Host "$($c.Dim)guardado en $dest$($c.Off)"
+    }
+    elseif ($script:DocCarpetas.Count -and ($op = Get-AIDocOlvidoPeticion $line)) {
+        # "olvida lo de los sueldos": sin pasar por el modelo, con confirmacion.
+        Start-AIDocOlvido $op.Que $op.Todo $usePRL
+    }
+    elseif ($dp = Get-AIDocPeticion $line) {
+        # "aprende de los documentos de D:\MiNegocio": la carpeta se lee
+        # conversando (pregunta de que tratan) y sin pasar por el modelo.
+        if ($dp.Ruta) { Add-AIDocCarpeta $dp.Ruta $line $usePRL }
+        else { Write-AIError "no encuentro la carpeta «$($dp.Pedida)». Revisa la ruta (si lleva espacios, ponla entre comillas)." }
     }
     elseif ($pet = Get-AIComandoPeticion $line) {
         # "agregame un comando para ver mi IP publica": se guarda conversando.
