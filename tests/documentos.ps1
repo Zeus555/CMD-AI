@@ -236,6 +236,54 @@ foreach ($x in '¿qué dice el documento de vacaciones?', '¿a qué hora abren?'
 foreach ($x in '¿Qué hora es?', 'que horas son', '¿qué día es hoy?', 'y que fecha es') { Ver ("{0,-48} -> reloj" -f $x) (Test-AIDocReloj $x) }
 foreach ($x in '¿a qué hora abren?', '¿qué día cierran?', '¿qué hora es la del cierre de caja?') { Ver ("{0,-48} -> no reloj" -f $x) (-not (Test-AIDocReloj $x)) }
 
+# ---- Olvidar ------------------------------------------------------------------
+Write-Output '--- olvidar'
+$o = Find-AIDocOlvido $e5 'empleados'
+Ver 'olvidar "empleados" -> el documento empleados.csv' ($o.Tipo -eq 'fichero' -and $o.Reglas[0].Fichero -eq 'empleados.csv' -and $o.Trozos -ge 1) $o.Que
+$o = Find-AIDocOlvido $e5 'ferreteria'
+Ver 'olvidar "ferreteria" -> la carpeta' ($o.Tipo -eq 'carpeta' -and $o.Carpeta -eq 'ferreteria') $o.Que
+$o = Find-AIDocOlvido $e5 'Vacaciones'
+Ver 'olvidar "Vacaciones" -> el apartado de reglamento.odt' ($o.Tipo -eq 'apartado' -and $o.Reglas[0].Fichero -eq 'reglamento.odt' -and $o.Reglas[0].Apartado -eq 'Reglamento interno > Vacaciones') $o.Que
+$o = Find-AIDocOlvido $e5 'pintura preparada'
+Ver 'olvidar "pintura preparada" -> un tema, con ejemplos' ($o.Tipo -eq 'tema' -and $o.Trozos -ge 1 -and $o.Ejemplos.Count -ge 1 -and $o.Ejemplos[0] -match 'devoluciones') $o.Que
+Ver 'olvidar algo que no esta -> nada' ($null -eq (Find-AIDocOlvido $e5 'submarinos nucleares'))
+$reglas = @((Find-AIDocOlvido $e5 'empleados').Reglas) + @((Find-AIDocOlvido $e5 'Vacaciones').Reglas) + @((Find-AIDocOlvido $e5 'pintura').Reglas)
+$eo = Update-AIDocIndice $carpetas $cache $null $e5 $reglas
+$em = @($eo.Ficheros | Where-Object { $_.Fichero -eq 'empleados.csv' })[0]
+Ver 'el documento olvidado ni se lee: queda como olvidado y se borra lo leido' ($em.Estado -eq 'olvidado' -and @(Get-ChildItem (Join-Path $cache 'textos')).Count -eq 9 -and @($eo.Indice.Fichero | Where-Object { $_ -eq 'empleados.csv' }).Count -eq 0)
+$h = Find-AIDocTrozos $eo.Indice '¿Quién es la gerente?'
+Ver 'y ya no sale en las respuestas' (@($h.Trozos | Where-Object { $_.Fichero -eq 'empleados.csv' }).Count -eq 0)
+$h = Find-AIDocTrozos $eo.Indice '¿Cuántos días de vacaciones tengo?'
+Ver 'el apartado olvidado tampoco' (@($h.Trozos | Where-Object { $_.Seccion -like '*Vacaciones*' }).Count -eq 0)
+Ver 'pero el resto del documento si' (@($eo.Indice.Seccion | Where-Object { $_ -eq 'Reglamento interno' }).Count -ge 1)
+$todo = $eo.Indice.Texto -join "`n"
+Ver 'el tema olvidado no sale en ningun documento' ($todo -notmatch '(?i)pintura') (@($eo.Indice.Texto | Where-Object { $_ -match '(?i)pintura' }) -join ' // ')
+Ver 'pero lo de al lado si: solo se van las lineas del tema' ($todo -match 'Corte de llaves \| Precio: 50' -and $todo -match 'herramientas' -eq $false -and $todo -match 'Correo: ventas@')
+Ver 'una fila cuyo primer dato es del tema se va entera (sin precio huerfano)' ($todo -notmatch '120\.5')
+$r = Remove-AIDocTema 'Planilla' "Nombre: Ana | Sueldo: 25000 | Cargo: Gerente`nNombre: Luis | Sueldo: 18000 | Cargo: Cajero`nEl sueldo se paga el 30." ([string[]]@((ConvertTo-AIDocTerminos 'sueldos')))
+Ver 'en una fila se quita solo el dato del tema' ($r.Quedan -eq "Nombre: Ana | Cargo: Gerente`nNombre: Luis | Cargo: Cajero" -and $r.Fuera.Count -eq 3) $r.Quedan
+$r = Remove-AIDocTema 'Politicas > Sueldos' "Se paga el 30.`nCon transferencia." ([string[]]@((ConvertTo-AIDocTerminos 'sueldos')))
+Ver 'si el apartado es del tema, se va todo' ($r.Quedan -eq '' -and $r.Fuera.Count -eq 2)
+Ver 'la lista de documentos no nombra el olvidado' ((Get-AIDocCatalogo $eo) -notmatch 'empleados')
+$ev = Update-AIDocIndice $carpetas $cache $null $eo @()
+Ver 'recordar: sin reglas, todo vuelve' (@($ev.Indice.Fichero | Where-Object { $_ -eq 'empleados.csv' }).Count -ge 1 -and $ev.Indice.N -eq $e5.Indice.N)
+$f = Join-Path $tmp 'olvidos.json'
+Save-AIDocOlvidos $f $reglas
+$l = Read-AIDocOlvidos $f
+Ver 'documentos-olvidos.json ida y vuelta' ($l.Lista.Count -eq $reglas.Count -and $l.Lista[1].Apartado -eq 'Reglamento interno > Vacaciones' -and $l.Lista[2].Tema -eq 'pintura')
+foreach ($x in @(
+    @('olvida todo lo que aprendiste', 'TODO'), @('olvida todos los documentos', 'TODO'), @('Olvida lo que aprendiste.', 'TODO'),
+    @('olvida el documento empleados.csv', 'empleados.csv'), @('borra lo de los sueldos', 'sueldos'),
+    @('deja de usar la carpeta ferreteria', 'ferreteria'), @('olvida el apartado de vacaciones', 'vacaciones'),
+    @('por favor olvida lo relacionado con la pintura', 'pintura'))) {
+    $pe = Get-AIDocOlvidoPeticion $x[0]
+    $ok = if ($x[1] -eq 'TODO') { $pe -and $pe.Todo } else { $pe -and -not $pe.Todo -and $pe.Que -eq $x[1] }
+    Ver ("{0,-48} -> {1}" -f $x[0], $x[1]) $ok "$($pe.Todo) / $($pe.Que)"
+}
+foreach ($x in 'olvida lo que te dije', 'quita la tilde de esta palabra', 'borra esto de mi cabeza', '¿cómo olvido un documento?') {
+    Ver ("{0,-48} -> no" -f $x) ($null -eq (Get-AIDocOlvidoPeticion $x))
+}
+
 # ---- Carpetas guardadas y proveedores --------------------------------------------
 Write-Output '--- guardadas'
 $f = Join-Path $tmp 'documentos.json'
@@ -253,15 +301,18 @@ Write-Output '--- ordenes'
 $ast = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'bin\ai.ps1'), [ref]$null, [ref]$null)
 $patrones = @($ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.StringConstantExpressionAst] -and $n.Value -like '^/(?:documentos?|docs?)*' }, $true) | ForEach-Object { $_.Value })
 function Orden($linea) { $i = 0; foreach ($p in $patrones) { $i++; if ($linea -match $p) { return $i } }; return 0 }
-Ver 'ocho ordenes de /documentos' ($patrones.Count -eq 8) $patrones.Count
+Ver 'once ordenes de /documentos' ($patrones.Count -eq 11) $patrones.Count
 Ver '/documentos nube on    -> nube' ((Orden '/documentos nube on') -eq 1 -and (Orden '/docs nube off') -eq 1)
 Ver '/documentos on|off     -> interruptor' ((Orden '/documentos off') -eq 2 -and (Orden '/doc on') -eq 2)
 Ver '/documentos agregar X  -> agregar' ((Orden '/documentos agregar D:\Mi Negocio') -eq 3 -and (Orden '/docs leer "D:\x y"') -eq 3)
 Ver '/documentos quitar X   -> quitar' ((Orden '/documentos quitar negocio') -eq 4)
-Ver '/documentos actualizar -> releer' ((Orden '/documentos actualizar') -eq 5)
-Ver '/documentos buscar X   -> buscar' ((Orden '/documentos buscar horario sabado') -eq 6)
-Ver '/documentos y /docs    -> lista' ((Orden '/documentos') -eq 7 -and (Orden '/docs') -eq 7 -and (Orden '/documentos lista') -eq 7)
-Ver '/documentos otra cosa  -> modo de uso' ((Orden '/documentos agregar') -eq 8 -and (Orden '/documentos nube') -eq 8)
+Ver '/documentos olvidar X  -> olvidar' ((Orden '/documentos olvidar empleados.csv') -eq 5 -and (Orden '/documentos olvidar todo') -eq 5)
+Ver '/documentos olvidos    -> lista de olvidos' ((Orden '/documentos olvidos') -eq 6)
+Ver '/documentos recordar N -> deshacer' ((Orden '/documentos recordar 2') -eq 7)
+Ver '/documentos actualizar -> releer' ((Orden '/documentos actualizar') -eq 8)
+Ver '/documentos buscar X   -> buscar' ((Orden '/documentos buscar horario sabado') -eq 9)
+Ver '/documentos y /docs    -> lista' ((Orden '/documentos') -eq 10 -and (Orden '/docs') -eq 10 -and (Orden '/documentos lista') -eq 10)
+Ver '/documentos otra cosa  -> modo de uso' ((Orden '/documentos agregar') -eq 11 -and (Orden '/documentos nube') -eq 11 -and (Orden '/documentos recordar x') -eq 11)
 Ver '/documental            -> al modelo' ((Orden '/documental') -eq 0)
 
 Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

@@ -128,6 +128,11 @@ $script:DocsNube = $conf.documentos_nube -eq $true
 $carga = Read-AIDocCarpetas $DocFile
 $script:DocCarpetas = @($carga.Lista)
 $script:DocMal      = $carga.Error
+# Lo que el usuario pidio olvidar de esos documentos (ver documentos.ps1).
+$OlvFile = Join-Path $DataDir 'documentos-olvidos.json'
+$carga = Read-AIDocOlvidos $OlvFile
+$script:DocOlvidos = @($carga.Lista)
+if ($carga.Error -and -not $script:DocMal) { $script:DocMal = $carga.Error }
 $script:DocEstado   = $null
 $script:DocNubeDicho = $false
 # Proveedores que rechazaron la herramienta con un HTTP 4xx: no se les vuelve
@@ -212,6 +217,11 @@ $($c.Bullet)EN EL MODO INTERACTIVO$($c.Off)
   /documentos    las carpetas y lo leido   /documentos agregar <carpeta>
   /documentos buscar X   ver que fragmentos salen para X, sin el modelo
   /documentos quitar N   dejar de leerla   /documentos actualizar   releer
+  olvida lo de los sueldos   olvidar algo de los documentos (un documento,
+                 un apartado o un tema), o "olvida todo lo que aprendiste".
+                 Ensena que se olvida y pregunta antes. Tus ficheros no se tocan
+  /documentos olvidar X  lo mismo       /documentos olvidos   lo olvidado
+  /documentos recordar N volver a usar lo olvidado numero N
   /documentos on|off     usarlos o no      /documentos nube on|off   mandarlos
                  o no a un proveedor de internet (por defecto, solo locales)
 "@ | Write-Host
@@ -330,7 +340,9 @@ function Get-AITurnMessages {
         $nota += ' Tienes la herramienta comando_guardado, con comandos de solo lectura que el usuario guardo en su equipo. Usala cuando la pregunta pida justo uno de esos datos.'
     }
     if ($Documentos) {
-        $nota += " El usuario tiene documentos propios sobre: $Documentos. Cuando su mensaje traiga fragmentos de esos documentos, contesta con lo que dicen y di de qué documento sale el dato; lo que no digan, no lo inventes."
+        # La ultima frase hace falta: sin ella, sin internet, a "cual es la
+        # capital de Francia" Gemma 4 E4B contesto "no tengo esa informacion".
+        $nota += " El usuario tiene documentos propios sobre: $Documentos. Cuando su mensaje traiga fragmentos de esos documentos, contesta con lo que dicen y di de qué documento sale el dato; lo que no digan de esos temas, no lo inventes. Las preguntas que no son de esos temas (cultura general, explicaciones, redactar) contéstalas como siempre, con lo que sabes."
         # Sin el "sin preguntarle", a "venden cemento?" Gemma 4 E4B contesto
         # "quieres que use la herramienta consultar_documentos?".
         if ($OfreceDocumentos) { $nota += ' Si te pregunta por esos temas y el mensaje no trae fragmentos, usa la herramienta consultar_documentos antes de contestar, sin preguntarle si quiere que la uses.' }
@@ -664,7 +676,7 @@ function Get-AIDocsEstado {
     if (-not $Forzar -and $vieja -and ((Get-Date) - $vieja.Revisado).TotalSeconds -lt $AI_DOC_REVISION) { return $vieja }
     $marca = @{ dicho = $false }
     $aviso = { param($t) if (-not $marca.dicho) { $marca.dicho = $true; if ($Nota) { & $Nota 'leyendo documentos nuevos o cambiados...' } } }
-    try { $e = Update-AIDocIndice $script:DocCarpetas $DocDir $aviso $vieja }
+    try { $e = Update-AIDocIndice $script:DocCarpetas $DocDir $aviso $vieja $script:DocOlvidos }
     catch {
         if ($Nota) { & $Nota "no pude leer los documentos: $($_.Exception.Message)" }
         return $vieja
@@ -722,7 +734,7 @@ function Add-AIDocCarpeta {
     $ancho = 70
     try { $ancho = [Math]::Max(30, [Console]::WindowWidth - 4) } catch { }
     $avance = { param($t) $t = "  $t"; if ($t.Length -gt $ancho) { $t = $t.Substring(0, $ancho) }; [Console]::Out.Write("`r$($c.Dim)$($t.PadRight($ancho))$($c.Off)") }
-    try { $e = Update-AIDocIndice $lista $DocDir $avance $null }
+    try { $e = Update-AIDocIndice $lista $DocDir $avance $null $script:DocOlvidos }
     catch { [Console]::Out.Write("`r" + (' ' * $ancho) + "`r"); Write-AIError "no pude leer los documentos: $($_.Exception.Message)"; return }
     [Console]::Out.Write("`r" + (' ' * $ancho) + "`r")
     try { Save-AIDocCarpetas $DocFile $lista }
@@ -748,6 +760,76 @@ function Add-AIDocCarpeta {
     }
 }
 
+function Start-AIDocOlvido {
+    <#  Olvidar algo de los documentos: todo, una carpeta, un documento, un
+        apartado o un tema (ver Find-AIDocOlvido). Siempre ensena que se va a
+        olvidar, con ejemplos, y pide un si. Los ficheros del usuario no se
+        tocan: se olvida lo leido.  #>
+    param([string]$Que, [bool]$Todo, [bool]$UsaPRL)
+    $c = $AI_COLOR
+    $di  = { param($t) Write-Host "$($c.Dim)$rotulo$($c.Off)$($c.Bot)$t$($c.Off)" }
+    $lee = { $r = Read-AILine "$($c.User)$user$($c.Off) $($c.Dim)>$($c.Off) " $UsaPRL; if ($null -eq $r) { return $null }; return ([string]$r).Trim() }
+    $esSi = { param($t) (ConvertTo-AIPlano ([string]$t)) -match '^\W*(?:s|si|claro|dale|ok|vale|y|yes|adelante|hazlo|olvidalo|correcto)\b' }
+    $memoria = { if ($messages.Count -gt 1) { & $di 'Lo que ya te dije en esta conversación sigue en su memoria; /new la vacía.' } }
+    if ($script:DocMal) { Write-AIError $script:DocMal; return }
+    if (-not $script:DocCarpetas.Count) { & $di 'No tengo documentos leídos: no hay nada que olvidar.'; return }
+
+    if ($Todo) {
+        $lista = (@($script:DocCarpetas | ForEach-Object { "«$($_.Nombre)»" }) -join ', ')
+        & $di "Voy a olvidar todo lo que leí de tus documentos: $(if ($script:DocCarpetas.Count -eq 1) { "la carpeta $lista" } else { "$($script:DocCarpetas.Count) carpetas ($lista)" }) y lo que guardé de ellas. Tus ficheros no se tocan. ¿Lo olvido? («sí» o «no»)"
+        if (-not (& $esSi (& $lee))) { & $di 'De acuerdo: no olvidé nada.'; return }
+        try {
+            Save-AIDocCarpetas $DocFile @()
+            Save-AIDocOlvidos $OlvFile @()
+            if (Test-Path -LiteralPath $DocDir) { Remove-Item -LiteralPath $DocDir -Recurse -Force }
+        } catch { Write-AIError "no pude borrarlo todo: $($_.Exception.Message)"; return }
+        $script:DocCarpetas = @(); $script:DocOlvidos = @(); $script:DocEstado = $null
+        & $di 'Olvidado: ya no tengo ningún documento.'
+        & $memoria
+        return
+    }
+
+    $e = Get-AIDocsEstado { param($t) Write-Host "$($c.Dim)$t$($c.Off)" }
+    $o = Find-AIDocOlvido $e $Que
+    if (-not $o) { & $di "No encuentro nada sobre «$Que» en tus documentos: no hay nada que olvidar. /documentos lista lo que tengo."; return }
+    & $di "Voy a olvidar $($o.Que). Tus ficheros no se tocan."
+    if ($o.Ejemplos.Count) {
+        Write-Host "  $($c.Dim)por ejemplo:$($c.Off)"
+        foreach ($x in $o.Ejemplos) { Write-Host "  $($c.Dim)- $x$($c.Off)" }
+        if ($o.Trozos -gt $o.Ejemplos.Count) { Write-Host "  $($c.Dim)  y $($o.Trozos - $o.Ejemplos.Count) más$($c.Off)" }
+    }
+    & $di '¿Lo olvido? («sí» o «no»)'
+    if (-not (& $esSi (& $lee))) { & $di 'De acuerdo: no olvidé nada.'; return }
+    try {
+        if ($o.Tipo -eq 'carpeta') {
+            $quedan = @($script:DocCarpetas | Where-Object { $_.Nombre -ne $o.Carpeta })
+            $reglas = @($script:DocOlvidos | Where-Object { $_.Carpeta -ne $o.Carpeta })
+            Save-AIDocCarpetas $DocFile $quedan
+            Save-AIDocOlvidos $OlvFile $reglas
+            $script:DocCarpetas = $quedan; $script:DocOlvidos = $reglas
+            if ($quedan.Count -eq 0 -and (Test-Path -LiteralPath $DocDir)) { Remove-Item -LiteralPath $DocDir -Recurse -Force -ErrorAction SilentlyContinue }
+        } else {
+            $reglas = @($script:DocOlvidos) + @($o.Reglas)
+            Save-AIDocOlvidos $OlvFile $reglas
+            $script:DocOlvidos = $reglas
+        }
+    } catch { Write-AIError "no pude guardarlo: $($_.Exception.Message)"; return }
+    $script:DocEstado = $null
+    $null = Get-AIDocsEstado { param($t) }
+    $deshacer = if ($o.Tipo -eq 'carpeta') { 'Para volver a leerla: /documentos agregar.' } else { 'Si te arrepientes: /documentos olvidos y /documentos recordar <número>.' }
+    & $di "Olvidado. $deshacer"
+    & $memoria
+}
+
+function Show-AIDocsOlvidos {
+    <#  /documentos olvidos: las reglas de lo olvidado, numeradas.  #>
+    $c = $AI_COLOR
+    if (-not $script:DocOlvidos.Count) { Write-Host "$($c.Dim)no has pedido olvidar nada. Para olvidar algo: /documentos olvidar <documento, apartado o tema>   o di «olvida lo de los sueldos»$($c.Off)"; return }
+    $i = 0
+    foreach ($o in $script:DocOlvidos) { $i++; Write-Host "  $($c.Bot)$i.$($c.Off) $(Format-AIDocOlvido $o)  $($c.Dim)($($o.Creado))$($c.Off)" }
+    Write-Host "$($c.Dim)(/documentos recordar <número> deshace uno)$($c.Off)"
+}
+
 function Show-AIDocsLista {
     <#  /documentos: las carpetas, cuanto se leyo de cada una y lo que no se
         pudo leer.  #>
@@ -765,8 +847,9 @@ function Show-AIDocsLista {
         $cuenta = if ($falta) { 'carpeta no encontrada' } else { "$($ok.Count) documentos, $(($ok | Measure-Object -Property Trozos -Sum).Sum) fragmentos" }
         Write-Host "  $($c.Bot)$($cp.Nombre)$($c.Off)  $($cp.Tema)$($c.Dim)  [$cuenta]$($c.Off)"
         Write-Host "      $($c.Dim)$($cp.Ruta)$($c.Off)"
-        foreach ($m in @($suyos | Where-Object { $_.Estado -ne 'ok' } | Select-Object -First 10)) { Write-Host "      $($c.Err)no leído:$($c.Off)$($c.Dim) $($m.Fichero): $($m.Motivo)$($c.Off)" }
+        foreach ($m in @($suyos | Where-Object { $_.Estado -eq 'mal' } | Select-Object -First 10)) { Write-Host "      $($c.Err)no leído:$($c.Off)$($c.Dim) $($m.Fichero): $($m.Motivo)$($c.Off)" }
     }
+    if ($script:DocOlvidos.Count) { Write-Host "$($c.Dim)olvidado a petición tuya: $($script:DocOlvidos.Count) (/documentos olvidos los lista)$($c.Off)" }
     $estado = if (-not $script:DocsOn) { 'apagados: /documentos on' }
               elseif ((Test-AIDocLocal $prov) -or $script:DocsNube) { 'encendidos: los uso cuando la pregunta va de ellos' }
               else { "encendidos, pero no se mandan a $($prov.Label) (internet): /documentos nube on" }
@@ -1508,13 +1591,37 @@ while ($true) {
         else {
             try {
                 $quedan = @($script:DocCarpetas | Where-Object { $_.Nombre -ne $n })
+                $reglas = @($script:DocOlvidos | Where-Object { $_.Carpeta -ne $n })
                 Save-AIDocCarpetas $DocFile $quedan
+                if ($reglas.Count -ne $script:DocOlvidos.Count) { Save-AIDocOlvidos $OlvFile $reglas }
                 $script:DocCarpetas = $quedan
+                $script:DocOlvidos = $reglas
                 $script:DocEstado = $null
                 # Lo leido de esa carpeta se borra en la siguiente revision.
                 if ($quedan.Count -eq 0 -and (Test-Path -LiteralPath $DocDir)) { Remove-Item -LiteralPath $DocDir -Recurse -Force -ErrorAction SilentlyContinue }
                 Write-Host "$($c.Dim)quitada «$n» (sus ficheros siguen donde estaban; solo dejo de leerlos)$($c.Off)"
             } catch { Write-AIError "no pude escribir $($DocFile): $($_.Exception.Message)" }
+        }
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+olvidar\s+(\S.*)$') {
+        $q = $Matches[1].Trim()
+        Start-AIDocOlvido $q ((ConvertTo-AIPlano $q) -match '^(?:todo|todos|todo lo que (?:aprendiste|sabes))$') $usePRL
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+olvidos$') {
+        Show-AIDocsOlvidos
+    }
+    elseif ($line -match '^/(?:documentos?|docs?)\s+recordar\s+(\d+)$') {
+        $n = [int]$Matches[1]
+        if ($n -lt 1 -or $n -gt $script:DocOlvidos.Count) { Write-AIError "no hay olvido número $n. /documentos olvidos los lista." }
+        else {
+            $fuera = $script:DocOlvidos[$n - 1]
+            try {
+                $reglas = @(for ($k = 0; $k -lt $script:DocOlvidos.Count; $k++) { if ($k -ne ($n - 1)) { $script:DocOlvidos[$k] } })
+                Save-AIDocOlvidos $OlvFile $reglas
+                $script:DocOlvidos = $reglas
+                $script:DocEstado = $null
+                Write-Host "$($c.Dim)vuelvo a usar $(Format-AIDocOlvido $fuera)$($c.Off)"
+            } catch { Write-AIError "no pude escribir $($OlvFile): $($_.Exception.Message)" }
         }
     }
     elseif ($line -match '^/(?:documentos?|docs?)\s+(?:actualizar|releer|revisar)$') {
@@ -1529,6 +1636,7 @@ while ($true) {
     }
     elseif ($line -match '^/(?:documentos?|docs?)\b') {
         Write-Host "$($c.Dim)uso: /documentos   /documentos agregar <carpeta>   /documentos quitar <nombre>   /documentos buscar <texto>$($c.Off)"
+        Write-Host "$($c.Dim)     /documentos olvidar <documento, apartado, tema o todo>   /documentos olvidos   /documentos recordar <número>$($c.Off)"
         Write-Host "$($c.Dim)     /documentos actualizar   /documentos on|off   /documentos nube on|off$($c.Off)"
         Write-Host "$($c.Dim)  o dilo conversando: aprende de los documentos de D:\MiNegocio$($c.Off)"
     }
@@ -1651,6 +1759,10 @@ while ($true) {
             ($messages.ToArray() | ConvertTo-Json -Depth 10),
             (New-Object System.Text.UTF8Encoding $false))
         Write-Host "$($c.Dim)guardado en $dest$($c.Off)"
+    }
+    elseif ($script:DocCarpetas.Count -and ($op = Get-AIDocOlvidoPeticion $line)) {
+        # "olvida lo de los sueldos": sin pasar por el modelo, con confirmacion.
+        Start-AIDocOlvido $op.Que $op.Todo $usePRL
     }
     elseif ($dp = Get-AIDocPeticion $line) {
         # "aprende de los documentos de D:\MiNegocio": la carpeta se lee

@@ -8,6 +8,66 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ---
 
+## 2026-11-17 — Olvidar, y una batería con un negocio entero
+
+**Las peticiones.**
+
+- «También quiero una opción para quitar dicho aprendizaje, o que olvide
+  algunos aspectos».
+- Después: unos documentos de prueba de todo lo que se había comentado (el
+  negocio, sus servicios, empleados, funcionamiento, procedimientos,
+  horarios y políticas), y que lo probara yo primero, con una batería de
+  conocimiento y otra de procesamiento de documentos.
+
+**Olvidar.** Son reglas en `documentos-olvidos.json`; los ficheros del
+usuario no se tocan.
+
+- **Qué se olvida:** todo, una carpeta, un documento, un apartado o un tema.
+- **Cómo se pide:** con «olvida lo de los sueldos» o con
+  `/documentos olvidar`. Siempre se enseña qué se va a olvidar, con
+  ejemplos, y se pide un sí.
+- **Cómo se deshace:** con `/documentos recordar`.
+- **Un documento olvidado ni se lee,** y lo leído de él se borra del equipo.
+- **Un tema** se quitaba al principio con su fragmento entero. Al olvidar
+  «pintura» se iba también la fila de «Corte de llaves», que estaba en el
+  mismo fragmento. Ahora se quitan solo las líneas del tema, y en una fila
+  de tabla solo su dato («Sueldo: 25000»). Si el dato es el primero de la
+  fila, se va la fila entera, para no dejar un precio huérfano.
+- **El orden de búsqueda importa.** «Permisos» se tomaba por el documento
+  «Vacaciones y permisos», porque su nombre lo contiene. Ahora gana lo
+  exacto, sea un documento o un apartado.
+
+**La batería, `tests/negocio.ps1`.** Es la Panadería y Cafetería La Espiga,
+inventada:
+
+- 13 ficheros en los doce formatos, más un PDF, una imagen y un temporal de
+  Word.
+- Trampas: datos que no están (sueldos, tarjeta, domicilio, correo) y dos
+  sucursales con horarios distintos.
+- **Procesamiento (sin modelo, 52 comprobaciones):** lo que se lee de cada
+  fichero, que cada una de las 32 preguntas lleve su documento al modelo, y
+  olvidar.
+  - **El primer fallo era del propio generador:** PowerShell aplanaba las
+    listas de párrafos y salían Word rotos. La batería lo cazó.
+- **Conocimiento (con Gemma 4 E4B, 34 preguntas, 6,5 s de media):**
+  - Dio bien los 26 datos con su documento, incluidas tablas de Word, horas
+    de Excel, una pregunta de seguimiento y el texto en Windows-1252.
+  - Las 4 que no están contestaron «no viene en los documentos», sin
+    inventar.
+  - La lista de documentos salió bien, y lo olvidado ya no lo sabía.
+  - **Lo que se arregló:** sin internet, a «¿cuál es la capital de
+    Francia?» contestó «no tengo esa información». La nota de no inventar
+    lo cohibía también fuera de los documentos. Ahora la nota dice que lo
+    demás se contesta como siempre, y contestó «París».
+  - **Tres fallos más eran de la corrección, no del modelo:** exigía la
+    hora de cierre cuando se preguntaba la de apertura, y «prohíbe» no
+    casaba por el acento.
+- **`tests\negocio.ps1 -Crear <carpeta>`** deja los documentos para probarlos
+  a mano. Están hechos para el lector, no para Office: llevan solo el XML
+  con el texto, y Word o Excel pueden negarse a abrirlos.
+
+---
+
 ## 2026-11-17 — Documentos: contestar con lo que dicen los del negocio
 
 **La petición.** Que la terminal, a partir de una carpeta de ficheros,

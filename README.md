@@ -847,8 +847,51 @@ imágenes y demás ficheros se ignoran.
   cambió.
 - `/documentos quitar <nombre>`: deja de leer una carpeta. Sus ficheros
   siguen donde estaban.
+- `/documentos olvidar <documento, apartado, tema o todo>`,
+  `/documentos olvidos` y `/documentos recordar <número>`: ver «Olvidar».
 - `/documentos on|off`: usarlos o no en esta sesión. También se apagan con
   `-NoDocumentos` o con `"documentos": false` en `settings.json`.
+
+### Olvidar
+
+Se puede olvidar todo o solo una parte. Lo que se olvida es lo leído; tus
+ficheros no se tocan:
+
+```
+Ariel > olvida lo de la extensión
+ia > Voy a olvidar lo que hable de «extension» (6 líneas de Empleados.csv). Tus ficheros no se tocan.
+  por ejemplo:
+  - Empleados.csv: Extensión: 101
+  - Empleados.csv: Extensión: 102
+  ...
+ia > ¿Lo olvido? («sí» o «no»)
+Ariel > sí
+ia > Olvidado. Si te arrepientes: /documentos olvidos y /documentos recordar <número>.
+```
+
+- **Qué se puede olvidar:**
+  - **Todo:** «olvida todo lo que aprendiste» o `/documentos olvidar todo`.
+    Quita las carpetas y lo que se guardó de ellas.
+  - **Una carpeta:** «deja de usar la carpeta negocio».
+  - **Un documento:** «olvida el documento Empleados.csv». Ya ni se lee, y
+    lo leído de él se borra.
+  - **Un apartado de un documento:** «olvida el apartado Permisos». Se va
+    con todo lo que cuelga de él, y el resto del documento sigue.
+  - **Un tema en todos los documentos:** «olvida lo de los sueldos». Se
+    quitan solo las líneas que hablan de él. En una fila de tabla se quita
+    solo ese dato («Sueldo: 25000»), salvo que sea el primero de la fila, el
+    que dice de qué es la fila; entonces se va la fila entera, para no dejar
+    un precio sin su producto.
+- **Por qué orden se busca:** primero el nombre exacto de una carpeta, un
+  documento o un apartado; después parte del nombre; si no, es un tema. Así
+  «permisos» es el apartado Permisos y no el documento «Vacaciones y
+  permisos».
+- **Siempre enseña qué va a olvidar,** con ejemplos, y pide un sí.
+- **Se puede deshacer:** `/documentos olvidos` lista lo olvidado y
+  `/documentos recordar <número>` lo vuelve a usar. Se guarda en
+  `documentos-olvidos.json`.
+- **Lo que ya se dijo en la conversación** sigue en su memoria; `/new` la
+  vacía.
 
 ### Privacidad
 
@@ -924,7 +967,7 @@ Después de un cambio, y antes de subirlo:
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\probar.ps1
 ```
 
-Sin modelo y sin internet tarda unos 25 segundos y pasa siete pruebas:
+Sin modelo y sin internet tarda unos 30 segundos y pasa ocho pruebas:
 
 | Prueba | Qué mira |
 | --- | --- |
@@ -933,13 +976,18 @@ Sin modelo y sin internet tarda unos 25 segundos y pasa siete pruebas:
 | `equipo.ps1` | Reloj, formatos con un equipo de mentira y la lectura de verdad de este equipo. Esta lectura sale en pantalla y no se guarda. |
 | `preferencias.ps1` | Qué mensajes piden recordar algo y qué se guarda, la limpieza, guardar y cargar, el fichero roto, la nota para el modelo y que el modelo no pueda guardarlas. |
 | `consultas.ps1` | Consultas web, con una página de ejemplo (`datos/consulta.html`): buscar rótulos, los bloques y el dato que falta, páginas JSON, el JSON que sale, lo que propone el modelo, guardar y cargar, y qué peticiones son de internet. |
-| `documentos.ps1` | Documentos de una ferretería inventada en todos los formatos, creados al vuelo en una carpeta temporal (en el repositorio no hay binarios). Mira cada lector, los fragmentos, qué se relee y qué no, el índice guardado, 15 preguntas que tienen que encontrar su fragmento y 6 que no deben sacar documentos, las peticiones conversadas y el orden de las órdenes `/documentos`. Con `-Crear <carpeta>` solo crea la ferretería, para probarla a mano. |
+| `documentos.ps1` | Documentos de una ferretería inventada en todos los formatos, creados al vuelo en una carpeta temporal (en el repositorio no hay binarios). Mira cada lector, los fragmentos, qué se relee y qué no, el índice guardado, 15 preguntas que tienen que encontrar su fragmento y 6 que no deben sacar documentos, las peticiones conversadas y el orden de las órdenes `/documentos`, y también olvidar. Con `-Crear <carpeta>` solo crea la ferretería, para probarla a mano. |
+| `negocio.ps1` | Un negocio inventado entero, la Panadería y Cafetería La Espiga: quiénes son, servicios y precios, empleados, horarios por sucursal, vacaciones y permisos, reglamento, procedimientos, quejas, pedidos, proveedores, seguridad alimentaria, inventario, y necesidades y metas. Va en los doce formatos, con trampas: datos que no están, dos horarios, un PDF y un temporal de Word. Sin modelo mira el procesamiento: qué se lee de cada fichero, que cada una de las 32 preguntas encuentre su documento y olvidar. Con `-Crear <carpeta>` solo crea los documentos. |
 | `dialogo.ps1 -SoloReconocer` | Reconocer cuándo una frase pide guardar un comando (`datos/peticiones.txt`) y leer lo que propone el modelo. |
 
 Opciones:
 
 - **`-Red`:** añade unas pocas peticiones de verdad a internet, para la IP pública, un servidor que no existe y la página de la Lotería Nacional de Nicaragua.
-- **`-Modelo`:** necesita el llama-server en marcha y tarda varios minutos. Pasa las once escenas de `datos/escenas.txt` por el diálogo real de `bin/ai.ps1`, con las respuestas del usuario ya escritas, y prueba `/comando agregar` con nueve casos.
+- **`-Modelo`:** necesita el llama-server en marcha y tarda varios minutos. Pasa las once escenas de `datos/escenas.txt` por el diálogo real de `bin/ai.ps1`, con las respuestas del usuario ya escritas, y prueba `/comando agregar` con nueve casos. También hace al modelo las preguntas de `negocio.ps1` y mira cada respuesta:
+  - los datos que están tienen que salir, y del documento;
+  - los que no están («¿cuánto gana Lucía?», «¿aceptan tarjeta?») tienen que decir que no vienen, sin cifras ni correos inventados;
+  - lo que no va del negocio («¿cuál es la capital de Francia?») se contesta sin documentos;
+  - lo olvidado ya no se sabe.
 
 Las respuestas del modelo cambian de una vez a otra: si una escena falla, lee su conversación antes de dar el fallo por bueno.
 

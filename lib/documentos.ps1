@@ -882,7 +882,7 @@ function Get-AIDocCatalogo {
         [void]$sb.AppendLine($l)
         $k++
     }
-    $no = @($Estado.Ficheros | Where-Object { $_.Estado -ne 'ok' })
+    $no = @($Estado.Ficheros | Where-Object { $_.Estado -eq 'mal' })
     # Con su motivo: sin el, Gemma 4 E4B dijo que un PDF "esta danado".
     if ($no.Count) {
         [void]$sb.AppendLine("El programa no pudo leer $($no.Count) ficheros:")
@@ -989,8 +989,14 @@ function Update-AIDocIndice {
     <#  Revisa las carpetas, lee lo nuevo o cambiado (lo demas sale de lo ya
         leido en $Dir) y monta el indice. Si nada cambio desde $Anterior, lo
         devuelve tal cual con la hora de revision nueva.
-        $Aviso recibe un texto para ensenar mientras lee.  #>
-    param([array]$Carpetas, [string]$Dir, [scriptblock]$Aviso, $Anterior)
+        $Aviso recibe un texto para ensenar mientras lee.
+        $Olvidos son las reglas de lo que el usuario pidio olvidar (ver
+        Find-AIDocOlvido): un fichero olvidado ni se lee, y lo leido de el se
+        borra; un apartado o un tema olvidados no entran en el indice.  #>
+    param([array]$Carpetas, [string]$Dir, [scriptblock]$Aviso, $Anterior, [array]$Olvidos = @())
+    $fueraF = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    foreach ($o in @($Olvidos | Where-Object { $_.Tipo -eq 'fichero' })) { [void]$fueraF.Add("$($o.Carpeta)|$($o.Fichero)") }
+    $olvidados = New-Object 'System.Collections.Generic.List[object]'
     $sw = [Diagnostics.Stopwatch]::StartNew()
     $textos = Join-Path $Dir 'textos'
     if (-not (Test-Path -LiteralPath $textos)) { New-Item -ItemType Directory -Path $textos -Force | Out-Null }
@@ -1015,18 +1021,22 @@ function Update-AIDocIndice {
         foreach ($f in (Get-AIDocFicheros $cp.Ruta)) {
             $ext = $f.Extension.ToLowerInvariant()
             if (-not $AI_DOC_LEE.ContainsKey($ext) -and -not $AI_DOC_NO_LEE.ContainsKey($ext)) { $est.Otros++; continue }
+            $puro = $f.FullName.Substring($base.Length).TrimStart('\')
+            $rel = if ($varias) { "$($cp.Nombre)\$puro" } else { $puro }
+            if ($fueraF.Contains("$($cp.Nombre)|$puro")) {
+                $olvidados.Add([pscustomobject]@{ Ruta = $f.FullName; Fichero = $rel; RelPuro = $puro; Carpeta = $cp.Nombre; Tipo = ''; Estado = 'olvidado'; Motivo = 'pediste olvidarlo (/documentos olvidos)'; Clave = ''; Trozos = 0 })
+                continue
+            }
             if ($vistos.Count -ge $AI_DOC_MAX_FICHEROS) { $est.Tope = $true; break }
             if (-not $vistos.Add($f.FullName)) { continue }      # una carpeta dentro de otra
-            $rel = $f.FullName.Substring($base.Length).TrimStart('\')
-            if ($varias) { $rel = "$($cp.Nombre)\$rel" }
-            $pend.Add(@($cp, $f, $rel))
+            $pend.Add(@($cp, $f, $rel, $puro))
         }
     }
     $firma = New-Object System.Text.StringBuilder
     $k = 0
     foreach ($x in $pend) {
         $k++
-        $cp = $x[0]; $f = $x[1]; $rel = $x[2]
+        $cp = $x[0]; $f = $x[1]; $rel = $x[2]; $puro = $x[3]
         $ruta = $f.FullName; $ticks = $f.LastWriteTimeUtc.Ticks; $bytes = $f.Length
         [void]$firma.Append("$ruta|$ticks|$bytes;")
         $m = $null
@@ -1044,8 +1054,9 @@ function Update-AIDocIndice {
         }
         $ext = $f.Extension.ToLowerInvariant()
         $tipo = if ($AI_DOC_LEE.ContainsKey($ext)) { $AI_DOC_TIPO[$AI_DOC_LEE[$ext]] } else { $ext.TrimStart('.').ToUpperInvariant() }
-        $est.Ficheros.Add([pscustomobject]@{ Ruta = $ruta; Fichero = $rel; Carpeta = $cp.Nombre; Tipo = $tipo; Estado = $m.Estado; Motivo = $m.Motivo; Clave = $m.Clave; Trozos = 0 })
+        $est.Ficheros.Add([pscustomobject]@{ Ruta = $ruta; Fichero = $rel; RelPuro = $puro; Carpeta = $cp.Nombre; Tipo = $tipo; Estado = $m.Estado; Motivo = $m.Motivo; Clave = $m.Clave; Trozos = 0 })
     }
+    foreach ($o in $olvidados) { $est.Ficheros.Add($o) }
     # Lo que ya no esta se olvida, salvo lo de una carpeta que ahora no se
     # encuentra (un disco USB sin enchufar): eso se guarda para cuando vuelva.
     $quita = @(foreach ($key in $man.Keys) {
@@ -1065,6 +1076,7 @@ function Update-AIDocIndice {
     # La firma: que ficheros hay, de cuando y de que tamano, y como se llaman
     # las carpetas (con varias, el nombre va delante de cada fichero).
     [void]$firma.Append('carpetas:' + (@($Carpetas | ForEach-Object { $_.Nombre }) -join ','))
+    [void]$firma.Append(';olvidos:' + (@($Olvidos | ForEach-Object { "$($_.Tipo)|$($_.Carpeta)|$($_.Fichero)|$($_.Apartado)|$($_.Tema)" }) -join ';'))
     $est.Firma = Get-AIDocClave $firma.ToString() 20
     if ($Anterior -and $Anterior.Firma -eq $est.Firma -and $Anterior.Indice) {
         foreach ($k in 'Revisado', 'Nuevos', 'Reusados', 'Otros', 'Tope', 'NoEncontradas', 'Carpetas') { $Anterior[$k] = $est[$k] }
@@ -1073,17 +1085,37 @@ function Update-AIDocIndice {
     # Sin cambios desde la ultima vez: el indice guardado. Si no, se monta.
     $ix = Read-AIDocIndice $Dir $est.Firma
     if (-not $ix) {
+        $apartados = @($Olvidos | Where-Object { $_.Tipo -eq 'apartado' })
         $trozos = New-Object 'System.Collections.Generic.List[object]'
         foreach ($f in $est.Ficheros) {
             if ($f.Estado -ne 'ok') { continue }
             $g = Join-Path $textos ($f.Clave + '.txt')
             if (-not (Test-Path -LiteralPath $g)) { continue }
+            $suyos = @($apartados | Where-Object { $_.Carpeta -eq $f.Carpeta -and $_.Fichero -eq $f.RelPuro })
             foreach ($t in (Split-AIDocTrozos ([IO.File]::ReadAllText($g, [Text.Encoding]::UTF8)))) {
+                if ($suyos.Count -and (Test-AIDocApartadoOlvidado $t.Seccion $suyos)) { continue }
                 $trozos.Add([pscustomobject]@{ Fichero = $f.Fichero; Seccion = $t.Seccion; Texto = $t.Texto })
             }
         }
         if ($Aviso -and $trozos.Count -gt 2000) { & $Aviso "preparando $($trozos.Count) fragmentos" }
         $ix = New-AIDocIndice $trozos
+        # Los temas olvidados: de los fragmentos que traen sus palabras se
+        # quitan las lineas (o los datos de una fila) que hablan de el, y se
+        # vuelve a montar sin ellos.
+        $cambio = $false
+        foreach ($o in @($Olvidos | Where-Object { $_.Tipo -eq 'tema' })) {
+            $ws = [string[]]@((ConvertTo-AIDocTerminos $o.Tema) | Select-Object -Unique)
+            if (-not $ws.Count) { continue }
+            foreach ($i in (Get-AIDocTemaTrozos $ix $o.Tema)) {
+                $r = Remove-AIDocTema $trozos[$i].Seccion $trozos[$i].Texto $ws
+                if ($r.Fuera.Count) { $trozos[$i].Texto = $r.Quedan; $cambio = $true }
+            }
+        }
+        if ($cambio) {
+            $quedan = New-Object 'System.Collections.Generic.List[object]'
+            foreach ($tz in $trozos) { if ($tz.Texto.Trim()) { $quedan.Add($tz) } }
+            $ix = New-AIDocIndice $quedan
+        }
         try { Save-AIDocIndice $ix $Dir $est.Firma } catch { }
     }
     $cuenta = @{}
@@ -1149,4 +1181,222 @@ function Get-AIDocPeticion {
         $cand = $c2.Substring(0, $k)
     }
     return @{ Ruta = ''; Pedida = $pedida.TrimEnd($fin) }
+}
+
+# ---------------------------------------------------------------------------
+#  Olvidar: lo que el usuario pide que deje de saberse. Son reglas guardadas
+#  en documentos-olvidos.json, no cambios en sus ficheros:
+#    fichero   un documento entero: ni se lee, y lo ya leido se borra
+#    apartado  un apartado de un documento ("Politicas > Sueldos") y lo que
+#              cuelga de el
+#    tema      los fragmentos que traen todas las palabras de un tema
+#              ("sueldos"), en cualquier documento
+#  Se aplican al montar el indice, asi que lo olvidado no llega al modelo ni
+#  en los fragmentos ni en la lista de documentos. /documentos recordar deshace
+#  una regla.
+# ---------------------------------------------------------------------------
+function Test-AIDocApartadoOlvidado {
+    <#  El apartado de un fragmento es uno olvidado o cuelga de uno?  #>
+    param([string]$Seccion, [array]$Reglas)
+    foreach ($o in $Reglas) {
+        if ($Seccion -eq $o.Apartado -or $Seccion.StartsWith($o.Apartado + ' > ')) { return $true }
+    }
+    return $false
+}
+
+function Get-AIDocTemaTrozos {
+    <#  Los fragmentos (sus posiciones en el indice) que traen todas las
+        palabras de un tema, ya recortadas como en la busqueda: "sueldos"
+        encuentra "sueldo".  #>
+    param($Indice, [string]$Tema)
+    $ws = @((ConvertTo-AIDocTerminos $Tema) | Select-Object -Unique)
+    if (-not $ws.Count -or -not $Indice -or -not $Indice.N) { return , ([int[]]@()) }
+    $comun = $null
+    foreach ($w in $ws) {
+        $ids = [int[]]@((Get-AIDocApariciones $Indice $w).Keys)
+        if ($null -eq $comun) { $comun = New-Object 'System.Collections.Generic.HashSet[int]'; foreach ($i in $ids) { [void]$comun.Add($i) } }
+        else { $comun.IntersectWith($ids) }
+        if (-not $comun.Count) { break }
+    }
+    return , ([int[]]@($comun | Sort-Object))
+}
+
+function Read-AIDocOlvidos {
+    <#  Devuelve @{ Lista; Error }, como Read-AIDocCarpetas.  #>
+    param([string]$Fichero)
+    $r = @{ Lista = @(); Error = '' }
+    if (-not (Test-Path -LiteralPath $Fichero)) { return $r }
+    try { $j = [IO.File]::ReadAllText($Fichero, [Text.Encoding]::UTF8) | ConvertFrom-Json }
+    catch { $r.Error = "documentos-olvidos.json no se puede leer ($Fichero). Arréglalo o bórralo."; return $r }
+    $r.Lista = @(foreach ($x in $j) {
+        if ([string]$x.tipo -notin 'fichero', 'apartado', 'tema') { continue }
+        [pscustomobject]@{ Tipo = [string]$x.tipo; Carpeta = [string]$x.carpeta; Fichero = [string]$x.fichero
+                           Apartado = [string]$x.apartado; Tema = [string]$x.tema; Creado = [string]$x.creado }
+    })
+    return $r
+}
+
+function Save-AIDocOlvidos {
+    param([string]$Fichero, [array]$Lista)
+    $dir = Split-Path -Parent $Fichero
+    if ($dir -and -not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $filas = @($Lista | ForEach-Object { [ordered]@{ tipo = $_.Tipo; carpeta = $_.Carpeta; fichero = $_.Fichero; apartado = $_.Apartado; tema = $_.Tema; creado = $_.Creado } })
+    $json = if ($filas.Count -eq 0) { '[]' } else { ConvertTo-Json -InputObject $filas -Depth 3 }
+    [IO.File]::WriteAllText($Fichero, $json, (New-Object System.Text.UTF8Encoding $false))
+}
+
+function Format-AIDocOlvido {
+    <#  Una regla en palabras, para la lista y las confirmaciones.  #>
+    param($Regla)
+    switch ($Regla.Tipo) {
+        'fichero'  { return "el documento $($Regla.Fichero) (carpeta $($Regla.Carpeta))" }
+        'apartado' { return "el apartado «$($Regla.Apartado)» de $($Regla.Fichero)" }
+        default    { return "lo que hable de «$($Regla.Tema)»" }
+    }
+}
+
+function Find-AIDocOlvido {
+    <#  Que hay que olvidar para "<texto>": una carpeta (por su nombre o su
+        ruta), un documento (por su nombre, con o sin extension), un apartado
+        (por su titulo) o, si no, un tema (los fragmentos que traen todas sus
+        palabras). Por ese orden: "empleados" es el documento empleados.csv
+        antes que cualquier fragmento que diga "empleados".
+        Devuelve @{ Tipo; Carpeta; Reglas; Que; Trozos; Ejemplos } o $null si
+        no hay nada que olvidar con ese texto.  #>
+    param($Estado, [string]$Texto)
+    $p = (ConvertTo-AIPlano $Texto).Trim().Trim('"', "'", '.', '?', '!', ',', [char]0xAB, [char]0xBB).Trim()
+    if (-not $p -or -not $Estado) { return $null }
+    $hoy = Get-Date -Format 'yyyy-MM-dd'
+    $ix = $Estado.Indice
+    $ejemplos = {
+        param($ids)
+        @($ids | Select-Object -First 5 | ForEach-Object {
+            $t = ($ix.Texto[$_] -replace '\s+', ' ').Trim()
+            if ($t.Length -gt 90) { $t = $t.Substring(0, 90) + '...' }
+            $d = if ($ix.Seccion[$_]) { "$($ix.Fichero[$_]) > $($ix.Seccion[$_])" } else { $ix.Fichero[$_] }
+            "$d`: $t"
+        })
+    }
+
+    # 1. Una carpeta.
+    foreach ($cp in $Estado.Carpetas) {
+        $hoja = Split-Path -Leaf ($cp.Ruta.TrimEnd('\'))
+        if ($p -eq (ConvertTo-AIPlano $cp.Nombre) -or $p.TrimEnd('\') -eq (ConvertTo-AIPlano $cp.Ruta).TrimEnd('\') -or $p -eq (ConvertTo-AIPlano $hoja)) {
+            $n = @($Estado.Ficheros | Where-Object { $_.Carpeta -eq $cp.Nombre -and $_.Estado -eq 'ok' }).Count
+            return @{ Tipo = 'carpeta'; Carpeta = $cp.Nombre; Reglas = @(); Que = "la carpeta «$($cp.Nombre)» ($($cp.Ruta)), con sus $n documentos"; Trozos = 0; Ejemplos = @() }
+        }
+    }
+    # 2 y 3. Un documento o un apartado: primero por el nombre exacto y
+    # despues por parte del nombre. Asi "permisos" es el apartado Permisos y
+    # no el documento "Vacaciones y permisos".
+    $vivos = @($Estado.Ficheros | Where-Object { $_.Estado -ne 'olvidado' })
+    foreach ($exacto in $true, $false) {
+        if (-not $exacto -and $p.Length -lt 4) { break }
+        $docs = @($vivos | Where-Object {
+            $h = Split-Path -Leaf $_.Fichero
+            if ($exacto) { @((ConvertTo-AIPlano $_.Fichero), (ConvertTo-AIPlano $_.RelPuro), (ConvertTo-AIPlano $h), (ConvertTo-AIPlano ([IO.Path]::GetFileNameWithoutExtension($h)))) -contains $p }
+            else { (ConvertTo-AIPlano $h).Contains($p) }
+        })
+        if ($docs.Count -gt 3) { $docs = @() }
+        if ($docs.Count) {
+            $nombres = @($docs | ForEach-Object { $_.Fichero })
+            $ids = @(for ($i = 0; $i -lt $ix.N; $i++) { if ($nombres -contains $ix.Fichero[$i]) { $i } })
+            return @{ Tipo = 'fichero'; Carpeta = ''; Que = ((@($docs | ForEach-Object { "el documento $($_.Fichero)" })) -join ', ')
+                      Reglas = @($docs | ForEach-Object { [pscustomobject]@{ Tipo = 'fichero'; Carpeta = $_.Carpeta; Fichero = $_.RelPuro; Apartado = ''; Tema = ''; Creado = $hoy } })
+                      Trozos = $ids.Count; Ejemplos = @(& $ejemplos $ids) }
+        }
+        # Un apartado, por el titulo de uno de sus niveles (el mas hondo que encaje).
+        $pares = [ordered]@{}
+        for ($i = 0; $i -lt $ix.N; $i++) {
+            $s = $ix.Seccion[$i]
+            if (-not $s) { continue }
+            $partes = @($s -split ' > ')
+            for ($k = $partes.Count - 1; $k -ge 0; $k--) {
+                $tt = ConvertTo-AIPlano $partes[$k]
+                if (($exacto -and $tt -eq $p) -or (-not $exacto -and $p.Length -ge 5 -and $tt.Contains($p))) {
+                    $clave = "$($ix.Fichero[$i])|$((@($partes[0..$k])) -join ' > ')"
+                    if (-not $pares.Contains($clave)) { $pares[$clave] = New-Object 'System.Collections.Generic.List[int]' }
+                    $pares[$clave].Add($i)
+                    break
+                }
+            }
+        }
+        if ($pares.Count -and $pares.Count -le 5) {
+            $reglas = @(); $ids = @(); $que = @()
+            foreach ($kv in $pares.GetEnumerator()) {
+                $fich, $apart = $kv.Key -split '\|', 2
+                $fi = @($vivos | Where-Object { $_.Fichero -eq $fich })[0]
+                $reglas += [pscustomobject]@{ Tipo = 'apartado'; Carpeta = $fi.Carpeta; Fichero = $fi.RelPuro; Apartado = $apart; Tema = ''; Creado = $hoy }
+                $ids += @($kv.Value)
+                $que += "el apartado «$apart» de $fich"
+            }
+            return @{ Tipo = 'apartado'; Carpeta = ''; Reglas = $reglas; Que = ($que -join ', '); Trozos = $ids.Count; Ejemplos = @(& $ejemplos $ids) }
+        }
+    }    # 4. Un tema: las mismas lineas que quitara Update-AIDocIndice.
+    $ws = [string[]]@((ConvertTo-AIDocTerminos $p) | Select-Object -Unique)
+    if (-not $ws.Count) { return $null }
+    $piezas = @(); $fs = @()
+    foreach ($i in (Get-AIDocTemaTrozos $ix $p)) {
+        $r = Remove-AIDocTema $ix.Seccion[$i] $ix.Texto[$i] $ws
+        foreach ($x in $r.Fuera) {
+            $x = ($x -replace '\s+', ' ').Trim()
+            if ($x.Length -gt 90) { $x = $x.Substring(0, 90) + '...' }
+            $piezas += "$($ix.Fichero[$i]): $x"
+        }
+        if ($r.Fuera.Count) { $fs += $ix.Fichero[$i] }
+    }
+    if (-not $piezas.Count) { return $null }
+    $fs = @($fs | Select-Object -Unique)
+    return @{ Tipo = 'tema'; Carpeta = ''; Que = "lo que hable de «$p» ($($piezas.Count) líneas de $($fs -join ', '))"
+              Reglas = @([pscustomobject]@{ Tipo = 'tema'; Carpeta = ''; Fichero = ''; Apartado = ''; Tema = $p; Creado = $hoy })
+              Trozos = $piezas.Count; Ejemplos = @($piezas | Select-Object -First 5) }
+}
+
+function Remove-AIDocTema {
+    <#  Quita de un fragmento lo que habla de un tema: cada linea que, junto
+        con el apartado, trae todas las palabras del tema. En una fila de
+        tabla ("Nombre: Ana | Sueldo: 25000") se mira dato a dato: se quita
+        solo el dato ("Sueldo: 25000"), salvo que sea el primero, el que dice
+        de que es la fila, y entonces se va la fila entera. Si el apartado
+        mismo es del tema, se va todo. Devuelve @{ Quedan; Fuera }.  #>
+    param([string]$Seccion, [string]$Texto, [string[]]$Palabras)
+    $sec = ' ' + (ConvertTo-AIDocNormal $Seccion) + ' '
+    $tiene = { param($s) $n = $sec + (ConvertTo-AIDocNormal $s) + ' '; foreach ($w in $Palabras) { if (-not $n.Contains(" $w ")) { return $false } }; return $true }
+    $quedan = New-Object 'System.Collections.Generic.List[string]'
+    $fuera = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($l in ($Texto -split "`n")) {
+        if (-not $l.Trim() -or $l.StartsWith($AI_DOC_COLUMNAS)) { $quedan.Add($l); continue }
+        $datos = @($l -split ' \| ')
+        if ($datos.Count -gt 1) {
+            if (& $tiene $datos[0]) { $fuera.Add($l); continue }
+            $siguen = @($datos | Where-Object { -not (& $tiene $_) })
+            if ($siguen.Count -eq $datos.Count) { $quedan.Add($l); continue }
+            foreach ($d in $datos) { if ($siguen -notcontains $d) { $fuera.Add($d) } }
+            $quedan.Add(($siguen -join ' | '))
+        }
+        elseif (& $tiene $l) { $fuera.Add($l) }
+        else { $quedan.Add($l) }
+    }
+    $hay = @($quedan | Where-Object { $_.Trim() -and -not $_.StartsWith($AI_DOC_COLUMNAS) }).Count
+    return @{ Quedan = $(if ($hay) { ($quedan -join "`n").Trim() } else { '' }); Fuera = @($fuera) }
+}
+
+function Get-AIDocOlvidoPeticion {
+    <#  "olvida todo lo que aprendiste", "olvida el documento empleados.csv",
+        "borra lo de los sueldos", "deja de usar la carpeta negocio": que se
+        pide olvidar. Devuelve @{ Todo = $true }, @{ Todo = $false; Que } o
+        $null si el mensaje no lo pide. Tiene que nombrar los documentos, una
+        carpeta, un apartado o "lo de...": "olvida lo que te dije" va al
+        modelo como siempre.  #>
+    param([string]$Texto)
+    $p = ConvertTo-AIPlano $Texto
+    if ($p -notmatch '^\W*(?:(?:por favor|oye|ia),?\s+)?(?:olvida(?:te)?|borra|quita|elimina|deja de usar|desaprende)\s+(.+?)[\s.!?]*$') { return $null }
+    $r = $Matches[1].Trim()
+    if ($r -notmatch '\b(?:documentos?|archivos?|ficheros?|carpetas?|apartados?|seccion|aprendiste|has aprendido|lo de|lo del|lo sobre|lo relacionado|la parte)\b') { return $null }
+    $todo = '^(?:de\s+)?(?:todo(?:\s+lo)?|todos)?\s*(?:lo\s+)?(?:que\s+(?:aprendiste|has aprendido|sabes|leiste|has leido))?\s*(?:(?:de|en|sobre)\s+)?(?:(?:los|las|mis|tus|todos los)\s+)?(?:documentos|archivos|ficheros|carpetas)?$'
+    if ($r -match $todo -and $r -match '\b(?:todo|todos|aprendiste|has aprendido|documentos|archivos|ficheros|carpetas)\b') { return @{ Todo = $true; Que = '' } }
+    $que = $r -replace '^(?:de\s+)?(?:todo\s+)?(?:lo\s+(?:de|del|sobre|relacionado\s+con|que\s+dicen?\s+(?:de|del|sobre))|el\s+(?:documento|archivo|fichero|apartado)(?:\s+de)?|la\s+(?:carpeta|seccion|parte)(?:\s+(?:de|del|sobre))?|los\s+(?:documentos|archivos|ficheros)\s+(?:de|del|sobre))\s+', ''
+    $que = $que -replace '^(?:los|las|el|la)\s+', '' -replace '\s+(?:de\s+(?:los|mis|tus)\s+documentos|que\s+(?:aprendiste|leiste))$', ''
+    if (-not $que.Trim()) { return $null }
+    return @{ Todo = $false; Que = $que.Trim() }
 }
