@@ -10,6 +10,9 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ## 2026-11-17 — Olvidar, y una batería con un negocio entero
 
+Esta entrada y la de documentos, de la rama `documentos`, se fusionaron
+juntas en main el mismo día.
+
 **Las peticiones.**
 
 - «También quiero una opción para quitar dicho aprendizaje, o que olvide
