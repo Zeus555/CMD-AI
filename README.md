@@ -53,7 +53,8 @@ que lo genera, y el cliente lo pinta segun llega.
   RTF) y desde entonces contesta con lo que dicen sobre tu negocio: servicios,
   empleados, horarios, procedimientos, políticas... Dice de qué documento
   sale cada dato, y si no viene, lo dice en vez de inventarlo. Todo se queda
-  en el equipo. Ver «Documentos».
+  en el equipo. Ver «Documentos» y, para el día a día, la
+  [guía de uso](docs/guia-documentos.md).
 - **Diagnóstico** con `AI -Check`: estado de clave y conectividad de los
   proveedores sin gastar tokens.
 - **Local por defecto**: sin configurar nada habla con Gemma 4 E4B en el
@@ -151,6 +152,11 @@ Dentro del modo interactivo:
 | `/comando N`   | ejecutar el comando guardado `N` y enseñar su salida, sin modelo |
 | `/comando quitar N` | borrarlo |
 | `/comando on|off` | dejar o no que el modelo use los comandos guardados |
+| `recuerda que ...` | guardar una preferencia para esta y las próximas conversaciones |
+| `/preferencias` | lista de las preferencias guardadas; `/preferencia agregar X` y `/preferencia quitar N` |
+| `aprende de los documentos de D:\MiNegocio` | leer una carpeta de documentos y contestar con lo que dicen |
+| `/documentos`  | las carpetas de documentos y lo leído; `/documentos buscar X` enseña de dónde saldría la respuesta |
+| `olvida lo de ...` | olvidar algo de los documentos (`/documentos olvidos` y `/documentos recordar N` lo deshacen) |
 | `/help`        | mostrar la ayuda                |
 
 Sin configurar nada, el proveedor es `gemma`: Gemma 4 E4B en el llama-server
@@ -764,7 +770,10 @@ guardada. La tendré en cuenta en esta y en las próximas conversaciones
 
 Una carpeta con los documentos de tu negocio (servicios, precios, empleados,
 horarios, procedimientos, políticas internas...) y la terminal contesta con
-lo que dicen. El ejemplo es una ferretería inventada, la misma de las
+lo que dicen. Para quien lo vaya a usar en su negocio sin conocimientos
+técnicos está la [guía de uso de los documentos](docs/guia-documentos.md):
+cómo preparar la carpeta, qué hacer con los PDF, cómo preguntar, comprobar y
+olvidar. El ejemplo de aquí es una ferretería inventada, la misma de las
 pruebas:
 
 ```
@@ -820,17 +829,18 @@ ia > El documento empleados.csv indica que Luis Mora tiene el cargo de Cajero y 
 
 | Formato | Ficheros |
 | --- | --- |
-| Word | `.docx` (títulos, listas y tablas; sin el texto borrado con control de cambios) |
-| Excel | `.xlsx` (cada hoja con su nombre) |
-| PowerPoint | `.pptx` (cada diapositiva, en orden) |
+| Word | `.docx` y `.docm` (títulos, listas y tablas; sin el texto borrado con control de cambios) |
+| Excel | `.xlsx` y `.xlsm` (cada hoja con su nombre) |
+| PowerPoint | `.pptx` y `.pptm` (cada diapositiva, en orden) |
 | OpenDocument | `.odt`, `.ods`, `.odp` |
-| Texto | `.txt`, `.md`, `.csv`, `.tsv`, `.json`, `.xml`, `.html`, `.rtf`, `.log`, `.ini`, `.yml` |
+| Texto | `.txt`, `.md`, `.markdown`, `.csv`, `.tsv`, `.json`, `.xml`, `.html`, `.htm`, `.rtf`, `.log`, `.ini`, `.yml`, `.yaml` |
 
 Los ficheros de texto se leen en UTF-8 o en Windows-1252, que es como
 guardaban el Bloc de notas antiguo y el Excel en español. Los PDF y los
 formatos viejos de Office (`.doc`, `.xls`, `.ppt`) todavía no se leen: se
 dice cuáles son y qué hacer, por ejemplo «guárdalo como Word (.docx)». Las
-imágenes y demás ficheros se ignoran.
+imágenes y demás ficheros se ignoran, igual que los ocultos, los temporales
+de Office (`~$...`) y las carpetas que empiezan por punto.
 
 ### Órdenes
 
@@ -845,7 +855,9 @@ imágenes y demás ficheros se ignoran.
 - `/documentos actualizar`: vuelve a revisar las carpetas ahora. No suele
   hacer falta: se revisan solas cada cinco minutos, y solo se lee lo que
   cambió.
-- `/documentos quitar <nombre>`: deja de leer una carpeta. Sus ficheros
+- `/documentos quitar <nombre>`: deja de leer una carpeta. El nombre es el
+  corto que enseña `/documentos` (el de la carpeta en minúsculas, sin
+  acentos y con guiones: `D:\Mi Negocio` es `mi-negocio`). Sus ficheros
   siguen donde estaban.
 - `/documentos olvidar <documento, apartado, tema o todo>`,
   `/documentos olvidos` y `/documentos recordar <número>`: ver «Olvidar».
@@ -887,9 +899,11 @@ ia > Olvidado. Si te arrepientes: /documentos olvidos y /documentos recordar <n�
   «permisos» es el apartado Permisos y no el documento «Vacaciones y
   permisos».
 - **Siempre enseña qué va a olvidar,** con ejemplos, y pide un sí.
-- **Se puede deshacer:** `/documentos olvidos` lista lo olvidado y
-  `/documentos recordar <número>` lo vuelve a usar. Se guarda en
-  `documentos-olvidos.json`.
+- **Se puede deshacer** lo olvidado de un documento, un apartado o un tema:
+  `/documentos olvidos` lo lista y `/documentos recordar <número>` lo vuelve
+  a usar. Se guarda en `documentos-olvidos.json`. Olvidar una carpeta o todo
+  no se deshace así, porque quita la carpeta de la lista (y con «todo»,
+  también la lista de olvidos): se vuelve a leer con `/documentos agregar`.
 - **Lo que ya se dijo en la conversación** sigue en su memoria; `/new` la
   vacía.
 
@@ -897,8 +911,9 @@ ia > Olvidado. Si te arrepientes: /documentos olvidos y /documentos recordar <n�
 
 Los documentos nunca se modifican. Lo leído se guarda en
 `%LOCALAPPDATA%\PRC-CMD-AI\documentos\`, para no releer cada vez lo que no
-cambió. Los fragmentos solo se mandan a los proveedores locales (Gemma, Qwen,
-Ollama). Con un proveedor de internet (xAI, OpenAI) saldrían del equipo, así
+cambió; la lista de carpetas va en `documentos.json` y lo olvidado en
+`documentos-olvidos.json`, en la misma carpeta `PRC-CMD-AI`. Los fragmentos
+solo se mandan a los proveedores locales (Gemma, Qwen, Ollama). Con un proveedor de internet (xAI, OpenAI) saldrían del equipo, así
 que no se mandan y se avisa una vez. Para permitirlo en una sesión está
 `/documentos nube on`, y para siempre, `"documentos_nube": true` en
 `settings.json`.
@@ -952,6 +967,10 @@ tools/build.ps1     normaliza codificacion: UTF-8 con BOM en .ps1, CRLF en .bat
 tests/probar.ps1    pasa todas las pruebas y dice cuales fallan
 tests/*.ps1         una prueba por parte; sus frases y escenas, en tests/datos/
 HISTORIAL.md        que cambio en cada version, por que y como se probo
+docs/guia-documentos.md  guia de uso de los documentos, para el dueno de
+                    un negocio
+docs/video/         el video de presentacion: guion, capturas reales de la
+                    terminal y la composicion HyperFrames que lo renderiza
 ```
 
 Si editas cualquier `.ps1` o `.bat`, pasa después `tools/build.ps1`: Windows

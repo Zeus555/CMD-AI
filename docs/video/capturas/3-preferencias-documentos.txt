@@ -1,0 +1,17 @@
+# Escena 3: una preferencia y, sobre todo, los documentos del negocio.
+# Los documentos los crea: tests\negocio.ps1 -Crear D:\MiNegocio
+recuerda que me contestes siempre en frases cortas
+s
+aprende de los documentos de D:\MiNegocio
+mi panadería: servicios, precios, empleados, horarios y procedimientos
+¿A qué hora abre la sucursal Norte los domingos?
+¿Cuánto es el fondo de caja al abrir?
+¿Cuánto gana Lucía Martínez?
+/documentos buscar fondo de caja
+olvida lo de la extensión
+sí
+/new
+¿Cuál es la extensión de Ana Torres?
+/documentos olvidos
+/documentos recordar 1
+bye

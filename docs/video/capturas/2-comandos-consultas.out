@@ -1,0 +1,94 @@
+
+  PRC AI 2.0  Gemma 4 E4B (local) / gemma-4-e4b  -  busca en internet si hace falta
+  bye para salir  -  /help para los comandos
+
+Usuario > agrégame un comando para ver el espacio libre de los discos
+ia > Vamos a guardar un comando de solo lectura. Yo pregunto y tú respondes; escribe «cancelar» para dejarlo.
+ia > Busco un comando de solo lectura para: ver el espacio libre de los discos
+ia > Este es el comando:
+
+  comando:  Get-Volume | Select-Object -ExpandProperty SizeRemaining
+  reglas:   pasa (Get-Volume | Select-Object)
+  red:      no sale del equipo
+  revisando con el modelo...
+  modelo, con la documentacion de Microsoft a la vista:
+    Muestra el espacio de almacenamiento restante de todos los volúmenes del sistema. Lee información interna del sistema de archivos. No envía datos fuera ni modifica nada en el equipo.
+
+ia > ¿Te vale así? Responde «sí», o dime qué le cambio.
+Usuario > sí
+ia > ¿Con qué nombre lo guardo? Pulsa Enter para «espacio-libre». Cuando preguntes con esas palabras, lo ejecutaré.
+Usuario > 
+ia > ¿Para qué sirve, en una frase? La leeré para saber cuándo usarlo. Pulsa Enter para «ver el espacio libre de los discos».
+Usuario > 
+ia > Ya no tengo más preguntas. Esto es lo que voy a guardar:
+
+  nombre:   espacio-libre
+  comando:  Get-Volume | Select-Object -ExpandProperty SizeRemaining
+  sirve:    ver el espacio libre de los discos
+  red:      no sale del equipo
+
+ia > ¿Lo pruebo ahora y, si funciona, lo dejo guardado? («sí» o «no»)
+Usuario > sí
+ia > Probando...
+ia > Resultado de la prueba (1.3 s):
+
+  120684544
+  714670817280
+  518728134656
+
+ia > Funcionó y quedó guardado como «espacio-libre». Pregúntame con las palabras «espacio libre» y lo ejecuto, o tecléalo tú con /comando espacio-libre.
+Usuario > ¿cuánto espacio libre me queda en los discos?
+ia > leyendo de este equipo: disco
+ia > ejecutando el comando guardado: espacio-libre
+Disco C: 665,6 GB libres y Disco D: 483,1 GB libres.
+Usuario > agrégame un comando para el último sorteo de la lotería de Nicaragua de internet
+ia > Vamos a guardar una consulta web: leo una página, saco de ella los datos que quieras y te los doy en JSON. Yo pregunto y tú respondes; escribe «cancelar» para dejarlo.
+ia > Busco en DuckDuckGo: Lotería Nicaragua sorteo oficial resultados página
+ia > ¿De cuál de estas páginas saco los datos?
+
+  1. Resultados | Lotería Nacional
+     https://loterianacional.com.ni/resultados/
+  2. Lotería Nacional | Nicaragua
+     https://loterianacional.com.ni/
+  3. Loto Nicaragua HOY: Resultados Diaria, Jugá 3, Fechas y Premia2
+     https://nuevaya.com.ni/loto-diaria-de-nicaragua/
+  4. Lotería Nacional (Sorteo Ordinario): Resultados del 17/11/2026 ...
+     https://www.resultadosdehoy.com/ni/loteria-nacional-ni
+  5. Resultados de Loterías en Nicaragua Hoy | Resultados de Hoy
+     https://www.resultadosdehoy.com/ni
+
+ia > Escribe el número (Enter para el 1), pega otra dirección o escribe otra búsqueda.
+Usuario > 
+ia > Leo loterianacional.com.ni...
+ia > Busco en ella los datos...
+ia > Esto es lo que saco ahora mismo de loterianacional.com.ni:
+
+  página:   https://loterianacional.com.ni/resultados/
+  rótulos:  sorteo="Sorteo" ganador="Ganador:" premio="Premio:" fecha="Fecha:" sucursal="Sucursal:"
+
+  {
+    "sorteo": "2305",
+    "ganador": "39016",
+    "premio": "C$12,000,000",
+    "fecha": "17/11/2026",
+    "sucursal": "Matagalpa"
+  }
+
+ia > ¿Te vale así? Responde «sí», dime qué le cambio (quitar o añadir un dato, sacar varios) o escribe «otra» para elegir otra página.
+Usuario > sí
+ia > ¿Con qué nombre la guardo? Pulsa Enter para «loteria-nicaragua». Cuando preguntes con esas palabras, la consulto.
+Usuario > 
+ia > ¿Para qué sirve, en una frase? La leeré para saber cuándo usarla. Pulsa Enter para «Proporciona los datos del último sorteo de la lotería de Nicaragua.».
+Usuario > 
+ia > Ya no tengo más preguntas. Esto es lo que voy a guardar:
+
+  nombre:   loteria-nicaragua
+  página:   https://loterianacional.com.ni/resultados/
+  campos:   sorteo="Sorteo" ganador="Ganador:" premio="Premio:" fecha="Fecha:" sucursal="Sucursal:"
+  sirve:    Proporciona los datos del último sorteo de la lotería de Nicaragua.
+
+ia > ¿La guardo? («sí» o «no»)
+Usuario > sí
+ia > Quedó guardada como «loteria-nicaragua». Cada vez que preguntes con las palabras «loteria nicaragua» leo la página de nuevo y te doy los datos del momento; o tecléalo tú con /comando loteria-nicaragua.
+Usuario > bye
+hasta luego

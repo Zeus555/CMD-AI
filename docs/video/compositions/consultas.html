@@ -1,0 +1,92 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #F3EFE6; font-family: 'Inter', sans-serif; }
+    #consultas-head { position: absolute; left: 120px; top: 62px; width: 1680px; }
+    #consultas-kicker { font-weight: 700; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; color: #A85C14; }
+    #consultas-titulo { font-weight: 700; font-size: 56px; line-height: 1.1; letter-spacing: -0.02em; color: #1D1B18; margin-top: 12px; }
+    #consultas-pie { font-weight: 400; font-size: 27px; line-height: 1.35; color: #5B554C; margin-top: 12px; }
+    #consultas-term { position: absolute; left: 120px; top: 282px; width: 1680px; height: 730px; background: #15171B; border-radius: 14px; overflow: hidden; box-shadow: 0 28px 60px rgba(60, 40, 10, 0.22); }
+    #consultas-term .bar { height: 44px; background: #23262C; display: flex; align-items: center; padding: 0 18px; gap: 10px; }
+    #consultas-term .dot { width: 14px; height: 14px; border-radius: 50%; }
+    #consultas-term .bar-t { margin-left: 14px; font: 500 17px 'JetBrains Mono', monospace; color: #8B9099; }
+    #consultas-cuerpo { padding: 22px 32px; font: 400 24px/1.45 'JetBrains Mono', monospace; color: #E4DFD4; }
+    #consultas-term .ln { opacity: 0; position: relative; white-space: pre-wrap; word-break: break-word; }
+    #consultas-term .tx { position: relative; }
+    #consultas-term .u { color: #F6F2EA; }
+    #consultas-term .u .pr { color: #7CC7B2; }
+    #consultas-term .ia .pr { color: #8B9099; }
+    #consultas-term .dim { color: #A3A8B0; }
+    #consultas-term .gap { color: #7C8087; }
+    #consultas-term .ch { display: none; }
+    #consultas-term .cur { display: inline-block; width: 12px; height: 1.1em; background: #7CC7B2; vertical-align: -0.2em; opacity: 0; }
+    #consultas-term .hl-bg { position: absolute; left: -14px; right: -14px; top: -1px; bottom: -1px; background: rgba(232, 160, 72, 0.17); border-left: 4px solid #E8A048; transform-origin: left center; }
+    #consultas-nota { position: absolute; left: 120px; top: 1028px; font-weight: 400; font-size: 22px; color: #6A645A; }
+  </style>
+  <div id="root" data-composition-id="consultas" data-width="1920" data-height="1080">
+    <div id="consultas-head">
+      <div id="consultas-kicker">5 &#183; Consultas web</div>
+      <div id="consultas-titulo">Datos de una p&#225;gina, en JSON</div>
+      <div id="consultas-pie">Elige la p&#225;gina, saca los datos por sus r&#243;tulos y te los ense&#241;a antes de guardarla.</div>
+    </div>
+    <div id="consultas-term" data-layout-allow-overflow>
+      <div class="bar"><span class="dot" style="background:#E5675B"></span><span class="dot" style="background:#E8B04A"></span><span class="dot" style="background:#5DBB72"></span><span class="bar-t" data-layout-ignore>AI  ·  PowerShell</span></div>
+      <div id="consultas-cuerpo">
+          <div class="ln u" id="consultas-l1"><span class="pr">Usuario &gt; </span><span class="ch">a</span><span class="ch">g</span><span class="ch">r</span><span class="ch">&#233;</span><span class="ch">g</span><span class="ch">a</span><span class="ch">m</span><span class="ch">e</span><span class="ch"> </span><span class="ch">u</span><span class="ch">n</span><span class="ch"> </span><span class="ch">c</span><span class="ch">o</span><span class="ch">m</span><span class="ch">a</span><span class="ch">n</span><span class="ch">d</span><span class="ch">o</span><span class="ch"> </span><span class="ch">p</span><span class="ch">a</span><span class="ch">r</span><span class="ch">a</span><span class="ch"> </span><span class="ch">e</span><span class="ch">l</span><span class="ch"> </span><span class="ch">&#250;</span><span class="ch">l</span><span class="ch">t</span><span class="ch">i</span><span class="ch">m</span><span class="ch">o</span><span class="ch"> </span><span class="ch">s</span><span class="ch">o</span><span class="ch">r</span><span class="ch">t</span><span class="ch">e</span><span class="ch">o</span><span class="ch"> </span><span class="ch">d</span><span class="ch">e</span><span class="ch"> </span><span class="ch">l</span><span class="ch">a</span><span class="ch"> </span><span class="ch">l</span><span class="ch">o</span><span class="ch">t</span><span class="ch">e</span><span class="ch">r</span><span class="ch">&#237;</span><span class="ch">a</span><span class="ch"> </span><span class="ch">d</span><span class="ch">e</span><span class="ch"> </span><span class="ch">N</span><span class="ch">i</span><span class="ch">c</span><span class="ch">a</span><span class="ch">r</span><span class="ch">a</span><span class="ch">g</span><span class="ch">u</span><span class="ch">a</span><span class="ch"> </span><span class="ch">d</span><span class="ch">e</span><span class="ch"> </span><span class="ch">i</span><span class="ch">n</span><span class="ch">t</span><span class="ch">e</span><span class="ch">r</span><span class="ch">n</span><span class="ch">e</span><span class="ch">t</span><span class="cur" id="consultas-l1-cur"></span></div>
+          <div class="ln gap" id="consultas-l2"><span class="tx">...</span></div>
+          <div class="ln ia" id="consultas-l3"><span class="tx"><span class="pr">ia &gt; </span>&#191;De cu&#225;l de estas p&#225;ginas saco los datos?</span></div>
+          <div class="ln gap" id="consultas-l4"><span class="tx">...</span></div>
+          <div class="ln dim" id="consultas-l5"><span class="tx">  1. Resultados | Loter&#237;a Nacional</span></div>
+          <div class="ln dim" id="consultas-l6"><span class="tx">     https://loterianacional.com.ni/resultados/</span></div>
+          <div class="ln gap" id="consultas-l7"><span class="tx">...</span></div>
+          <div class="ln ia" id="consultas-l8"><span class="tx"><span class="pr">ia &gt; </span>Esto es lo que saco ahora mismo de loterianacional.com.ni:</span></div>
+          <div class="ln gap" id="consultas-l9"><span class="tx">...</span></div>
+          <div class="ln dim" id="consultas-l10"><span class="tx">  p&#225;gina:   https://loterianacional.com.ni/resultados/</span></div>
+          <div class="ln gap" id="consultas-l11"><span class="tx">...</span></div>
+          <div class="ln dim" id="consultas-l12"><span class="tx">  {</span></div>
+          <div class="ln dim" id="consultas-l13"><span class="hl-bg"></span><span class="tx">    &quot;sorteo&quot;: &quot;2305&quot;,</span></div>
+          <div class="ln dim" id="consultas-l14"><span class="hl-bg"></span><span class="tx">    &quot;ganador&quot;: &quot;39016&quot;,</span></div>
+          <div class="ln dim" id="consultas-l15"><span class="hl-bg"></span><span class="tx">    &quot;premio&quot;: &quot;C$12,000,000&quot;,</span></div>
+          <div class="ln dim" id="consultas-l16"><span class="hl-bg"></span><span class="tx">    &quot;fecha&quot;: &quot;17/11/2026&quot;,</span></div>
+          <div class="ln dim" id="consultas-l17"><span class="hl-bg"></span><span class="tx">    &quot;sucursal&quot;: &quot;Matagalpa&quot;</span></div>
+          <div class="ln dim" id="consultas-l18"><span class="tx">  }</span></div>
+      </div>
+    </div>
+    <div id="consultas-nota">Salida real de PRC AI 2.0 con Gemma 4 E4B en la propia laptop · las esperas del modelo se han acortado</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo('#consultas-kicker', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 0);
+      tl.fromTo('#consultas-titulo', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 0.08);
+      tl.fromTo('#consultas-pie', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.35);
+      tl.fromTo('#consultas-term', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.2);
+      tl.set('#consultas-l1', { opacity: 1 }, 1);
+      tl.set('#consultas-l1-cur', { opacity: 1 }, 1);
+      tl.fromTo('#consultas-l1 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 1.2);
+      tl.set('#consultas-l1-cur', { opacity: 0 }, 2.59);
+      tl.fromTo('#consultas-l2', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.69);
+      tl.fromTo('#consultas-l3', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.99);
+      tl.fromTo('#consultas-l4', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 3.15);
+      tl.fromTo('#consultas-l5', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 3.45);
+      tl.fromTo('#consultas-l6', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 3.61);
+      tl.fromTo('#consultas-l7', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 3.77);
+      tl.fromTo('#consultas-l8', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 4.07);
+      tl.fromTo('#consultas-l9', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 4.23);
+      tl.fromTo('#consultas-l10', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 4.53);
+      tl.fromTo('#consultas-l11', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 4.69);
+      tl.fromTo('#consultas-l12', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 4.99);
+      tl.fromTo('#consultas-l13', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 5.15);
+      tl.fromTo('#consultas-l13 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 5.4);
+      tl.fromTo('#consultas-l14', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 5.31);
+      tl.fromTo('#consultas-l14 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 5.56);
+      tl.fromTo('#consultas-l15', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 5.47);
+      tl.fromTo('#consultas-l15 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 5.72);
+      tl.fromTo('#consultas-l16', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 5.63);
+      tl.fromTo('#consultas-l16 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 5.88);
+      tl.fromTo('#consultas-l17', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 5.79);
+      tl.fromTo('#consultas-l17 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 6.04);
+      tl.fromTo('#consultas-l18', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 5.95);
+      window.__timelines["consultas"] = tl;
+    })();
+  </script>
+</template>

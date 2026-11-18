@@ -8,6 +8,78 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ---
 
+## 2026-11-18 — Guía de los documentos y un video de presentación
+
+**Las peticiones.** «La documentación correspondiente» de lo último que se
+añadió (las carpetas de documentos, olvidar y la batería `negocio.ps1`), y un
+video corto con lo más relevante de PRC AI 2.0, hecho por la misma vía barata
+que los videos de `D:\PRC Channel Linkedin`.
+
+**La guía, `docs/guia-documentos.md`.** El README explica cómo funciona; la
+guía es para el dueño de un negocio sin conocimientos técnicos: preparar la
+carpeta, qué formatos sirven y qué hacer con los PDF, cómo preguntar, cómo
+comprobar de dónde sale un dato, olvidar y deshacer, privacidad, preguntas
+frecuentes y una chuleta. Sus ejemplos son salidas reales con Gemma 4 E4B y
+la panadería de las pruebas, no inventadas.
+
+**Lo que no cuadraba en el README con el código:**
+
+- **Deshacer un olvido.** Decía que todo se deshace con `/documentos
+  recordar`. No es así con una carpeta ni con «todo»: la carpeta sale de la
+  lista (y «todo» borra también la lista de olvidos). Se vuelve a leer con
+  `/documentos agregar`.
+- **Formatos.** Faltaban `.docm`, `.xlsm`, `.pptm`, `.markdown`, `.htm` y
+  `.yaml`, que sí se leen, y que se saltan los ocultos y los temporales de
+  Office.
+- **`/documentos quitar`** pide el nombre corto de la carpeta (`mi-negocio`),
+  no la ruta; no lo decía.
+- **La tabla del modo interactivo** no tenía ni las preferencias ni los
+  documentos.
+
+**El video, `docs/video/`.** 1:59, 1920×1080, en español, sin voz ni música:
+en LinkedIn el video arranca sin sonido, así que todo se lee. Coste cero: no
+usa ningún modelo de pago.
+
+- **Misma vía que el canal de LinkedIn:** HyperFrames, HTML que se renderiza
+  a MP4 fotograma a fotograma, con GSAP. Se usó la versión ya descargada en
+  el equipo (0.8.221).
+- **La terminal del video es real.** `capturar.ps1` lanza el `AI` de verdad
+  con lo que se teclea ya escrito, y `montar.ps1` copia las líneas de esas
+  capturas por su número; donde se salta un trozo sale `...`. Solo cambia el
+  ritmo, y el pie de cada escena lo dice.
+  - **La primera idea**, sacar las funciones del árbol de sintaxis como en
+    `negocio.ps1`, servía para las preguntas pero no para los diálogos
+    (aprender, olvidar, comandos), que viven en el bucle del REPL. Se probó
+    a darle la entrada por tubería al REPL entero, y con la entrada
+    redirigida `ai.ps1` la toma toda como una sola pregunta (el modo
+    `type fichero | AI`). La captura corre sobre una copia de `bin\` y
+    `lib\` con dos cambios, los dos de la entrada: se salta ese desvío y
+    `Read-AILine` repite lo leído, para que se vea qué se tecleó.
+  - **Con `-File` o `.` (dot-source), no con `&`.** Lanzado con `& ai.ps1`,
+    el bloque `{ Add-AIToken ... }.GetNewClosure()` del streaming no
+    encuentra la función y el turno falla: las funciones del script no
+    quedan en el ámbito global.
+- **Sin datos personales.** La captura usa una carpeta de datos vacía
+  (`LOCALAPPDATA` propio) y el usuario «usuario», así que el prompt sale como
+  `Usuario >`. Las preguntas se eligieron para no enseñar la IP, la wifi ni el
+  nombre del equipo.
+- **Lo que cazó la revisión de fotogramas:** líneas sin prefijo a las que el
+  montaje les ponía un `ia >` que el programa no escribió (habría sido un
+  dato falso en pantalla), y el cursor al final de la línea mientras se
+  tecleaba.
+- **El tiempo de lectura manda sobre la duración.** `hyperframes check` avisó
+  de que las respuestas finales se iban a los 2,5 s, cuando una frase de 30
+  palabras pide unos 7. Ahora la pausa tras cada respuesta crece con lo que
+  hay que leer, y para seguir por debajo de 2 minutos se teclea más rápido y
+  se quitaron dos confirmaciones intermedias. Aun así, las respuestas largas
+  están por debajo de ese mínimo: con once funciones en 2 minutos, el título
+  de cada escena lleva el mensaje y la terminal es la prueba.
+- **El MP4 no va en git** (`docs/video/renders/` está en `.gitignore`).
+  `tools/build.ps1` pasa ahora también por `docs\`, porque los dos scripts
+  del video llevan acentos y necesitan BOM.
+
+**Pruebas.** `tests\probar.ps1`: las 8 pasan. No se tocó el código del programa (`bin\` y `lib\`).
+
 ## 2026-11-17 — Olvidar, y una batería con un negocio entero
 
 Esta entrada y la de documentos, de la rama `documentos`, se fusionaron

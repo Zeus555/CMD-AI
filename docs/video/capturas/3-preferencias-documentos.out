@@ -1,0 +1,65 @@
+
+  PRC AI 2.0  Gemma 4 E4B (local) / gemma-4-e4b  -  busca en internet si hace falta
+  bye para salir  -  /help para los comandos
+
+Usuario > recuerda que me contestes siempre en frases cortas
+  preferencia: Me contestes siempre en frases cortas
+  ¿La guardo para esta y las próximas conversaciones? (s/n) s
+guardada. La tendré en cuenta en esta y en las próximas conversaciones (/preferencias las lista).
+Usuario > aprende de los documentos de D:\MiNegocio
+ia > Voy a leer los documentos de D:\MiNegocio para contestarte con lo que dicen. No los cambio ni los mando a ningún sitio: lo que lea se queda en este equipo.
+ia > Hay 12 que sé leer (3 Word, 2 texto, 2 OpenDocument, 1 PowerPoint, 1 RTF, 1 CSV, 1 HTML, 1 Excel). También hay 1 PDF, que todavía no sé leer.
+ia > ¿De qué tratan, en pocas palabras? Así sé cuándo mirarlos; por ejemplo «mi ferretería: servicios, empleados, horarios y procedimientos». (Enter: «MiNegocio»; «cancelar» para dejarlo)
+Usuario > mi panadería: servicios, precios, empleados, horarios y procedimientos
+  leyendo 1 de 13: Catálogo de pasteles.pdf                             leyendo 2 de 13: Empleados.csv                                        leyendo 3 de 13: Inventario mínimo.ods                                leyendo 4 de 13: Necesidades y metas 2027.pptx                        leyendo 5 de 13: Proveedores.html                                     leyendo 6 de 13: Quiénes somos.docx                                   leyendo 7 de 13: Seguridad alimentaria.rtf                            leyendo 8 de 13: Servicios y precios.xlsx                             leyendo 9 de 13: Procedimientos\Apertura y cierre.docx                leyendo 10 de 13: Procedimientos\Atención de quejas.md                leyendo 11 de 13: Procedimientos\Pedidos para eventos.txt             leyendo 12 de 13: Recursos humanos\Reglamento interno.odt             leyendo 13 de 13: Recursos humanos\Vacaciones y permisos.docx                                                                             ia > Listo: leí 12 documentos (26 fragmentos) en 0.7 s. Pregúntame lo que quieras sobre mi panadería: servicios, precios, empleados, horarios y procedimientos y te diré de qué documento sale cada dato. Si cambias o añades ficheros en la carpeta, los vuelvo a leer solo.
+ia > Estos no los pude leer:
+  Catálogo de pasteles.pdf: PDF: todavía no sé leerlos; guárdalo como Word (.docx) o como texto
+Usuario > ¿A qué hora abre la sucursal Norte los domingos?
+ia > consultando tus documentos: Servicios y precios.xlsx, Procedimientos\Apertura y cierre.docx, Quiénes somos.docx
+ia > La sucursal Norte abre a las 08:00 los domingos. Esto viene del documento Servicios y precios.xlsx, apartado «Hoja: Horarios».
+   documentos: Servicios y precios.xlsx  Procedimientos\Apertura y cierre.docx  Quiénes somos.docx
+Usuario > ¿Cuánto es el fondo de caja al abrir?
+ia > consultando tus documentos: Procedimientos\Apertura y cierre.docx, Servicios y precios.xlsx
+ia > El fondo de caja al abrir es de C$ 1,500. Esto viene del documento Procedimientos\Apertura y cierre.docx, apartado «Apertura y cierre de sucursal > Apertura».
+   documentos: Procedimientos\Apertura y cierre.docx  Servicios y precios.xlsx
+Usuario > ¿Cuánto gana Lucía Martínez?
+ia > consultando tus documentos: Procedimientos\Apertura y cierre.docx, Empleados.csv
+ia > No viene en los documentos.
+   documentos: Procedimientos\Apertura y cierre.docx  Empleados.csv
+Usuario > /documentos buscar fondo de caja
+  1. Procedimientos\Apertura y cierre.docx > Apertura y cierre de sucursal > Apertura  (5.09 puntos)
+     - A las 4:00 el jefe de panadería enciende los hornos.
+     - A las 5:30 se limpian las vitrinas y el mostrador.
+     - A las 5:45 la cajera cuenta el fondo de caja, que es de C$ 1,500.
+     - Se abre al público a la hora del horario de cada sucursal.
+  2. Procedimientos\Apertura y cierre.docx > Apertura y cierre de sucursal > Cierre  (2.9 puntos)
+     - Se cuadra la caja y el efectivo se guarda en la caja fuerte.
+     - Se apagan los hornos y se anota la temperatura final de las cámaras.
+     - Se activa la alarma; el código solo lo tienen la encargada y la gerente.
+(viajarían solos con esa pregunta; cobertura 1)
+Usuario > olvida lo de la extensión
+ia > Voy a olvidar lo que hable de «extension» (6 líneas de Empleados.csv). Tus ficheros no se tocan.
+  por ejemplo:
+  - Empleados.csv: Extensión: 101
+  - Empleados.csv: Extensión: 102
+  - Empleados.csv: Extensión: 103
+  - Empleados.csv: Extensión: 200
+  - Empleados.csv: Extensión: 201
+    y 1 más
+ia > ¿Lo olvido? («sí» o «no»)
+Usuario > sí
+ia > Olvidado. Si te arrepientes: /documentos olvidos y /documentos recordar <número>.
+ia > Lo que ya te dije en esta conversación sigue en su memoria; /new la vacía.
+Usuario > /new
+memoria vaciada
+Usuario > ¿Cuál es la extensión de Ana Torres?
+ia > consultando tus documentos: Procedimientos\Apertura y cierre.docx, Empleados.csv
+ia > Ana Torres es Encargada de sucursal. Este dato sale de Empleados.csv.
+   documentos: Procedimientos\Apertura y cierre.docx  Empleados.csv
+Usuario > /documentos olvidos
+  1. lo que hable de «extension»  (2026-11-18)
+(/documentos recordar <número> deshace uno)
+Usuario > /documentos recordar 1
+vuelvo a usar lo que hable de «extension»
+Usuario > bye
+hasta luego

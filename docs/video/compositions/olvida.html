@@ -1,0 +1,98 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #F3EFE6; font-family: 'Inter', sans-serif; }
+    #olvida-head { position: absolute; left: 120px; top: 62px; width: 1680px; }
+    #olvida-kicker { font-weight: 700; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; color: #A85C14; }
+    #olvida-titulo { font-weight: 700; font-size: 56px; line-height: 1.1; letter-spacing: -0.02em; color: #1D1B18; margin-top: 12px; }
+    #olvida-pie { font-weight: 400; font-size: 27px; line-height: 1.35; color: #5B554C; margin-top: 12px; }
+    #olvida-term { position: absolute; left: 120px; top: 282px; width: 1680px; height: 730px; background: #15171B; border-radius: 14px; overflow: hidden; box-shadow: 0 28px 60px rgba(60, 40, 10, 0.22); }
+    #olvida-term .bar { height: 44px; background: #23262C; display: flex; align-items: center; padding: 0 18px; gap: 10px; }
+    #olvida-term .dot { width: 14px; height: 14px; border-radius: 50%; }
+    #olvida-term .bar-t { margin-left: 14px; font: 500 17px 'JetBrains Mono', monospace; color: #8B9099; }
+    #olvida-cuerpo { padding: 22px 32px; font: 400 24px/1.45 'JetBrains Mono', monospace; color: #E4DFD4; }
+    #olvida-term .ln { opacity: 0; position: relative; white-space: pre-wrap; word-break: break-word; }
+    #olvida-term .tx { position: relative; }
+    #olvida-term .u { color: #F6F2EA; }
+    #olvida-term .u .pr { color: #7CC7B2; }
+    #olvida-term .ia .pr { color: #8B9099; }
+    #olvida-term .dim { color: #A3A8B0; }
+    #olvida-term .gap { color: #7C8087; }
+    #olvida-term .ch { display: none; }
+    #olvida-term .cur { display: inline-block; width: 12px; height: 1.1em; background: #7CC7B2; vertical-align: -0.2em; opacity: 0; }
+    #olvida-term .hl-bg { position: absolute; left: -14px; right: -14px; top: -1px; bottom: -1px; background: rgba(232, 160, 72, 0.17); border-left: 4px solid #E8A048; transform-origin: left center; }
+    #olvida-nota { position: absolute; left: 120px; top: 1028px; font-weight: 400; font-size: 22px; color: #6A645A; }
+  </style>
+  <div id="root" data-composition-id="olvida" data-width="1920" data-height="1080">
+    <div id="olvida-head">
+      <div id="olvida-kicker">8 &#183; Olvidar</div>
+      <div id="olvida-titulo">Y olvida lo que le pidas</div>
+      <div id="olvida-pie">Ense&#241;a qu&#233; va a olvidar y pide un s&#237;. Tus ficheros no se tocan: olvida lo le&#237;do.</div>
+    </div>
+    <div id="olvida-term" data-layout-allow-overflow>
+      <div class="bar"><span class="dot" style="background:#E5675B"></span><span class="dot" style="background:#E8B04A"></span><span class="dot" style="background:#5DBB72"></span><span class="bar-t" data-layout-ignore>AI  ·  PowerShell</span></div>
+      <div id="olvida-cuerpo">
+          <div class="ln u" id="olvida-l1"><span class="pr">Usuario &gt; </span><span class="ch">o</span><span class="ch">l</span><span class="ch">v</span><span class="ch">i</span><span class="ch">d</span><span class="ch">a</span><span class="ch"> </span><span class="ch">l</span><span class="ch">o</span><span class="ch"> </span><span class="ch">d</span><span class="ch">e</span><span class="ch"> </span><span class="ch">l</span><span class="ch">a</span><span class="ch"> </span><span class="ch">e</span><span class="ch">x</span><span class="ch">t</span><span class="ch">e</span><span class="ch">n</span><span class="ch">s</span><span class="ch">i</span><span class="ch">&#243;</span><span class="ch">n</span><span class="cur" id="olvida-l1-cur"></span></div>
+          <div class="ln ia" id="olvida-l2"><span class="hl-bg"></span><span class="tx"><span class="pr">ia &gt; </span>Voy a olvidar lo que hable de &#171;extension&#187; (6 l&#237;neas de Empleados.csv). Tus ficheros no se tocan.</span></div>
+          <div class="ln dim" id="olvida-l3"><span class="tx">  por ejemplo:</span></div>
+          <div class="ln dim" id="olvida-l4"><span class="tx">  - Empleados.csv: Extensi&#243;n: 101</span></div>
+          <div class="ln dim" id="olvida-l5"><span class="tx">  - Empleados.csv: Extensi&#243;n: 102</span></div>
+          <div class="ln dim" id="olvida-l6"><span class="tx">  - Empleados.csv: Extensi&#243;n: 103</span></div>
+          <div class="ln dim" id="olvida-l7"><span class="tx">  - Empleados.csv: Extensi&#243;n: 200</span></div>
+          <div class="ln dim" id="olvida-l8"><span class="tx">  - Empleados.csv: Extensi&#243;n: 201</span></div>
+          <div class="ln dim" id="olvida-l9"><span class="tx">    y 1 m&#225;s</span></div>
+          <div class="ln ia" id="olvida-l10"><span class="tx"><span class="pr">ia &gt; </span>&#191;Lo olvido? (&#171;s&#237;&#187; o &#171;no&#187;)</span></div>
+          <div class="ln u" id="olvida-l11"><span class="pr">Usuario &gt; </span><span class="ch">s</span><span class="ch">&#237;</span><span class="cur" id="olvida-l11-cur"></span></div>
+          <div class="ln ia" id="olvida-l12"><span class="hl-bg"></span><span class="tx"><span class="pr">ia &gt; </span>Olvidado. Si te arrepientes: /documentos olvidos y /documentos recordar &lt;n&#250;mero&gt;.</span></div>
+          <div class="ln ia" id="olvida-l13"><span class="tx"><span class="pr">ia &gt; </span>Lo que ya te dije en esta conversaci&#243;n sigue en su memoria; /new la vac&#237;a.</span></div>
+          <div class="ln u" id="olvida-l14"><span class="pr">Usuario &gt; </span><span class="ch">/</span><span class="ch">n</span><span class="ch">e</span><span class="ch">w</span><span class="cur" id="olvida-l14-cur"></span></div>
+          <div class="ln ia" id="olvida-l15"><span class="tx">memoria vaciada</span></div>
+          <div class="ln u" id="olvida-l16"><span class="pr">Usuario &gt; </span><span class="ch">&#191;</span><span class="ch">C</span><span class="ch">u</span><span class="ch">&#225;</span><span class="ch">l</span><span class="ch"> </span><span class="ch">e</span><span class="ch">s</span><span class="ch"> </span><span class="ch">l</span><span class="ch">a</span><span class="ch"> </span><span class="ch">e</span><span class="ch">x</span><span class="ch">t</span><span class="ch">e</span><span class="ch">n</span><span class="ch">s</span><span class="ch">i</span><span class="ch">&#243;</span><span class="ch">n</span><span class="ch"> </span><span class="ch">d</span><span class="ch">e</span><span class="ch"> </span><span class="ch">A</span><span class="ch">n</span><span class="ch">a</span><span class="ch"> </span><span class="ch">T</span><span class="ch">o</span><span class="ch">r</span><span class="ch">r</span><span class="ch">e</span><span class="ch">s</span><span class="ch">?</span><span class="cur" id="olvida-l16-cur"></span></div>
+          <div class="ln ia" id="olvida-l17"><span class="tx"><span class="pr">ia &gt; </span>consultando tus documentos: Procedimientos\Apertura y cierre.docx, Empleados.csv</span></div>
+          <div class="ln ia" id="olvida-l18"><span class="tx"><span class="pr">ia &gt; </span>Ana Torres es Encargada de sucursal. Este dato sale de Empleados.csv.</span></div>
+      </div>
+    </div>
+    <div id="olvida-nota">Salida real de PRC AI 2.0 con Gemma 4 E4B en la propia laptop · las esperas del modelo se han acortado</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo('#olvida-kicker', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 0);
+      tl.fromTo('#olvida-titulo', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 0.08);
+      tl.fromTo('#olvida-pie', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.35);
+      tl.fromTo('#olvida-term', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.2);
+      tl.set('#olvida-l1', { opacity: 1 }, 1);
+      tl.set('#olvida-l1-cur', { opacity: 1 }, 1);
+      tl.fromTo('#olvida-l1 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 1.2);
+      tl.set('#olvida-l1-cur', { opacity: 0 }, 1.81);
+      tl.fromTo('#olvida-l2', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 1.91);
+      tl.fromTo('#olvida-l2 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 2.16);
+      tl.fromTo('#olvida-l3', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.07);
+      tl.fromTo('#olvida-l4', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.23);
+      tl.fromTo('#olvida-l5', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.39);
+      tl.fromTo('#olvida-l6', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.55);
+      tl.fromTo('#olvida-l7', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.71);
+      tl.fromTo('#olvida-l8', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.87);
+      tl.fromTo('#olvida-l9', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 3.03);
+      tl.fromTo('#olvida-l10', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 3.19);
+      tl.set('#olvida-l11', { opacity: 1 }, 6.35);
+      tl.set('#olvida-l11-cur', { opacity: 1 }, 6.35);
+      tl.fromTo('#olvida-l11 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 6.55);
+      tl.set('#olvida-l11-cur', { opacity: 0 }, 6.83);
+      tl.fromTo('#olvida-l12', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 6.93);
+      tl.fromTo('#olvida-l12 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 7.18);
+      tl.fromTo('#olvida-l13', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 7.09);
+      tl.set('#olvida-l14', { opacity: 1 }, 10.08);
+      tl.set('#olvida-l14-cur', { opacity: 1 }, 10.08);
+      tl.fromTo('#olvida-l14 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 10.28);
+      tl.set('#olvida-l14-cur', { opacity: 0 }, 10.58);
+      tl.fromTo('#olvida-l15', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 10.68);
+      tl.set('#olvida-l16', { opacity: 1 }, 11.78);
+      tl.set('#olvida-l16-cur', { opacity: 1 }, 11.78);
+      tl.fromTo('#olvida-l16 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 11.98);
+      tl.set('#olvida-l16-cur', { opacity: 0 }, 12.75);
+      tl.fromTo('#olvida-l17', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 12.85);
+      tl.fromTo('#olvida-l18', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 13.01);
+      window.__timelines["olvida"] = tl;
+    })();
+  </script>
+</template>

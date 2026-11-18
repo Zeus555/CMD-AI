@@ -1,0 +1,14 @@
+# Escena 2: un comando guardado conversando y una consulta web en JSON.
+agrégame un comando para ver el espacio libre de los discos
+sí
+
+
+sí
+¿cuánto espacio libre me queda en los discos?
+agrégame un comando para el último sorteo de la lotería de Nicaragua de internet
+
+sí
+
+
+sí
+bye
