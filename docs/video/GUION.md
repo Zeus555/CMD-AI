@@ -1,5 +1,12 @@
 # Video: PRC AI 2.0 en 2 minutos
 
+**Publicado:** [PRC AI 2.0 en YouTube](https://www.youtube.com/watch?v=FhrSBxF6vFE),
+en el canal A.M., público, el 2026-11-18. Se subió marcado como contenido
+sintético (la voz es generada por IA), con el subidor de `D:\PRC Channel
+Linkedin` (`services\security-alerts\lib\youtube.mjs`), que antes de subir
+comprueba que el token es de ese canal. Si se vuelve a renderizar, el video
+de YouTube no cambia: hay que subirlo de nuevo.
+
 Un video corto (2:13, 1920×1080, 30 fps, en español) con lo más relevante
 de PRC AI 2.0, narrado. La voz cuenta lo que hace cada escena, así que se
 sigue sin leer la terminal; y como en LinkedIn el video arranca sin sonido,

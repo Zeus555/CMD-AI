@@ -8,6 +8,26 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ---
 
+## 2026-11-18 — El video, en YouTube
+
+**La petición.** Publicar el video en el canal de YouTube y referenciarlo en
+la documentación.
+
+- **Publicado** en el canal A.M., público:
+  https://www.youtube.com/watch?v=FhrSBxF6vFE. El título y la descripción
+  los aprobó el usuario antes de subirlo; la descripción dice que la
+  terminal es salida real y que la voz es generada por IA, y enlaza el
+  repositorio y la guía.
+- **Con el subidor del canal de LinkedIn** (`D:\PRC Channel Linkedin`,
+  `services\security-alerts\lib\youtube.mjs`), no con uno nuevo: ya tiene el
+  token autorizado y antes de subir comprueba que es del canal A.M. Se mandó
+  `containsSyntheticMedia: true`; al leer el video, la API no devuelve ese
+  campo (pasa lo mismo con los videos diarios del canal), así que se ve en
+  YouTube Studio.
+- **Dónde se enlaza:** al principio del README, en la guía de los
+  documentos (con el minuto en que empieza la parte del negocio, 1:01) y en
+  `docs/video/GUION.md`.
+
 ## 2026-11-18 — El video, narrado
 
 **La petición.** Ponerle audio al video: «una narración sin depender
