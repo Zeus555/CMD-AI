@@ -82,5 +82,46 @@ Ver 'nada se ejecuta: sin Invoke-Expression ni ScriptBlock' ($src -notmatch 'Inv
 $ai = [IO.File]::ReadAllText((Join-Path $Raiz 'bin\ai.ps1'))
 Ver 'el modelo no puede guardarlas: ninguna herramienta llama a Add-AIPreferencia' (-not [regex]::IsMatch($ai, "tc\.Name -eq '[a-z_]*preferencia"))
 
+# ---- en ingles -------------------------------------------------------------------
+# Lo que escribe el usuario se reconoce en los dos idiomas, sea cual sea el
+# activo; el idioma solo cambia lo que se escribe.
+$enCasos = [ordered]@{
+    'remember that you give me money figures in dollars'  = 'You give me money figures in dollars'
+    'Please, remember that my name is Ana'                = 'My name is Ana'
+    'remember: I live in Managua'                         = 'I live in Managua'
+    'remember to answer in English'                       = 'Answer in English'
+    'keep in mind that I prefer short answers'            = 'I prefer short answers'
+    'take note: temperatures in Celsius'                  = 'Temperatures in Celsius'
+    'save this as a preference: dates as dd/mm/yyyy'      = 'Dates as dd/mm/yyyy'
+    'from now on, give me the figures in USD'             = 'Give me the figures in USD'
+    'always answer in a formal tone'                      = 'Always answer in a formal tone'
+    # no son peticiones
+    'do you remember what I told you?'                    = ''
+    'remember'                                            = ''
+    'remember that'                                       = ''
+    'remember tomorrow is a holiday?'                     = ''
+    'what is a preference?'                               = ''
+    'always?'                                             = ''
+}
+foreach ($idi in 'es', 'en') {
+    Set-AIIdioma $idi
+    foreach ($k in $enCasos.Keys) {
+        $p = Get-AIPreferenciaPeticion $k
+        if (-not $p) { $p = '' }
+        Ver "peticion en ingles ($idi): $k" ($p -ceq $enCasos[$k]) "-> <$p>"
+    }
+}
+# Set-AIIdioma en sigue activo: los mensajes salen en ingles.
+$sin = Get-AIPreferenciasNota @()
+Ver 'en: la nota dice "remember that" y /preference add' ($sin -like '*You cannot save anything*' -and $sin -like '*"remember that"*' -and $sin -like '*/preference add*')
+$con = Get-AIPreferenciasNota @($una)
+Ver 'en: la nota con preferencias, en ingles' ($con -like '*These are the preferences the user saved*' -and $con -like "*`n- Cifras en d*" -and $con -notlike '*Siguelas*')
+$f = Join-Path ([IO.Path]::GetTempPath()) ("preferencias-prueba-" + [Guid]::NewGuid().ToString('N') + '.json')
+[IO.File]::WriteAllText($f, '{roto')
+Ver 'en: fichero roto, en ingles' ((Read-AIPreferencias $f).Error -like '*cannot be read*')
+Remove-Item $f
+Set-AIIdioma es
+Ver 'es otra vez: la nota en espanol' ((Get-AIPreferenciasNota @()) -like '*no puedes guardar*')
+
 Write-Output "preferencias: $n comprobaciones, $mal mal"
 exit $mal

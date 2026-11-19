@@ -9,6 +9,8 @@
 #  queremos. Con StrictMode 2.0 lanzarian PropertyNotFoundException.
 # ============================================================================
 
+. (Join-Path $PSScriptRoot 'idioma.ps1')
+
 function Get-AIKey {
     <#  Lee la clave. Nunca viaja por una linea de comandos.  #>
     param([hashtable]$Provider)
@@ -102,7 +104,7 @@ function Get-AIErrorText {
     $resp = $null
     try { $resp = $ErrorRecord.Exception.Response } catch { }
     if (-not $resp) {
-        return "sin respuesta del servidor -> $($ErrorRecord.Exception.Message)"
+        return (L "sin respuesta del servidor -> $($ErrorRecord.Exception.Message)" "no response from the server -> $($ErrorRecord.Exception.Message)")
     }
 
     $code = 0
@@ -131,7 +133,7 @@ function Get-AIErrorText {
             $msg = $raw.Trim()                                          # texto plano
         }
     }
-    if ([string]::IsNullOrWhiteSpace($msg)) { $msg = '(sin cuerpo)' }
+    if ([string]::IsNullOrWhiteSpace($msg)) { $msg = (L '(sin cuerpo)' '(no body)') }
 
     return ("HTTP {0} -> {1}" -f $code, ($msg -replace '\s+', ' ').Trim())
 }
@@ -157,7 +159,7 @@ function Invoke-AIChat {
     if (-not $key) {
         return [pscustomobject]@{
             Text = ''; Model = $null; Ok = $false
-            Error = "falta la variable de entorno $($Provider.KeyVar). Ejecuta:  AI -SetKey $($Provider.KeyVar)"
+            Error = (L "falta la variable de entorno $($Provider.KeyVar). Ejecuta:  AI -SetKey $($Provider.KeyVar)" "the environment variable $($Provider.KeyVar) is missing. Run:  AI -SetKey $($Provider.KeyVar)")
         }
     }
 
@@ -216,7 +218,7 @@ function Invoke-AIChat {
         # el arreglo es arrancarlo y el proveedor sabe como (campo Hint de
         # providers.ps1). Un plazo vencido NO entra aqui: es otro Status.
         if ($Provider.Hint -and $_.Exception.Status -eq [System.Net.WebExceptionStatus]::ConnectFailure) {
-            $err = "nadie escucha en $($Provider.BaseUrl). $($Provider.Hint)"
+            $err = (L "nadie escucha en $($Provider.BaseUrl). " "nothing is listening at $($Provider.BaseUrl). ") + (Get-AIProviderHint $Provider)
         }
         return [pscustomobject]@{
             Text = ''; Model = $null; Ok = $false; Error = $err; ToolCalls = @()
@@ -324,9 +326,9 @@ function Invoke-AIChat {
     }
 
     if ($stream -and -not $completo) {
-        $corte = 'la respuesta se corto: el servidor cerro el flujo sin terminarla.'
+        $corte = (L 'la respuesta se corto: el servidor cerro el flujo sin terminarla.' 'the answer was cut off: the server closed the stream before finishing it.')
         if ($Provider.Hint) {
-            $corte += ' Pasa si otro cliente pide el otro modelo (solo cabe uno en memoria): repite la pregunta.'
+            $corte += (L ' Pasa si otro cliente pide el otro modelo (solo cabe uno en memoria): repite la pregunta.' ' This happens when another client asks for the other model (only one fits in memory): ask again.')
         }
         return [pscustomobject]@{
             Text = $sb.ToString(); Model = $realModel; Ok = $false; Error = $corte; ToolCalls = @()
@@ -366,13 +368,13 @@ function Test-AIProvider {
     $r = [ordered]@{
         Proveedor = $Provider.Label
         Variable  = $Provider.KeyVar
-        Clave     = if ($real)                   { 'definida (' + $real.Length + ' chars)' }
-                    elseif (-not $Provider.NeedsKey) { 'no hace falta' }
-                    else                         { 'FALTA' }
+        Clave     = if ($real)                   { (L 'definida (' 'set (') + $real.Length + ' chars)' }
+                    elseif (-not $Provider.NeedsKey) { (L 'no hace falta' 'not needed') }
+                    else                         { (L 'FALTA' 'MISSING') }
         Modelo    = $Provider.Model
-        Estado    = 'no probado'
+        Estado    = (L 'no probado' 'not tested')
     }
-    if (-not $key) { $r.Estado = 'sin clave'; return [pscustomobject]$r }
+    if (-not $key) { $r.Estado = (L 'sin clave' 'no key'); return [pscustomobject]$r }
 
     # /v1/models responde en todos y no gasta tokens.
     $url = $Provider.BaseUrl.TrimEnd('/') + '/models'
@@ -394,7 +396,7 @@ function Test-AIProvider {
             try { $lista = ($sr.ReadToEnd() | ConvertFrom-Json).data } catch { } finally { $sr.Close() }
             if ($lista) {
                 $m = @($lista | Where-Object { $_.id -ceq $Provider.Model -or @($_.aliases) -ccontains $Provider.Model })
-                if ($m.Count -eq 0)             { $r.Estado = "contesta, pero no ofrece '$($Provider.Model)'" }
+                if ($m.Count -eq 0)             { $r.Estado = (L "contesta, pero no ofrece '$($Provider.Model)'" "answers, but does not offer '$($Provider.Model)'") }
                 elseif ($m[0].status.value)     { $r.Estado = "OK ($($m[0].status.value))" }
             }
         }
@@ -404,7 +406,7 @@ function Test-AIProvider {
         $r.Estado = (Get-AIErrorText $_)
         # Igual que en Invoke-AIChat: si nadie escucha, decir como arrancarlo.
         if ($Provider.Hint -and $_.Exception.Status -eq [System.Net.WebExceptionStatus]::ConnectFailure) {
-            $r.Estado = "parado. $($Provider.Hint)"
+            $r.Estado = (L 'parado. ' 'stopped. ') + (Get-AIProviderHint $Provider)
         }
     }
     catch                           { $r.Estado = $_.Exception.Message }

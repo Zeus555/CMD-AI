@@ -17,26 +17,31 @@
 #  Se apaga con -NoWeb, con "web": false en settings.json o con /web off.
 # ============================================================================
 
+. (Join-Path $PSScriptRoot 'idioma.ps1')
 $AI_WEB_SEARCH_URL = 'https://html.duckduckgo.com/html/?q='
 $AI_WEB_HOST       = 'html.duckduckgo.com'
 
 # La herramienta tal como viaja en la peticion. La descripcion es lo que el
 # modelo lee para decidir: datos que cambian o que no sabe, nunca cuentas ni
-# definiciones.
-$AI_WEB_TOOL = @{
-    type     = 'function'
-    function = @{
-        name        = 'buscar_web'
-        description = 'Busca en internet y devuelve los resultados con el texto de las primeras paginas. Usala para datos que cambian con el tiempo o que no conoces con seguridad: precios, tipo de cambio, clima, noticias, resultados deportivos, horarios, versiones recientes, personas o sitios concretos. No la uses para cuentas, definiciones, traducciones ni charla.'
-        parameters  = @{
-            type       = 'object'
-            properties = @{
-                consulta = @{ type = 'string'; description = 'lo que se busca, en pocas palabras, como se escribiria en un buscador' }
+# definiciones. Es una funcion para que salga en el idioma activo aunque se
+# cambie a mitad de la sesion (/language); el nombre y el parametro no cambian.
+function Get-AIWebTool {
+    return @{
+        type     = 'function'
+        function = @{
+            name        = 'buscar_web'
+            description = (L 'Busca en internet y devuelve los resultados con el texto de las primeras paginas. Usala para datos que cambian con el tiempo o que no conoces con seguridad: precios, tipo de cambio, clima, noticias, resultados deportivos, horarios, versiones recientes, personas o sitios concretos. No la uses para cuentas, definiciones, traducciones ni charla.' 'Searches the internet and returns the results with the text of the first pages. Use it for data that changes over time or that you do not know for sure: prices, exchange rates, weather, news, sports results, opening hours, recent versions, specific people or places. Do not use it for arithmetic, definitions, translations or small talk.')
+            parameters  = @{
+                type       = 'object'
+                properties = @{
+                    consulta = @{ type = 'string'; description = (L 'lo que se busca, en pocas palabras, como se escribiria en un buscador' 'what to search for, in a few words, as you would type it into a search engine') }
+                }
+                required   = @('consulta')
             }
-            required   = @('consulta')
         }
     }
 }
+$AI_WEB_TOOL = Get-AIWebTool
 
 # ---------------------------------------------------------------------------
 #  Hay salida?
@@ -115,14 +120,14 @@ function Get-AIWebPage {
     $script:AIWebStatus = 0
     $limite = [DateTime]::UtcNow.AddSeconds($Secs)
     for ($salto = 0; ; $salto++) {
-        if ($salto -gt 5) { throw 'demasiadas redirecciones' }
-        if (Test-AIInternalUrl $Url) { throw 'destino interno' }
+        if ($salto -gt 5) { throw (L 'demasiadas redirecciones' 'too many redirects') }
+        if (Test-AIInternalUrl $Url) { throw (L 'destino interno' 'internal destination') }
         $resta = [int]($limite - [DateTime]::UtcNow).TotalMilliseconds
-        if ($resta -le 0) { throw 'tiempo agotado' }
+        if ($resta -le 0) { throw (L 'tiempo agotado' 'timed out') }
         $r = [Net.HttpWebRequest]::Create($Url)
         $r.UserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
         $r.Accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-        $r.Headers.Add('Accept-Language', 'es,en;q=0.7')
+        $r.Headers.Add('Accept-Language', (L 'es,en;q=0.7' 'en,es;q=0.7'))
         $r.AutomaticDecompression = [Net.DecompressionMethods]::GZip -bor [Net.DecompressionMethods]::Deflate
         $r.Timeout = $resta
         $r.ReadWriteTimeout = 8000
@@ -142,7 +147,7 @@ function Get-AIWebPage {
     }
     try {
         $ct = [string]$resp.ContentType
-        if ($ct -and $ct -notmatch 'text/|html|xml|json') { throw "tipo no textual: $ct" }
+        if ($ct -and $ct -notmatch 'text/|html|xml|json') { throw (L "tipo no textual: $ct" "not a text type: $ct") }
         $st  = $resp.GetResponseStream()
         $ms  = New-Object IO.MemoryStream
         $buf = New-Object byte[] 65536
@@ -182,9 +187,9 @@ function Search-AIWeb {
     catch {
         $cod = $script:AIWebStatus
         if ($cod -eq 403 -or $cod -eq 429 -or $cod -eq 418) {
-            return @{ Estado = 'bloqueado'; Motivo = "DuckDuckGo respondio $cod"; Items = @() }
+            return @{ Estado = 'bloqueado'; Motivo = (L "DuckDuckGo respondio $cod" "DuckDuckGo answered $cod"); Items = @() }
         }
-        return @{ Estado = 'fallo'; Motivo = "DuckDuckGo no respondio ($($_.Exception.Message))"; Items = @() }
+        return @{ Estado = 'fallo'; Motivo = (L "DuckDuckGo no respondio ($($_.Exception.Message))" "DuckDuckGo did not answer ($($_.Exception.Message))"); Items = @() }
     }
 
     $rx = [regex]'(?s)<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>.*?class="result__snippet"[^>]*>(.*?)</a>'
@@ -213,8 +218,8 @@ function Search-AIWeb {
         if ($html.IndexOf($s, [StringComparison]::OrdinalIgnoreCase) -ge 0 -and
             $Query.IndexOf($s, [StringComparison]::OrdinalIgnoreCase) -lt 0) { $robot = $true }
     }
-    if ($robot) { return @{ Estado = 'bloqueado'; Motivo = 'DuckDuckGo pide comprobar que no es un robot'; Items = @() } }
-    return @{ Estado = 'vacio'; Motivo = 'DuckDuckGo no tiene resultados'; Items = @() }
+    if ($robot) { return @{ Estado = 'bloqueado'; Motivo = (L 'DuckDuckGo pide comprobar que no es un robot' 'DuckDuckGo asks to check that this is not a robot'); Items = @() } }
+    return @{ Estado = 'vacio'; Motivo = (L 'DuckDuckGo no tiene resultados' 'DuckDuckGo has no results'); Items = @() }
 }
 
 # ---------------------------------------------------------------------------
@@ -228,13 +233,13 @@ function Invoke-AIWebSearch {
     $hoy = Get-Date -Format 'yyyy-MM-dd'
     $r = Search-AIWeb $Query
     if ($r.Estado -ne 'ok') {
-        $txt = if ($r.Estado -eq 'vacio') { "La busqueda '$Query' no dio resultados." }
-               else { "No se pudo buscar '$Query': $($r.Motivo). Dile al usuario que la busqueda fallo; no inventes el dato." }
+        $txt = if ($r.Estado -eq 'vacio') { (L "La busqueda '$Query' no dio resultados." "The search '$Query' gave no results.") }
+               else { (L "No se pudo buscar '$Query': $($r.Motivo). Dile al usuario que la busqueda fallo; no inventes el dato." "Could not search '$Query': $($r.Motivo). Tell the user the search failed; do not make up the data.") }
         return [pscustomobject]@{ Ok = $false; Text = $txt; Sources = @(); Motivo = $r.Motivo }
     }
 
     $sb = New-Object System.Text.StringBuilder
-    [void]$sb.AppendLine("Resultados de la busqueda '$Query' (hecha hoy, $hoy):")
+    [void]$sb.AppendLine((L "Resultados de la busqueda '$Query' (hecha hoy, $hoy):" "Results of the search '$Query' (done today, $hoy):"))
     $i = 0
     foreach ($it in $r.Items) {
         $i++
@@ -257,7 +262,7 @@ function Invoke-AIWebSearch {
     }
     foreach ($p in $leidas) {
         [void]$sb.AppendLine()
-        [void]$sb.AppendLine("--- texto de $($p.Url) ---")
+        [void]$sb.AppendLine((L "--- texto de $($p.Url) ---" "--- text of $($p.Url) ---"))
         [void]$sb.AppendLine($p.Text)
     }
 

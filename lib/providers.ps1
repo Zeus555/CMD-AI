@@ -18,10 +18,12 @@
 # modelos locales por el mismo puerto. Los nombres de modelo son las
 # secciones de su fichero de modelos. Si el servicio cambia de puerto,
 # se cambia aqui y solo aqui.
+. (Join-Path $PSScriptRoot 'idioma.ps1')
 $AI_LLAMA_URL  = 'http://127.0.0.1:8080/v1'
 # Lo que core.ps1 anade al error cuando nadie escucha en ese puerto: la orden
-# que arranca TU servidor. Aqui es un servicio de pm2.
-$AI_LLAMA_HINT = 'Arranca el servicio:  pm2 start rpa-ai-portable'
+# que arranca TU servidor. Aqui es un servicio de pm2. Solo la orden: la frase
+# de alrededor la pone Get-AIProviderHint en el idioma activo.
+$AI_LLAMA_HINT = 'pm2 start rpa-ai-portable'
 
 $AI_PROVIDERS = [ordered]@{
 
@@ -160,6 +162,14 @@ $AI_ALIASES = @{
     qwen3    = 'qwen'
 }
 
+function Get-AIProviderHint {
+    <#  La frase que dice como arrancar el servidor de un proveedor local
+        (campo Hint: la orden), en el idioma activo. Vacia si no tiene.  #>
+    param([hashtable]$Provider)
+    if (-not $Provider.Hint) { return '' }
+    return (L 'Arranca el servicio:  ' 'Start the service:  ') + $Provider.Hint
+}
+
 function Resolve-AIProvider {
     <#  Devuelve la tabla del proveedor a partir de un nombre o alias.  #>
     param([string]$Name)
@@ -170,7 +180,7 @@ function Resolve-AIProvider {
 
     if (-not $AI_PROVIDERS.Contains($k)) {
         $validos = (@($AI_PROVIDERS.Keys) + @($AI_ALIASES.Keys)) -join ', '
-        throw "Proveedor desconocido '$Name'. Validos: $validos"
+        throw (L "Proveedor desconocido '$Name'. Validos: $validos" "Unknown provider '$Name'. Valid: $validos")
     }
 
     # Clone para que /model y /provider no muten la tabla original.
