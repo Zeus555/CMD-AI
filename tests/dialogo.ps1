@@ -48,6 +48,120 @@ Ver 'propuesta: solo el comando' ($p.Comando -eq 'Get-Process | Sort-Object CPU'
 $p = ConvertFrom-AIComandoPropuesta 'Claro, aqui tienes una explicacion larga sin comando.'
 Ver 'propuesta: nada util' (-not $p.Comando -and -not $p.Imposible)
 Ver 'la guia nombra los comandos de la lista' ((Get-AIComandoGuia) -match 'Get-CimInstance' -and (Get-AIComandoGuia) -match 'Select-Object' -and (Get-AIComandoGuia) -notmatch 'Remove-Item')
+
+# ---- el idioma (sin modelo) ------------------------------------------------------
+# Las ordenes en ingles se pasan a su nombre en espanol antes del despacho
+# (ConvertTo-AIOrdenEs, sacada de bin\ai.ps1 con sus dos tablas), y caen en la
+# misma rama que la espanola.
+$astI = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'bin\ai.ps1'), [ref]$null, [ref]$null)
+foreach ($v in 'AI_ORDENES', 'AI_SUBORDENES') {
+    $a = $astI.Find({ param($x) $x -is [System.Management.Automation.Language.AssignmentStatementAst] -and $x.Left.Extent.Text -eq "`$$v" }, $true)
+    . ([scriptblock]::Create($a.Extent.Text))
+}
+foreach ($f in 'ConvertTo-AIOrdenEs', 'Save-AIIdiomaAjuste', 'Get-AIRotulo') {
+    $d = $astI.Find({ param($x) $x -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $x.Name -eq $f }, $true)
+    . ([scriptblock]::Create($d.Extent.Text))
+}
+# Las ramas del despacho: los "$line -match '^/...'" del bucle, en su orden.
+$todas = @($astI.FindAll({ param($x) $x -is [System.Management.Automation.Language.BinaryExpressionAst] -and $x.Operator -eq 'Imatch' -and $x.Left.Extent.Text -eq '$line' -and $x.Right -is [System.Management.Automation.Language.StringConstantExpressionAst] -and $x.Right.Value -like '^/*' }, $true) | ForEach-Object { $_.Right.Value })
+function Rama([string]$linea) { $i = 0; foreach ($p in $todas) { $i++; if ($linea -match $p) { return $i } }; return 0 }
+$parejas = [ordered]@{
+    '/documents add D:\My Business' = '/documentos agregar D:\My Business'
+    '/documents remove negocio'     = '/documentos quitar negocio'
+    '/documents search opening hours' = '/documentos buscar opening hours'
+    '/documents forget salaries.csv' = '/documentos olvidar salaries.csv'
+    '/documents forgotten'          = '/documentos olvidos'
+    '/documents restore 2'          = '/documentos recordar 2'
+    '/documents cloud on'           = '/documentos nube on'
+    '/documents update'             = '/documentos actualizar'
+    '/documents list'               = '/documentos lista'
+    '/documents off'                = '/documentos off'
+    '/docs add D:\x'                = '/docs agregar D:\x'
+    '/command add public-ip Get-Date' = '/comando agregar public-ip Get-Date'
+    '/command remove public-ip'     = '/comando quitar public-ip'
+    '/commands'                     = '/comandos'
+    '/command web lottery https://x.com a=B' = '/comando web lottery https://x.com a=B'
+    '/command public-ip'            = '/comando public-ip'
+    '/preferences'                  = '/preferencias'
+    '/preference add Dates in ISO'  = '/preferencia agregar Dates in ISO'
+    '/preference remove 1'          = '/preferencia quitar 1'
+    '/computer battery'             = '/equipo bateria'
+    '/computer off'                 = '/equipo off'
+    '/search dollar rate'           = '/buscar dollar rate'
+    '/language en'                  = '/idioma en'
+    '/ayuda'                        = '/help'
+}
+foreach ($k in $parejas.Keys) {
+    $t = ConvertTo-AIOrdenEs $k
+    Ver "orden en ingles: $k" ($t -ceq $parejas[$k]) "-> <$t>"
+    Ver "  misma rama que en espanol" ((Rama $t) -gt 0 -and (Rama $t) -eq (Rama $parejas[$k])) "$(Rama $t)"
+}
+foreach ($k in '/documentos agregar D:\X', '/comando quitar ip', '/new', '/model qwen', '/web off', '/save C:\a b.json', '/documental') {
+    Ver "orden en espanol intacta: $k" ((ConvertTo-AIOrdenEs $k) -ceq $k)
+}
+$ri = @($todas | Where-Object { $_ -like '^/idioma*' })[0]
+Ver '/idioma sola: muestra el actual' ('/idioma' -match $ri -and -not $Matches[1])
+Ver '/language es -> /idioma es' ((ConvertTo-AIOrdenEs '/language es') -match $ri -and $Matches[1] -eq 'es')
+
+# settings.json: crear, mezclar sin perder claves, y no pisar uno roto.
+$tmpI = Join-Path ([IO.Path]::GetTempPath()) ('idioma-prueba-' + [Guid]::NewGuid().ToString('N'))
+$cf = Join-Path $tmpI 'sub\settings.json'
+Ver 'settings.json: se crea' ((Save-AIIdiomaAjuste $cf 'en') -eq '' -and ([IO.File]::ReadAllText($cf) | ConvertFrom-Json).language -eq 'en')
+[IO.File]::WriteAllText($cf, '{"provider":"xai","web":false,"system":"Eres breve.","idioma":"es"}', (New-Object Text.UTF8Encoding $false))
+$null = Save-AIIdiomaAjuste $cf 'en'
+$j = [IO.File]::ReadAllText($cf, [Text.Encoding]::UTF8) | ConvertFrom-Json
+Ver 'settings.json: mezcla sin perder claves' ($j.language -eq 'en' -and $j.idioma -eq 'en' -and $j.provider -eq 'xai' -and $j.web -eq $false -and $j.system -eq 'Eres breve.')
+Ver 'settings.json: sin BOM' ([IO.File]::ReadAllBytes($cf)[0] -eq [byte][char]'{')
+[IO.File]::WriteAllText($cf, '{roto')
+$m = Save-AIIdiomaAjuste $cf 'en'
+Ver 'settings.json roto: lo dice y no lo pisa' ($m -and [IO.File]::ReadAllText($cf) -eq '{roto')
+
+# El rotulo y unos mensajes, en ingles.
+Set-AIIdioma en
+Ver 'en: rotulo ai >' ((Get-AIRotulo) -eq 'ai > ')
+$e1 = ''; try { $null = Resolve-AIProvider 'nadie' } catch { $e1 = $_.Exception.Message }
+Ver 'en: proveedor desconocido' ($e1 -like "Unknown provider 'nadie'. Valid:*") $e1
+Ver 'en: como arrancar el servidor' ((Get-AIProviderHint (Resolve-AIProvider 'gemma')) -eq 'Start the service:  pm2 start rpa-ai-portable')
+$r1 = Invoke-AIChat -Provider @{ KeyVar = 'AI_PRUEBA_SIN_CLAVE_' + [Guid]::NewGuid().ToString('N'); NeedsKey = $true } -Messages @(@{ role = 'user'; content = 'x' })
+Ver 'en: falta la clave' ($r1.Error -like 'the environment variable * is missing. Run:  AI -SetKey *') $r1.Error
+Ver 'en: la herramienta de buscar' ((Get-AIWebTool).function.description -like 'Searches the internet*' -and (Get-AIWebTool).function.name -eq 'buscar_web')
+Set-AIIdioma es
+Ver 'es: rotulo ia >' ((Get-AIRotulo) -eq 'ia > ')
+Ver 'es: como arrancar el servidor, igual que antes' ((Get-AIProviderHint (Resolve-AIProvider 'gemma')) -eq 'Arranca el servicio:  pm2 start rpa-ai-portable')
+Ver 'es: la herramienta de buscar, igual que antes' ((Get-AIWebTool).function.description -like 'Busca en internet*')
+
+# -Help de verdad (otro powershell), con el idioma de AI_LANG, de -Lang y de
+# settings.json (en una carpeta de datos de prueba).
+$ps = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+$ai = Join-Path $root 'bin\ai.ps1'
+$espanol = '[\u00C0-\u00FF\u00BF\u00A1\u00AB\u00BB]|\b(?:de|que|para|los|las|el|una|con|sin|del|por|esto|modo|comando|comandos|documentos|equipo|preferencias?|buscar|agregar|quitar|olvidar|olvidos|recordar|lista|nube|idioma|ayuda|pregunta|carpeta)\b'
+$viejo = $env:AI_LANG; $viejoLA = $env:LOCALAPPDATA
+try {
+    $env:AI_LANG = 'en'
+    $h = (& $ps -NoProfile -ExecutionPolicy Bypass -File $ai -Help) -join "`n"
+    $sobra = @([regex]::Matches($h, $espanol) | ForEach-Object { $_.Value } | Select-Object -Unique)
+    Ver 'en: -Help sin nada en espanol' ($h -like '*IN INTERACTIVE MODE*' -and $sobra.Count -eq 0) ($sobra -join ' ')
+    Ver 'en: -Help con los nombres en ingles' ($h -like '*/documents add*' -and $h -like '*/language en|es*' -and $h -like '*/command add*' -and $h -like '*/preference add*' -and $h -like '*/computer*')
+    $env:AI_LANG = 'es'
+    $h = (& $ps -NoProfile -ExecutionPolicy Bypass -File $ai -Help) -join "`n"
+    Ver 'es: -Help en espanol' ($h -like '*EN EL MODO INTERACTIVO*' -and $h -like '*/documentos agregar*' -and $h -like '*/idioma es|en*')
+    $h = (& $ps -NoProfile -ExecutionPolicy Bypass -File $ai -Help -Lang en) -join "`n"
+    Ver '-Lang en gana a AI_LANG' ($h -like '*IN INTERACTIVE MODE*')
+    $env:AI_LANG = $null
+    $env:LOCALAPPDATA = $tmpI
+    New-Item -ItemType Directory -Path (Join-Path $tmpI 'PRC-CMD-AI') -Force | Out-Null
+    [IO.File]::WriteAllText((Join-Path $tmpI 'PRC-CMD-AI\settings.json'), '{"language":"en"}')
+    $h = (& $ps -NoProfile -ExecutionPolicy Bypass -File $ai -Help) -join "`n"
+    Ver 'settings.json "language": "en"' ($h -like '*IN INTERACTIVE MODE*')
+    [IO.File]::WriteAllText((Join-Path $tmpI 'PRC-CMD-AI\settings.json'), '{"idioma":"en"}')
+    $h = (& $ps -NoProfile -ExecutionPolicy Bypass -File $ai -Help) -join "`n"
+    Ver 'settings.json "idioma": "en" tambien vale' ($h -like '*IN INTERACTIVE MODE*')
+    [IO.File]::WriteAllText((Join-Path $tmpI 'PRC-CMD-AI\settings.json'), '{"provider":"gemma"}')
+    $h = (& $ps -NoProfile -ExecutionPolicy Bypass -File $ai -Help) -join "`n"
+    Ver 'sin idioma y con datos de antes: espanol' ($h -like '*EN EL MODO INTERACTIVO*')
+} finally { $env:AI_LANG = $viejo; $env:LOCALAPPDATA = $viejoLA }
+Remove-Item -LiteralPath $tmpI -Recurse -Force -ErrorAction SilentlyContinue
+
 if ($SoloReconocer) { Write-Output "MAL = $mal de $n"; exit $mal }
 
 # ---- el dialogo -------------------------------------------------------------
