@@ -18,7 +18,7 @@
 #  minuto de transcripcion.
 #  Comentarios y expresiones regulares en ASCII (ver tools\build.ps1).
 # ---------------------------------------------------------------------------
-param([string]$Dir, [double]$Tempo = 1.1, [switch]$Todo, [string[]]$Solo)
+param([string]$Dir, [double]$Tempo = 1.1, [switch]$Todo, [string[]]$Solo, [ValidateSet('es', 'en')][string]$Idioma = 'es')
 $ErrorActionPreference = 'Stop'
 if (-not $Dir) { $Dir = Split-Path -Parent $MyInvocation.MyCommand.Path }
 $utf8 = New-Object Text.UTF8Encoding $false
@@ -27,6 +27,11 @@ Add-Type -AssemblyName System.Net.Http
 $MODELO = 'gpt-4o-mini-tts'
 $VOZ    = 'cedar'
 $ESTILO = 'Habla en español latinoamericano neutro. Eres el narrador de un video corto que presenta un programa: voz cálida, clara y segura, con ritmo ágil pero sin prisa y con naturalidad, como quien enseña algo que conoce bien. Lee cada palabra exactamente como está escrita, sin añadir ni cambiar nada.'
+# En ingles, la misma voz y el mismo tono, en ingles de EE. UU. (el video en
+# ingles va en docsideoen, con su propia narracion.txt).
+if ($Idioma -eq 'en') {
+    $ESTILO = 'Speak in neutral American English. You are the narrator of a short video that presents a program: a warm, clear and confident voice, at a brisk but unhurried pace, natural, like someone showing something they know well. Read every word exactly as written, adding and changing nothing.'
+}
 $MIN_COBERTURA = 0.9
 $TOMAS = 3
 
@@ -64,7 +69,9 @@ function Get-Huella([string]$texto) {
 function ConvertTo-Palabras([string]$t) {
     $t = $t.ToLowerInvariant().Normalize([Text.NormalizationForm]::FormD)
     $t = -join ($t.ToCharArray() | Where-Object { [Globalization.CharUnicodeInfo]::GetUnicodeCategory($_) -ne 'NonSpacingMark' })
-    # Whisper escribe cifras y siglas; el guion las lleva en letras.
+    # Whisper escribe cifras y siglas; el guion en espanol las lleva en
+    # letras. El ingles se escribe con cifras, como lo escribe Whisper.
+    if ($Idioma -eq 'en') { return @($t -split '[^a-z0-9]+' | Where-Object { $_ }) }
     $t = $t -replace 'c\$\s*650|650', ' seiscientos cincuenta '
     $t = $t -replace '\b2[.,]0\b', ' dos punto cero '
     $t = $t -replace '\bp\.?\s?r\.?\s?c\.?(?=\W|$)', ' pe erre ce '
@@ -153,7 +160,7 @@ function Invoke-Transcripcion([string]$fichero) {
         $a.Headers.ContentType = New-Object System.Net.Http.Headers.MediaTypeHeaderValue('audio/mpeg')
         $f.Add($a, 'file', 'toma.mp3')
         $f.Add((New-Object System.Net.Http.StringContent('whisper-1')), 'model')
-        $f.Add((New-Object System.Net.Http.StringContent('es')), 'language')
+        $f.Add((New-Object System.Net.Http.StringContent($Idioma)), 'language')
         $m = New-Object System.Net.Http.HttpRequestMessage([System.Net.Http.HttpMethod]::Post, 'https://api.openai.com/v1/audio/transcriptions')
         $m.Content = $f
         $m
