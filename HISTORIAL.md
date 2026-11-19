@@ -8,6 +8,87 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ---
 
+## 2026-11-18 — Leer los PDF
+
+**La petición.** Que lea los PDF: «es de los documentos más comunes que
+existen». Hasta ahora se decía cuáles había y que se pasaran a Word.
+
+**Por qué ahora sí, y qué cambió de la decisión anterior.** Se habían dejado
+fuera porque, sin una biblioteca, sus tipos de letra dan texto roto en
+muchos ficheros, y un texto roto acaba en datos falsos. El riesgo sigue: lo
+que cambia es que ahora se mide. Se cuentan las letras que no se pudieron
+descifrar y se mira si lo leído parece texto. Un PDF que no pasa no se lee, y
+se dice por qué. Así se leen los PDF normales y se rechazan los raros, en
+vez de rechazarlos todos.
+
+**Cómo, sin dependencias (`lib/pdf.ps1`).**
+
+- **Fichero en Latin-1.** Se lee así, que es un carácter por byte, y las
+  expresiones regulares de .NET hacen el trabajo pesado: los objetos, los
+  streams (Flate con el `DeflateStream` de .NET, ASCII85, hexadecimal), los
+  objetos guardados dentro de streams (`/ObjStm`, lo que hacen Word y Chrome)
+  y el contenido de cada página.
+- **No se lee la tabla xref:** se recorre el fichero. Vale también cuando la
+  tabla está mal, y si un objeto sale dos veces vale el último.
+- **Cada letra se descifra con su tipo de letra:** con su tabla ToUnicode
+  y, si no la trae, con su codificación (WinAnsi, MacRoman) y los nombres de
+  `/Differences` (`/aacute` es «á»).
+- **La posición decide el texto.** Con la matriz de texto y la de la
+  página, y el ancho de cada letra: un hueco pequeño es un espacio, uno de
+  columna es ` | `, un salto grande es un párrafo. Los títulos se sacan por
+  el tamaño de la letra (o por ser una línea corta toda en negrita) y salen
+  como `# título`, igual que con Word, para que los fragmentos lleven su
+  apartado y se pueda olvidar un apartado de un PDF.
+- **Lo que no se lee:** escaneados (sin texto; la capa de un OCR sí se lee),
+  protegidos (se propone imprimirlos en «Microsoft Print to PDF») y los que
+  tienen más de un 5 % de letras sin descifrar o no parecen texto.
+- **Lo leído se guarda como lo demás.** Un PDF que antes salió como
+  «todavía no sé leerlos» se vuelve a probar solo, sin `/documentos
+  actualizar`.
+
+**Velocidad, lo que más costó.** La primera versión tardaba 25 s en 15
+páginas de Chrome, que coloca cada letra por separado (53.000 operaciones).
+En PowerShell 5.1 cada llamada a una función cuesta unos 85 µs, y había
+varias por letra (convertir un número, por ejemplo: 87 µs como función,
+2,5 µs con `[double]::TryParse` en línea). El bucle del contenido se
+reescribió sin llamadas por letra, con variables locales y con una tabla por
+código para la letra y su ancho. `[void]` se cambió por `$null =`, que es
+cuatro veces más rápido. Quedó en 3 s: unas 8 veces más rápido. Es el peor
+caso, y solo la primera vez.
+
+**Una regresión que sacó el PDF.** Con el catálogo de pasteles ya legible,
+«¿cuánto cuesta el horno que necesitamos?» dejó de traer la presentación del
+horno. El catálogo dice «cuesta» y «costo», y esas palabras pesaban lo mismo
+que «horno». Las palabras de una categoría, las que tienen sinónimos
+(precio, horario, empleado…), dicen de qué va la pregunta, no de qué cosa:
+ahora pesan 0,6, y sus sinónimos 0,3. No se cambió el texto de la prueba
+para esquivarlo: en un negocio de verdad los catálogos dicen «cuesta».
+
+**Pruebas.**
+
+- **`tests/hacer-pdf.ps1`** escribe PDF de verdad, sin bibliotecas.
+  Pueden ir comprimidos, con objetos dentro de streams y tabla xref en
+  stream, con tipos de letra recortados con ToUnicode, con letras por su
+  nombre, con palabras separadas solo por desplazamientos y con tablas en
+  columnas.
+- **`documentos.ps1`** prueba doce casos de PDF, incluidos los que no se
+  leen: escaneado, protegido, sin tabla de letras y roto.
+- **`negocio.ps1`**: el catálogo de pasteles es ahora un PDF, coherente
+  con los precios del Excel. La trampa pasa a ser una factura escaneada.
+  Hay dos preguntas nuevas que salen del PDF; son 34 en total y pasan
+  todas.
+- **Comprobado a mano** con PDF reales de Edge (`--print-to-pdf`) y de
+  «Microsoft Print to PDF» (TrueType de Windows, dos páginas): salen los
+  títulos, las tablas y los acentos. Con un PDF hecho por Word no se probó:
+  no estaba instalado. Las 8 pruebas de `tests\probar.ps1` pasan.
+
+**El video** se volvió a grabar con la captura 3 nueva. La segunda pregunta
+es el precio de un pastel, que sale del PDF, y `/documentos buscar` enseña
+ese fragmento con su apartado. Lo que dice que no puede leer ya no es «el
+PDF», sino la factura escaneada.
+
+---
+
 ## 2026-11-18 — Guía de los documentos y un video de presentación
 
 **Las peticiones.** «La documentación correspondiente» de lo último que se

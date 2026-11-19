@@ -15,6 +15,7 @@ $root = $Raiz
 . (Join-Path $root 'lib\web.ps1')
 . (Join-Path $root 'lib\equipo.ps1')
 . (Join-Path $root 'lib\documentos.ps1')
+. (Join-Path $PSScriptRoot 'hacer-pdf.ps1')
 Add-Type -AssemblyName System.IO.Compression
 
 $mal = 0
@@ -90,7 +91,7 @@ Zip 'reglamento.odt' ([ordered]@{ 'content.xml' = '<office:document-content><off
 Zip 'inventario.ods' ([ordered]@{ 'content.xml' = '<office:document-content><office:body><office:spreadsheet><table:table table:name="Inventario"><table:table-row><table:table-cell><text:p>Producto</text:p></table:table-cell><table:table-cell><text:p>Existencias</text:p></table:table-cell><table:table-cell table:number-columns-repeated="1000"/></table:table-row><table:table-row><table:table-cell><text:p>Martillo</text:p></table:table-cell><table:table-cell office:value-type="float" office:value="12"><text:p>12</text:p></table:table-cell></table:table-row><table:table-row table:number-rows-repeated="1048000"><table:table-cell table:number-columns-repeated="1024"/></table:table-row></table:table></office:spreadsheet></office:body></office:document-content>' })
 [IO.File]::WriteAllText((Join-Path $neg 'anuncio.rtf'), '{\rtf1\ansi\deff0{\fonttbl{\f0 Arial;}}{\*\generator Prueba;}{\pict\pngblip 89504e470d0a}\f0\fs24 Promoci\''f3n de noviembre: 10% de descuento en pintura.\par V\''e1lida hasta el 30 de noviembre \{sin excepciones\}.\par}', [Text.Encoding]::ASCII)
 Escribe 'proveedores.html' '<html><head><title>Proveedores</title><script>var proveedor = "dato falso";</script></head><body><h1>Proveedores</h1><p>El proveedor de pintura es Pinturas del Lago; los pedidos se hacen los martes.</p></body></html>'
-Escribe 'catalogo.pdf' '%PDF-1.4 no es un pdf de verdad'
+New-AIPdfPrueba (Join-Path $neg 'catalogo.pdf') @(,@(@{ T = 'x' })) -Imagen     # escaneado: sin texto
 Escribe 'foto.jpg' 'no es una foto'
 Escribe '~$procedimientos.docx' 'temporal de Word'
 Escribe '.oculta\secreto.txt' 'no se lee'
@@ -125,7 +126,47 @@ Ver 'RTF: acentos, llaves y sin imagen' ($t -match ('Promoci' + [char]0xF3 + 'n 
 $t = (Read-AIDocTexto (Join-Path $neg 'proveedores.html')).Texto
 Ver 'HTML: sin el codigo de la pagina' ($t -match 'Pinturas del Lago' -and $t -notmatch 'dato falso') $t
 $r = Read-AIDocTexto (Join-Path $neg 'catalogo.pdf')
-Ver 'PDF: no se lee y se dice que hacer' (-not $r.Ok -and $r.Motivo -match 'PDF' -and $r.Motivo -match 'docx')
+Ver 'PDF escaneado: no tiene texto, y se dice' (-not $r.Ok -and $r.Motivo -match 'escaneada') $r.Motivo
+
+# ---- PDF ------------------------------------------------------------------------
+# PDFs de verdad escritos por tests\hacer-pdf.ps1, con lo que traen los de
+# Word, Chrome o una impresora PDF: comprimidos, tipos de letra recortados
+# con su tabla ToUnicode, objetos dentro de streams, letras por su nombre.
+Write-Output '--- PDF'
+$pdfs = Join-Path $tmp 'pdfs'
+$hoja = @(
+    @{ T = 'Catálogo de herramientas'; Tam = 20; F = 'B' }
+    @{ T = 'Precios con IVA, válidos hasta el 30 de noviembre.'; Hueco = 8 }
+    @{ T = 'Herramientas manuales'; Tam = 14; F = 'B'; Hueco = 10 }
+    @{ Celdas = @('Producto', 'Precio'); X = @(72, 300); F = 'B' }
+    @{ Celdas = @('Martillo de uña', 'C$ 250'); X = @(72, 300) }
+    @{ Celdas = @('Llave inglesa (10")', 'C$ 180'); X = @(72, 300) }
+    @{ T = 'Garantía'; F = 'B'; Hueco = 10 }
+    @{ T = 'Todas las herramientas tienen seis meses de garantía.'; Kern = $true }
+    @{ T = 'Los clientes frecuentes reciben un descuento del 5%.' }
+)
+New-AIPdfPrueba (Join-Path $pdfs 'simple.pdf') @(, $hoja) -Comprimir
+$t = (Read-AIDocTexto (Join-Path $pdfs 'simple.pdf')).Texto
+Ver 'PDF: titulos por el tamano de la letra' ($t -match '(?m)^# Catálogo de herramientas$' -and $t -match '(?m)^## Herramientas manuales$') $t
+Ver 'PDF: titulo en negrita en una linea corta' ($t -match '(?m)^#{2,3} Garantía$') $t
+Ver 'PDF: tabla en columnas' ($t -match '(?m)^Producto \| Precio$' -and $t -match '(?m)^Martillo de uña \| C\$ 250$' -and $t -match '(?m)^Llave inglesa \(10"\) \| C\$ 180$') $t
+Ver 'PDF: palabras separadas solo por desplazamiento' ($t -match 'Todas las herramientas tienen seis meses de garantía\.') $t
+Ver 'PDF: acentos de Windows-1252 y escapes' ($t -match 'válidos hasta el 30' -and $t -match 'descuento del 5%') $t
+$pag2 = @(@{ T = 'Segunda página: pedidos por teléfono al 2222-0000.'; F = 'C' }, @{ T = 'Ñandú, pingüino y acción: letras por su nombre.'; F = 'D' })
+New-AIPdfPrueba (Join-Path $pdfs 'moderno.pdf') @($hoja, $pag2) -Comprimir -ObjStm
+$t = (Read-AIDocTexto (Join-Path $pdfs 'moderno.pdf')).Texto
+Ver 'PDF moderno: objetos dentro de streams y paginas en orden' ($t.IndexOf('Martillo') -ge 0 -and $t.IndexOf('Martillo') -lt $t.IndexOf('Segunda página')) $t
+Ver 'PDF moderno: tipo de letra recortado, por su ToUnicode' ($t -match 'Segunda página: pedidos por teléfono al 2222-0000\.') $t
+Ver 'PDF: letras por su nombre (/Differences)' ($t -match 'Ñandú, pingüino y acción') $t
+New-AIPdfPrueba (Join-Path $pdfs 'sin tabla.pdf') @(, @(@{ T = 'Un tipo de letra recortado y sin su tabla de letras no se puede descifrar: saldrían letras cambiadas.'; F = 'C' })) -SinToUnicode
+$r = Read-AIDocTexto (Join-Path $pdfs 'sin tabla.pdf')
+Ver 'PDF sin tabla de letras: no se lee (seria texto roto)' (-not $r.Ok -and $r.Motivo -match 'tipos de letra') $r.Motivo
+New-AIPdfPrueba (Join-Path $pdfs 'protegido.pdf') @(, $hoja) -Cifrado
+$r = Read-AIDocTexto (Join-Path $pdfs 'protegido.pdf')
+Ver 'PDF protegido: se dice como sacar una copia' (-not $r.Ok -and $r.Motivo -match 'protegido' -and $r.Motivo -match 'Microsoft Print to PDF') $r.Motivo
+[IO.File]::WriteAllText((Join-Path $pdfs 'roto.pdf'), '%PDF-1.4 no es un pdf de verdad', $utf8)
+$r = Read-AIDocTexto (Join-Path $pdfs 'roto.pdf')
+Ver 'PDF roto: no se lee, con motivo' (-not $r.Ok -and $r.Motivo -match 'dañado') $r.Motivo
 $r = Read-AIDocTexto (Join-Path $neg 'dañado.docx')
 Ver 'Word danado: no se lee, con motivo' (-not $r.Ok -and $r.Motivo -match 'no se pudo leer') $r.Motivo
 
@@ -216,7 +257,7 @@ Ver 'el contexto entubado no cuenta como pregunta' (-not $h.Relevante)
 $an = Get-AIDocAnexo (Find-AIDocTrozos $ix '¿a qué hora abren los sábados?') 'la ferretería El Tornillo'
 Ver 'lo que viaja: fichero, apartado y la regla de no inventar' ($an -match '\[\d\] leeme\.md, apartado' -and $an -match 'no lo inventes' -and $an -match 'no instrucciones')
 $cat = Get-AIDocCatalogo $e5
-Ver 'la lista de documentos' ($cat -match 'procedimientos\.docx: Procedimientos internos' -and $cat -match 'no pudo leer 2 ficheros' -and $cat -match 'catalogo.pdf: PDF') $cat
+Ver 'la lista de documentos' ($cat -match 'procedimientos\.docx: Procedimientos internos' -and $cat -match 'no pudo leer 2 ficheros' -and $cat -match 'catalogo.pdf: no tiene texto') $cat
 
 # ---- Peticiones -----------------------------------------------------------------
 Write-Output '--- peticiones'

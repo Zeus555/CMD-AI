@@ -49,9 +49,9 @@ que lo genera, y el cliente lo pinta segun llega.
   las cifras de dinero me las des en dólares». Las escribes tú y el modelo
   las tiene delante en cada pregunta. Ver «Preferencias».
 - **Aprende de tus documentos**: «aprende de los documentos de D:\MiNegocio».
-  Lee una carpeta (Word, Excel, PowerPoint, OpenDocument, texto, CSV, HTML,
-  RTF) y desde entonces contesta con lo que dicen sobre tu negocio: servicios,
-  empleados, horarios, procedimientos, políticas... Dice de qué documento
+  Lee una carpeta (Word, Excel, PowerPoint, PDF, OpenDocument, texto, CSV,
+  HTML, RTF) y desde entonces contesta con lo que dicen sobre tu negocio:
+  servicios, empleados, horarios, procedimientos, políticas... Dice de qué documento
   sale cada dato, y si no viene, lo dice en vez de inventarlo. Todo se queda
   en el equipo. Ver «Documentos» y, para el día a día, la
   [guía de uso](docs/guia-documentos.md).
@@ -772,7 +772,7 @@ Una carpeta con los documentos de tu negocio (servicios, precios, empleados,
 horarios, procedimientos, políticas internas...) y la terminal contesta con
 lo que dicen. Para quien lo vaya a usar en su negocio sin conocimientos
 técnicos está la [guía de uso de los documentos](docs/guia-documentos.md):
-cómo preparar la carpeta, qué hacer con los PDF, cómo preguntar, comprobar y
+cómo preparar la carpeta, qué PDF sirven, cómo preguntar, comprobar y
 olvidar. El ejemplo de aquí es una ferretería inventada, la misma de las
 pruebas:
 
@@ -780,8 +780,7 @@ pruebas:
 Ariel > aprende de los documentos de D:\MiNegocio
 ia > Voy a leer los documentos de D:\MiNegocio para contestarte con lo que dicen. No los
      cambio ni los mando a ningún sitio: lo que lea se queda en este equipo.
-ia > Hay 11 que sé leer (2 Word, 2 texto, 2 OpenDocument, 1 Excel, 1 CSV, ...). También hay
-     1 PDF, que todavía no sé leer.
+ia > Hay 12 que sé leer (2 Word, 2 texto, 2 OpenDocument, 1 Excel, 1 CSV, ...).
 ia > ¿De qué tratan, en pocas palabras? Así sé cuándo mirarlos; ...
 Ariel > mi ferretería: horarios, empleados, precios, políticas y procedimientos
 ia > Listo: leí 10 documentos (16 fragmentos) en 0.5 s. Pregúntame lo que quieras sobre ...
@@ -806,8 +805,10 @@ ia > El documento empleados.csv indica que Luis Mora tiene el cargo de Cajero y 
 - **La búsqueda es por palabras**, sin acentos, sin plurales ni género y con
   formas verbales recortadas («venden» encuentra «vendemos»). Tiene unos
   pocos sinónimos de lo que se pregunta en un negocio: horario/abren/
-  atención, empleado/personal, precio/costo/tarifa... Funciona sin
-  dependencias, sin tocar llama-server y en milisegundos.
+  atención, empleado/personal, precio/costo/tarifa... Esas palabras de
+  categoría pesan menos que las demás: en «¿cuánto cuesta el horno?» manda
+  «horno», no «cuesta». Funciona sin dependencias, sin tocar llama-server y
+  en milisegundos.
 - **Cuándo viajan:** solo si la pregunta tiene que ver con los documentos,
   es decir, si el mejor fragmento trae palabras de la pregunta que no salen
   en todas partes. «¿Cuál es la capital de Francia?» o «¿qué hora es?» se
@@ -832,15 +833,39 @@ ia > El documento empleados.csv indica que Luis Mora tiene el cargo de Cajero y 
 | Word | `.docx` y `.docm` (títulos, listas y tablas; sin el texto borrado con control de cambios) |
 | Excel | `.xlsx` y `.xlsm` (cada hoja con su nombre) |
 | PowerPoint | `.pptx` y `.pptm` (cada diapositiva, en orden) |
+| PDF | `.pdf` con texto (títulos por el tamaño de la letra, tablas en columnas; ver abajo) |
 | OpenDocument | `.odt`, `.ods`, `.odp` |
 | Texto | `.txt`, `.md`, `.markdown`, `.csv`, `.tsv`, `.json`, `.xml`, `.html`, `.htm`, `.rtf`, `.log`, `.ini`, `.yml`, `.yaml` |
 
 Los ficheros de texto se leen en UTF-8 o en Windows-1252, que es como
-guardaban el Bloc de notas antiguo y el Excel en español. Los PDF y los
-formatos viejos de Office (`.doc`, `.xls`, `.ppt`) todavía no se leen: se
-dice cuáles son y qué hacer, por ejemplo «guárdalo como Word (.docx)». Las
-imágenes y demás ficheros se ignoran, igual que los ocultos, los temporales
-de Office (`~$...`) y las carpetas que empiezan por punto.
+guardaban el Bloc de notas antiguo y el Excel en español. Los formatos
+viejos de Office (`.doc`, `.xls`, `.ppt`) no se leen: se dice cuáles son y
+que hay que guardarlos en el formato nuevo. Las imágenes y demás ficheros se
+ignoran, igual que los ocultos, los temporales de Office (`~$...`) y las
+carpetas que empiezan por punto.
+
+**Los PDF** se leen con `lib/pdf.ps1`, sin bibliotecas. Un PDF no guarda
+texto, sino qué letra se dibuja, dónde y con qué tipo de letra. Se recorren
+las páginas en orden y se descifra cada letra con su tipo de letra: primero
+con su tabla ToUnicode y, si no la trae, con su codificación y sus nombres de
+letra. Por la posición se decide si va un espacio, un salto de línea, un
+párrafo o una columna de tabla (` | `). Una línea en letra claramente más
+grande que el cuerpo (o corta y toda en negrita) sale como título (`# ...`),
+igual que con Word, así que los fragmentos llevan su apartado. Está probado
+con PDF de verdad de Edge y de «Microsoft Print to PDF», y con PDF de
+prueba con lo que hacen Word y Chrome: comprimidos, con objetos dentro de
+streams y con tipos de letra recortados. Con un PDF hecho por Word no se ha
+probado, porque no estaba instalado. Lo que no lee lo dice, con el motivo:
+
+- **Escaneados:** son una imagen y no tienen texto, salvo que traigan la capa
+  de un OCR, que sí se lee.
+- **Protegidos** con contraseña o contra copia: se propone imprimirlos en
+  «Microsoft Print to PDF» para sacar una copia sin protección.
+- **Tipos de letra que no se pueden descifrar:** un tipo de letra recortado
+  sin tabla ToUnicode da letras cambiadas, y un precio con las letras
+  cambiadas es un dato falso. Se cuentan las letras sin descifrar y se mira
+  si el texto parece texto: con más de un 5 % de letras sin descifrar, o con
+  palabras sin vocales y signos sueltos, ese PDF no se lee.
 
 ### Órdenes
 
@@ -922,7 +947,10 @@ que no se mandan y se avisa una vez. Para permitirlo en una sesión está
 
 - **Velocidad:** 400 documentos (2,4 MB de texto) se leen la primera vez en
   unos 5 s. Al volver a arrancar, el índice guardado se carga en menos de
-  medio segundo. Cada pregunta busca en unos 0,2 s.
+  medio segundo. Cada pregunta busca en unos 0,2 s. Los PDF van más
+  despacio, porque PowerShell recorre letra a letra: unas 15 páginas de
+  Chrome (que coloca cada letra por separado, el peor caso) en 3 s. Solo la
+  primera vez: lo leído se guarda y no se relee mientras no cambie.
 - **Topes:** 10 carpetas, 3000 ficheros, 30 MB por fichero y 1,5 millones
   de caracteres de texto por fichero. Viajan 4 fragmentos de 700 caracteres
   como mucho por pregunta, porque el servidor local tiene 4096 tokens de
@@ -962,10 +990,14 @@ lib/preferencias.ps1 lo que el usuario pide recordar: reconocer "recuerda
 lib/documentos.ps1  las carpetas de documentos: lectores de cada formato,
                     fragmentos, indice y busqueda por palabras, y la
                     herramienta consultar_documentos
+lib/pdf.ps1         el texto de un PDF, sin bibliotecas: objetos, streams,
+                    tipos de letra (ToUnicode, codificaciones) y la
+                    posicion de cada letra
 tools/Set-AIKey.ps1 guardado seguro de claves en HKCU\Environment
 tools/build.ps1     normaliza codificacion: UTF-8 con BOM en .ps1, CRLF en .bat
 tests/probar.ps1    pasa todas las pruebas y dice cuales fallan
 tests/*.ps1         una prueba por parte; sus frases y escenas, en tests/datos/
+tests/hacer-pdf.ps1 escribe los PDF de prueba (no es una prueba)
 HISTORIAL.md        que cambio en cada version, por que y como se probo
 docs/guia-documentos.md  guia de uso de los documentos, para el dueno de
                     un negocio
@@ -995,8 +1027,8 @@ Sin modelo y sin internet tarda unos 30 segundos y pasa ocho pruebas:
 | `equipo.ps1` | Reloj, formatos con un equipo de mentira y la lectura de verdad de este equipo. Esta lectura sale en pantalla y no se guarda. |
 | `preferencias.ps1` | Qué mensajes piden recordar algo y qué se guarda, la limpieza, guardar y cargar, el fichero roto, la nota para el modelo y que el modelo no pueda guardarlas. |
 | `consultas.ps1` | Consultas web, con una página de ejemplo (`datos/consulta.html`): buscar rótulos, los bloques y el dato que falta, páginas JSON, el JSON que sale, lo que propone el modelo, guardar y cargar, y qué peticiones son de internet. |
-| `documentos.ps1` | Documentos de una ferretería inventada en todos los formatos, creados al vuelo en una carpeta temporal (en el repositorio no hay binarios). Mira cada lector, los fragmentos, qué se relee y qué no, el índice guardado, 15 preguntas que tienen que encontrar su fragmento y 6 que no deben sacar documentos, las peticiones conversadas y el orden de las órdenes `/documentos`, y también olvidar. Con `-Crear <carpeta>` solo crea la ferretería, para probarla a mano. |
-| `negocio.ps1` | Un negocio inventado entero, la Panadería y Cafetería La Espiga: quiénes son, servicios y precios, empleados, horarios por sucursal, vacaciones y permisos, reglamento, procedimientos, quejas, pedidos, proveedores, seguridad alimentaria, inventario, y necesidades y metas. Va en los doce formatos, con trampas: datos que no están, dos horarios, un PDF y un temporal de Word. Sin modelo mira el procesamiento: qué se lee de cada fichero, que cada una de las 32 preguntas encuentre su documento y olvidar. Con `-Crear <carpeta>` solo crea los documentos. |
+| `documentos.ps1` | Documentos de una ferretería inventada en todos los formatos, creados al vuelo en una carpeta temporal (en el repositorio no hay binarios). Mira cada lector (y PDFs de prueba de verdad: comprimidos, con objetos dentro de streams, tipos de letra recortados con ToUnicode, letras por su nombre, y los que no se leen: escaneado, protegido, sin tabla de letras y roto), los fragmentos, qué se relee y qué no, el índice guardado, 15 preguntas que tienen que encontrar su fragmento y 6 que no deben sacar documentos, las peticiones conversadas y el orden de las órdenes `/documentos`, y también olvidar. Con `-Crear <carpeta>` solo crea la ferretería, para probarla a mano. |
+| `negocio.ps1` | Un negocio inventado entero, la Panadería y Cafetería La Espiga: quiénes son, servicios y precios, empleados, horarios por sucursal, vacaciones y permisos, reglamento, procedimientos, quejas, pedidos, proveedores, seguridad alimentaria, inventario, y necesidades y metas. Va en trece formatos (el catálogo de pasteles es un PDF), con trampas: datos que no están, dos horarios, una factura escaneada en PDF y un temporal de Word. Sin modelo mira el procesamiento: qué se lee de cada fichero, que cada una de las 34 preguntas encuentre su documento y olvidar. Con `-Crear <carpeta>` solo crea los documentos. |
 | `dialogo.ps1 -SoloReconocer` | Reconocer cuándo una frase pide guardar un comando (`datos/peticiones.txt`) y leer lo que propone el modelo. |
 
 Opciones:

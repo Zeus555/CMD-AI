@@ -42,20 +42,20 @@ $escenas = @(
        Pie = 'Para esta conversación y las próximas.'
        Captura = '3-preferencias-documentos.out'; Lineas = '5-8'; Resalta = @('guardada.') }
     @{ Id = 'aprende'; Kicker = '7 · Los documentos de tu negocio'; Titulo = 'Aprende de una carpeta de documentos'
-       Pie = 'Word, Excel, PowerPoint, OpenDocument, texto... No entrena el modelo: busca en ellos en cada pregunta.'
-       Captura = '3-preferencias-documentos.out'; Lineas = '9-16'; Resalta = @('Hay 12 que sé leer', 'ia > Listo:') }
+       Pie = 'Word, Excel, PowerPoint, PDF, texto... Lo que no puede leer, como un escaneo, lo dice. No entrena el modelo: busca en ellos.'
+       Captura = '3-preferencias-documentos.out'; Lineas = '9-16'; Resalta = @('Hay 14 que sé leer', 'ia > Listo:') }
     @{ Id = 'pregunta'; Kicker = '7 · Los documentos de tu negocio'; Titulo = 'Contesta con lo que dicen, y dice de dónde'
-       Pie = 'Y si un dato no está en los documentos, lo dice: no lo inventa.'
-       Captura = '3-preferencias-documentos.out'; Lineas = '17-28'; Resalta = @('consultando tus documentos', 'No viene en los documentos.') }
+       Pie = 'También de un PDF, con su apartado. Y si un dato no está en los documentos, lo dice: no lo inventa.'
+       Captura = '3-preferencias-documentos.out'; Lineas = '17-28'; Resalta = @('Cuesta C$ 650', 'No viene en los documentos.') }
     @{ Id = 'buscar'; Kicker = '7 · Los documentos de tu negocio'; Titulo = 'Comprueba de dónde sale cada dato'
-       Pie = '/documentos buscar enseña los trozos que vería el modelo, sin preguntarle.'
-       Captura = '3-preferencias-documentos.out'; Lineas = '29-39'; Resalta = @('fondo de caja, que es de') }
+       Pie = '/documentos buscar enseña los trozos que vería el modelo, sin preguntarle: aquí, la tabla del PDF.'
+       Captura = '3-preferencias-documentos.out'; Lineas = '29-35,41'; Resalta = @('Tres leches | C$ 60 | C$ 650') }
     @{ Id = 'olvida'; Kicker = '8 · Olvidar'; Titulo = 'Y olvida lo que le pidas'
        Pie = 'Enseña qué va a olvidar y pide un sí. Tus ficheros no se tocan: olvida lo leído.'
-       Captura = '3-preferencias-documentos.out'; Lineas = '40-57'; Resalta = @('Voy a olvidar', 'Olvidado.') }
+       Captura = '3-preferencias-documentos.out'; Lineas = '42-59'; Resalta = @('Voy a olvidar', 'Olvidado.') }
     @{ Id = 'recuerda'; Kicker = '8 · Olvidar'; Titulo = 'Y se puede deshacer'
        Pie = 'Lo olvidado queda en una lista: /documentos recordar lo vuelve a usar.'
-       Captura = '3-preferencias-documentos.out'; Lineas = '59-63'; Resalta = @('vuelvo a usar') }
+       Captura = '3-preferencias-documentos.out'; Lineas = '61-65'; Resalta = @('vuelvo a usar') }
 )
 $DUR_INTRO = 4.5
 $DUR_FINAL = 6.0

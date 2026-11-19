@@ -6,7 +6,7 @@
   reglamento, procedimientos, pedidos, quejas, proveedores, seguridad
   alimentaria, inventario, y necesidades y metas, en todos los formatos que
   se leen. Lleva trampas a proposito: datos que no estan (sueldos, tarjeta,
-  domicilio), dos horarios distintos, un PDF, una imagen y un temporal de
+  domicilio), dos horarios distintos, un PDF escaneado, una imagen y un temporal de
   Word.
 
     .\tests\negocio.ps1                  procesamiento: que se lee de cada
@@ -24,6 +24,7 @@ $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $root = $Raiz
 foreach ($l in 'providers', 'web', 'equipo', 'documentos') { . (Join-Path $root "lib\$l.ps1") }
+. (Join-Path $PSScriptRoot 'hacer-pdf.ps1')
 Add-Type -AssemblyName System.IO.Compression
 
 # ===========================================================================
@@ -267,7 +268,24 @@ Los pedidos se hacen en caja o por WhatsApp al 8888-0000.
     Ods (Join-Path $n 'Inventario mínimo.ods') 'Inventario' @(
         @('Insumo', 'Mínimo', 'Unidad'), @('Harina', '20', 'quintales'), @('Azúcar', '5', 'quintales'),
         @('Huevos', '30', 'cajillas'), @('Café en grano', '15', 'libras'), @('Leche', '40', 'litros'))
-    Texto (Join-Path $n 'Catálogo de pasteles.pdf') '%PDF-1.4 no es un pdf de verdad'
+    # Un PDF de verdad (comprimido, con titulos y una tabla) y otro que es
+    # solo una imagen, como una factura escaneada.
+    New-AIPdfPrueba (Join-Path $n 'Catálogo de pasteles.pdf') @(,@(
+        @{ T = 'Catálogo de pasteles'; Tam = 20; F = 'B' }
+        @{ T = 'Todos nuestros pasteles se hacen en la sucursal Central con ingredientes frescos.'; Hueco = 8 }
+        @{ T = 'Los pasteles enteros se piden con 3 días de anticipación.' }
+        @{ T = 'Precios'; Tam = 14; F = 'B'; Hueco = 12 }
+        @{ Celdas = @('Pastel', 'Porción', 'Entero (12 porciones)'); X = @(72, 260, 360); F = 'B' }
+        @{ Celdas = @('Tres leches', 'C$ 60', 'C$ 650'); X = @(72, 260, 360) }
+        @{ Celdas = @('Chocolate con avellana', 'C$ 75', 'C$ 820'); X = @(72, 260, 360) }
+        @{ Celdas = @('Zanahoria y nuez', 'C$ 70', 'C$ 760'); X = @(72, 260, 360) }
+        @{ Celdas = @('Selva negra', 'C$ 80', 'C$ 880'); X = @(72, 260, 360) }
+        @{ T = 'Decoración'; Tam = 14; F = 'B'; Hueco = 12 }
+        @{ T = 'El nombre o un mensaje en el pastel no tiene costo.'; Kern = $true }
+        @{ T = 'Una fotografía comestible cuesta C$ 150 adicionales.' }
+        @{ T = 'Las figuras de fondant se cotizan aparte, según el diseño.' }
+    )) -Comprimir
+    New-AIPdfPrueba (Join-Path $n 'Facturas\Factura harina noviembre.pdf') @(,@(@{ T = 'x' })) -Imagen
     Texto (Join-Path $n 'logo.png') 'no es una imagen'
     Texto (Join-Path $n 'Procedimientos\~$Apertura y cierre.docx') 'temporal de Word'
     return $n
@@ -292,8 +310,8 @@ $e = Update-AIDocIndice $carpetas $cache $null $null
 $ok = @($e.Ficheros | Where-Object { $_.Estado -eq 'ok' })
 $no = @($e.Ficheros | Where-Object { $_.Estado -ne 'ok' })
 Write-Output "    $($ok.Count) leídos, $($e.Indice.N) fragmentos, $([Math]::Round($sw.Elapsed.TotalSeconds, 1)) s"
-Ver 'los doce documentos que se saben leer' ($ok.Count -eq 12) (@($ok | ForEach-Object { $_.Fichero }) -join ', ')
-Ver 'el PDF no, con su motivo' ($no.Count -eq 1 -and $no[0].Fichero -like '*.pdf' -and $no[0].Motivo -match 'PDF')
+Ver 'los trece documentos que se saben leer' ($ok.Count -eq 13) (@($ok | ForEach-Object { $_.Fichero }) -join ', ')
+Ver 'el PDF escaneado no, con su motivo' ($no.Count -eq 1 -and $no[0].Fichero -like 'Facturas\*.pdf' -and $no[0].Motivo -match 'escaneada') (@($no | ForEach-Object { "$($_.Fichero): $($_.Motivo)" }) -join ' / ')
 Ver 'la imagen y el temporal de Word, ni eso' ($e.Otros -eq 1 -and @($e.Ficheros | Where-Object { $_.Fichero -match '~\$' }).Count -eq 0)
 $txt = @{}
 foreach ($f in $ok) { $txt[$f.Fichero] = [IO.File]::ReadAllText((Join-Path $cache "textos\$($f.Clave).txt"), [Text.Encoding]::UTF8) }
@@ -312,6 +330,7 @@ Lee 'Necesidades y metas 2027.pptx' 'diapositivas en orden' @('(?s)Necesidades a
 Lee 'Proveedores.html' 'tabla HTML sin el codigo' @('Harina\s+Molinos del Norte\s+lunes y jueves')
 Lee 'Seguridad alimentaria.rtf' 'RTF con grados y acentos' @('entre 0 y 4 °C', '-18 °C', 'bitácora', 'día siguiente')
 Lee 'Inventario mínimo.ods' 'hoja de OpenDocument' @('## Hoja: Inventario', 'Insumo: Harina \| Mínimo: 20 \| Unidad: quintales')
+Lee 'Catálogo de pasteles.pdf' 'PDF: titulos, tabla y espacios' @('(?m)^# Catálogo de pasteles$', '(?m)^## Precios$', '(?m)^Tres leches \| C\$ 60 \| C\$ 650$', '(?m)^Pastel \| Porción \| Entero \(12 porciones\)$', 'El nombre o un mensaje en el pastel no tiene costo\.')
 Ver 'el codigo de la pagina no se cuela' ([string]$txt['Proveedores.html'] -notmatch 'Proveedor falso')
 
 # ===========================================================================
@@ -346,6 +365,8 @@ $preguntas = @(
     @{ T = 'dato'; P = '¿Qué días llega la harina?'; F = 'Proveedores.html'; Viaja = 'Molinos del Norte'; Dice = @('(?i)lunes', '(?i)jueves') }
     @{ T = 'dato'; P = '¿A qué temperatura deben estar los refrigeradores?'; F = 'Seguridad alimentaria.rtf'; Viaja = 'entre 0 y 4'; Dice = @('\b0\b', '\b4\b') }
     @{ T = 'dato'; P = '¿Qué se hace con el pan que no se vende?'; F = 'Seguridad alimentaria.rtf'; Viaja = 'Comedor Infantil'; Dice = @('(?i)don') }
+    @{ T = 'dato'; P = '¿Cuánto cuesta un pastel de tres leches entero?'; F = 'Catálogo de pasteles.pdf'; Viaja = 'Tres leches \| C\$ 60 \| C\$ 650'; Dice = @('650') }
+    @{ T = 'dato'; P = '¿Cuánto cobran por ponerle una foto al pastel?'; F = 'Catálogo de pasteles.pdf'; Viaja = 'fotografía comestible'; Dice = @('150') }
     @{ T = 'dato'; P = '¿Cuál es el mínimo de harina que debe haber en inventario?'; F = 'Inventario mínimo.ods'; Viaja = 'Mínimo: 20'; Dice = @('\b20\b', '(?i)quintal') }
     @{ T = 'falta'; P = '¿Cuánto gana Lucía Martínez?' }
     @{ T = 'falta'; P = '¿Aceptan pago con tarjeta?' }

@@ -62,6 +62,7 @@ pone `Usuario >`, en tu pantalla saldrá tu nombre de usuario de Windows.
 | Word | `.docx` (con sus títulos, listas y tablas) |
 | Excel | `.xlsx` (todas las hojas; las fechas y horas salen como fechas y horas) |
 | PowerPoint | `.pptx` (cada diapositiva, en orden) |
+| PDF | `.pdf` con texto (con sus títulos y tablas; los escaneados no: ver abajo) |
 | LibreOffice / OpenOffice | `.odt`, `.ods`, `.odp` |
 | Texto | `.txt`, `.md`, `.csv`, `.html`, `.rtf` y otros de texto |
 
@@ -69,24 +70,36 @@ Las imágenes (fotos, logos) y los demás ficheros se ignoran sin más. Los
 temporales de Word (los que empiezan por `~$`) y los ficheros ocultos,
 también.
 
-### Los PDF y los formatos viejos
+### Los PDF
 
-**Los PDF todavía no los lee.** Al leer la carpeta te dirá cuáles hay. Qué
-hacer con cada uno:
+**Lee los PDF que tienen texto:** los que salen de Word o de Excel con
+«Guardar como PDF», los de una impresora PDF (como «Microsoft Print to PDF»)
+y los que se guardan desde el navegador. Igual que en un Word, saca los
+títulos (los reconoce por el tamaño de la letra) y las tablas, fila a fila.
 
-- **Si tienes el original** (el Word o el Excel del que salió el PDF), pon el
-  original en la carpeta. Es lo mejor.
-- **Si solo tienes el PDF,** ábrelo con Word (Archivo › Abrir, elige el PDF):
-  Word lo convierte. Revisa que se vea bien y guárdalo como `.docx`.
-- **O copia el texto:** abre el PDF, selecciona todo (Ctrl+E o Ctrl+A),
-  cópialo y pégalo en un Bloc de notas. Guárdalo como `.txt` con un nombre
-  claro.
-- **Si el PDF es una foto o un escaneo** (no puedes seleccionar el texto con
-  el ratón), no tiene texto que leer: hay que pasarlo a mano o con un
-  programa de reconocimiento de texto (OCR) y guardar el resultado.
+Una forma rápida de saber si un PDF tiene texto: ábrelo e intenta seleccionar
+una palabra con el ratón. Si se puede, lo lee.
 
-Los formatos viejos de Office tampoco se leen: ábrelos y usa «Guardar como»
-con el formato nuevo (`.doc` → `.docx`, `.xls` → `.xlsx`, `.ppt` → `.pptx`).
+Hay PDF que no puede leer. Al leer la carpeta te dice cuáles y por qué:
+
+- **Escaneados o fotos** («no tiene texto»): son una imagen de la página. Hay
+  que pasarlos a mano o con un programa de reconocimiento de texto (OCR). Si
+  el escaneo ya trae el OCR hecho (puedes seleccionar el texto), sí lo lee.
+- **Protegidos** con contraseña o contra copia: ábrelo y, si te deja,
+  imprímelo en «Microsoft Print to PDF» para tener una copia sin protección.
+- **Con tipos de letra que no se pueden descifrar:** algunos PDF dibujan las
+  letras sin decir cuáles son. Leerlos daría letras cambiadas, y unas letras
+  cambiadas en un precio o en un teléfono serían un dato falso. Por eso, en
+  vez de leerlos mal, te dice que no los pudo leer.
+
+**Si tienes el original** (el Word o el Excel del que salió el PDF), mejor
+pon el original: trae sus títulos y sus cabeceras de tabla tal cual, y un PDF
+hay que reconstruirlo por la posición de cada letra en la página.
+
+### Los formatos viejos de Office
+
+No se leen: ábrelos y usa «Guardar como» con el formato nuevo (`.doc` →
+`.docx`, `.xls` → `.xlsx`, `.ppt` → `.pptx`).
 
 ## 3. Enséñale la carpeta
 
@@ -97,24 +110,24 @@ la carpeta:
 Usuario > aprende de los documentos de D:\MiNegocio
 ia > Voy a leer los documentos de D:\MiNegocio para contestarte con lo que dicen. No los
      cambio ni los mando a ningún sitio: lo que lea se queda en este equipo.
-ia > Hay 12 que sé leer (3 Word, 2 texto, 2 OpenDocument, 1 PowerPoint, 1 RTF, 1 CSV,
-     1 HTML, 1 Excel). También hay 1 PDF, que todavía no sé leer.
+ia > Hay 14 que sé leer (3 Word, 2 texto, 2 OpenDocument, 2 PDF, 1 RTF, 1 PowerPoint, 1 CSV,
+     1 HTML, 1 Excel).
 ia > ¿De qué tratan, en pocas palabras? Así sé cuándo mirarlos; por ejemplo «mi ferretería:
      servicios, empleados, horarios y procedimientos». (Enter: «MiNegocio»; «cancelar»
      para dejarlo)
 Usuario > mi panadería: servicios, precios, empleados, horarios y procedimientos
-ia > Listo: leí 12 documentos (26 fragmentos) en 0.7 s. Pregúntame lo que quieras sobre mi
+ia > Listo: leí 13 documentos (29 fragmentos) en 1.4 s. Pregúntame lo que quieras sobre mi
      panadería: servicios, precios, empleados, horarios y procedimientos y te diré de qué
      documento sale cada dato. Si cambias o añades ficheros en la carpeta, los vuelvo a
      leer solo.
 ia > Estos no los pude leer:
-  Catálogo de pasteles.pdf: PDF: todavía no sé leerlos; guárdalo como Word (.docx) o como texto
+  Facturas\Factura harina noviembre.pdf: no tiene texto (¿es una imagen escaneada?)
 ```
 
 - **Te pregunta de qué tratan los documentos.** Contesta en pocas palabras:
   es lo que le dice cuándo mirarlos. Con Enter se queda con el nombre de la
   carpeta; con «cancelar» lo deja.
-- **Te dice qué no pudo leer** y por qué (por ejemplo, el PDF).
+- **Te dice qué no pudo leer** y por qué: aquí, una factura escaneada, que es una foto y no tiene texto. El catálogo de pasteles, que también es un PDF, sí lo leyó.
 - **Solo hace falta una vez.** Las siguientes veces que abras `AI` ya los
   tiene. Si cambias, añades o borras ficheros en la carpeta, lo nota solo
   (lo revisa cada cinco minutos). Si tienes prisa: `/documentos actualizar`.
@@ -133,18 +146,19 @@ delante:
 Usuario > ¿A qué hora abre la sucursal Norte los domingos?
 ia > consultando tus documentos: Servicios y precios.xlsx, Procedimientos\Apertura y
      cierre.docx, Quiénes somos.docx
-ia > La sucursal Norte abre a las 08:00 los domingos. Esto viene del documento Servicios y
-     precios.xlsx, apartado «Hoja: Horarios».
+ia > Abre a las 08:00. Esto viene del documento Servicios y precios.xlsx, apartado «Hoja:
+     Horarios».
    documentos: Servicios y precios.xlsx  Procedimientos\Apertura y cierre.docx  Quiénes somos.docx
-Usuario > ¿Cuánto es el fondo de caja al abrir?
-ia > consultando tus documentos: Procedimientos\Apertura y cierre.docx, Servicios y precios.xlsx
-ia > El fondo de caja al abrir es de C$ 1,500. Esto viene del documento Procedimientos\Apertura
-     y cierre.docx, apartado «Apertura y cierre de sucursal > Apertura».
-   documentos: Procedimientos\Apertura y cierre.docx  Servicios y precios.xlsx
+Usuario > ¿Cuánto cuesta un pastel de tres leches entero?
+ia > consultando tus documentos: Catálogo de pasteles.pdf, Servicios y precios.xlsx
+ia > Cuesta C$ 650. Esto viene del documento Catálogo de pasteles.pdf, apartado «Catálogo de
+     pasteles > Precios».
+   documentos: Catálogo de pasteles.pdf  Servicios y precios.xlsx
 Usuario > ¿Cuánto gana Lucía Martínez?
-ia > consultando tus documentos: Procedimientos\Apertura y cierre.docx, Empleados.csv
+ia > consultando tus documentos: Procedimientos\Apertura y cierre.docx, Catálogo de pasteles.pdf,
+     Empleados.csv
 ia > No viene en los documentos.
-   documentos: Procedimientos\Apertura y cierre.docx  Empleados.csv
+   documentos: Procedimientos\Apertura y cierre.docx  Catálogo de pasteles.pdf  Empleados.csv
 ```
 
 Las respuestas son cortas porque en esa conversación se le había pedido
@@ -152,7 +166,8 @@ antes «recuerda que me contestes siempre en frases cortas» (ver
 «Preferencias» en el README).
 
 - **Antes de contestar dice qué documento consulta,** y en la respuesta, de
-  cuál sale el dato.
+  cuál sale el dato. Del PDF da también el apartado («Precios»): lo saca de
+  los títulos del PDF.
 - **Si no viene, lo dice.** Fíjate en el sueldo de la pregunta de arriba: no
   está en los documentos, y en vez de inventar una cifra lo dice. Eso es lo
   que tiene que pasar.
@@ -171,21 +186,27 @@ modelo con esa pregunta. No pregunta al modelo: es una búsqueda directa, al
 instante.
 
 ```
-Usuario > /documentos buscar fondo de caja
-  1. Procedimientos\Apertura y cierre.docx > Apertura y cierre de sucursal > Apertura  (5.09 puntos)
-     - A las 4:00 el jefe de panadería enciende los hornos.
-     - A las 5:30 se limpian las vitrinas y el mostrador.
-     - A las 5:45 la cajera cuenta el fondo de caja, que es de C$ 1,500.
-     - Se abre al público a la hora del horario de cada sucursal.
-  2. Procedimientos\Apertura y cierre.docx > Apertura y cierre de sucursal > Cierre  (2.9 puntos)
-     - Se cuadra la caja y el efectivo se guarda en la caja fuerte.
-     - Se apagan los hornos y se anota la temperatura final de las cámaras.
-     - Se activa la alarma; el código solo lo tienen la encargada y la gerente.
+Usuario > /documentos buscar pastel tres leches
+  1. Catálogo de pasteles.pdf > Catálogo de pasteles > Precios  (6.5 puntos)
+     Pastel | Porción | Entero (12 porciones)
+     Tres leches | C$ 60 | C$ 650
+     Chocolate con avellana | C$ 75 | C$ 820
+     Zanahoria y nuez | C$ 70 | C$ 760
+     Selva negra | C$ 80 | C$ 880
+  2. Servicios y precios.xlsx > Hoja: Panadería  (4.35 puntos)
+     Producto: Pan francés | Precio: 5 | Unidad: unidad | Vigente desde: 01/10/2026
+     Producto: Baguette | Precio: 35 | Unidad: unidad | Vigente desde: 01/10/2026
+     Producto: Croissant | Precio: 28 | Unidad: unidad | Vigente desde: 01/10/2026
+     Producto: Pastel de tres leches | Precio: 60 | Unidad: porción | Vigente desde: 01/10/2026
 (viajarían solos con esa pregunta; cobertura 1)
 ```
 
-- **Cada resultado dice el documento y el apartado** (`Apertura y cierre.docx >
-  ...`) y el texto tal cual se leyó.
+- **Cada resultado dice el documento y el apartado** (`Catálogo de
+  pasteles.pdf > ... > Precios`) y el texto tal cual se leyó. En un PDF, las
+  columnas de una tabla salen separadas por ` | `.
+- **Aquí se ve por qué conviene una sola versión de cada cosa:** el precio de
+  la porción está en el PDF y en el Excel. Coinciden (C$ 60), así que no hay
+  problema; si no coincidieran, el modelo vería los dos.
 - **Los puntos** dicen cuánto encaja con lo que buscas: el primero es el que
   más.
 - **Al final dice si esos trozos viajarían solos** con esa pregunta. Si dice
@@ -291,7 +312,9 @@ Suele ser porque la pregunta usa otras palabras. Prueba con
 `/documentos buscar` y las palabras del documento, y pregunta con ellas.
 
 **¿Puedo meter un PDF?**
-Todavía no. Mira el apartado 2: pásalo a Word o a texto.
+Sí, si tiene texto (si puedes seleccionar una palabra con el ratón). Los
+escaneados, los protegidos y algunos con tipos de letra raros no se leen, y
+te dice cuáles: mira el apartado 2.
 
 **¿Puede ver mis documentos alguien de fuera?**
 Con el modelo local, no: todo ocurre en tu equipo. Solo saldrían si tú
@@ -302,7 +325,9 @@ Lo nota en la siguiente revisión y deja de usarlo.
 
 **¿Cuántos documentos puede leer?**
 Hasta 3000 ficheros. Unos 400 documentos se leen la primera vez en unos
-5 segundos, y luego cada pregunta busca en una fracción de segundo.
+5 segundos, y luego cada pregunta busca en una fracción de segundo. Los PDF
+tardan más: un PDF largo, unos segundos la primera vez (luego ya no se
+relee, salvo que cambie).
 
 **¿Se puede usar en otra computadora?**
 Sí, si tiene `AI` instalado y la carpeta. Cada equipo lee la carpeta por su

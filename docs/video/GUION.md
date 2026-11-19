@@ -10,9 +10,9 @@ quiere.
 
 Cada escena de terminal sale de una conversación de verdad con el programa,
 grabada con `capturar.ps1` el 2026-11-18 con Gemma 4 E4B en el llama-server
-local (`http://127.0.0.1:8080`). Las conversaciones enteras están en
-[`capturas/`](capturas): los `.txt` son lo que se tecleó y los `.out`, lo que
-salió.
+local (`http://127.0.0.1:8080`); la 3 se volvió a grabar al añadir los PDF.
+Las conversaciones enteras están en [`capturas/`](capturas): los `.txt` son
+lo que se tecleó y los `.out`, lo que salió.
 
 - **El texto no se reescribe a mano.** `montar.ps1` copia las líneas de los
   `.out` por su número. Donde se salta un trozo sale una línea `...`.
@@ -24,7 +24,8 @@ salió.
   nombre del equipo. Lo que sí sale del equipo es la memoria RAM y el espacio
   libre de los discos.
 - **El negocio es inventado:** la Panadería y Cafetería La Espiga, de
-  `tests\negocio.ps1 -Crear D:\MiNegocio`.
+  `tests\negocio.ps1 -Crear`. El catálogo de pasteles es un PDF; una factura
+  escaneada, también, y es lo que dice que no puede leer.
 
 ## Escenas
 
@@ -37,11 +38,11 @@ salió.
 | 4 | `comandos` | Guarda un comando de solo lectura conversando; las reglas lo aprueban; luego se usa al preguntar. | `2-comandos-consultas.out` 5, 8, 10-12, 39-43 |
 | 5 | `consultas` | Consulta web: elige la página y saca los datos en JSON. | `2-comandos-consultas.out` 44, 47, 49-50, 64, 66, 69-75 |
 | 6 | `preferencias` | «Recuerda que me contestes siempre en frases cortas». | `3-preferencias-documentos.out` 5-8 |
-| 7 | `aprende` | Aprende de la carpeta del negocio; dice qué no puede leer (el PDF). | `3-preferencias-documentos.out` 9-16 |
-| 8 | `pregunta` | Contesta con lo que dicen los documentos y dice de cuál sale; lo que no está, lo dice. | `3-preferencias-documentos.out` 17-28 |
-| 9 | `buscar` | `/documentos buscar`: de dónde sale un dato, sin preguntar al modelo. | `3-preferencias-documentos.out` 29-39 |
-| 10 | `olvida` | «Olvida lo de la extensión»: enseña qué olvida, pide un sí, y en una conversación nueva ya no la da. | `3-preferencias-documentos.out` 40-57 |
-| 11 | `recuerda` | `/documentos olvidos` y `/documentos recordar 1` lo deshacen. | `3-preferencias-documentos.out` 59-63 |
+| 7 | `aprende` | Aprende de la carpeta del negocio (Word, Excel, PDF...); dice qué no puede leer (la factura escaneada). | `3-preferencias-documentos.out` 9-16 |
+| 8 | `pregunta` | Contesta con lo que dicen los documentos y dice de cuál sale (el precio del pastel, del PDF, con su apartado); lo que no está, lo dice. | `3-preferencias-documentos.out` 17-28 |
+| 9 | `buscar` | `/documentos buscar`: de dónde sale un dato, sin preguntar al modelo; aquí, la tabla de precios leída del PDF. | `3-preferencias-documentos.out` 29-35, 41 |
+| 10 | `olvida` | «Olvida lo de la extensión»: enseña qué olvida, pide un sí, y en una conversación nueva ya no la da. | `3-preferencias-documentos.out` 42-59 |
+| 11 | `recuerda` | `/documentos olvidos` y `/documentos recordar 1` lo deshacen. | `3-preferencias-documentos.out` 61-65 |
 | 12 | `final` (6 s) | Aprende de los documentos de tu negocio. Y olvida lo que le pidas. Si un dato no está, te lo dice. El repositorio y la guía. | — |
 
 Los textos de cada escena (rótulo, título y pie) y las líneas que toma están
@@ -60,7 +61,8 @@ voz, ni música, ni modelos de pago: el coste es cero.
    ya escrito:
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -File tests\negocio.ps1 -Crear D:\MiNegocio
+   powershell -NoProfile -ExecutionPolicy Bypass -File tests\negocio.ps1 -Crear $env:TEMP\espiga
+   robocopy "$env:TEMP\espiga\Panadería La Espiga" D:\MiNegocio /E /MOVE
    powershell -NoProfile -ExecutionPolicy Bypass -File docs\video\capturar.ps1 -Entrada docs\video\capturas\3-preferencias-documentos.txt -Salida docs\video\capturas\3-preferencias-documentos.out
    ```
 
