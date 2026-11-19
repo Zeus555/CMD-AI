@@ -1,0 +1,93 @@
+
+  PRC AI 2.0  Gemma 4 E4B (local) / gemma-4-e4b  -  searches the internet when needed
+  bye to quit  -  /help for the commands
+
+User > add a command to see the free space on the disks
+ai > Let's save a read-only command. I ask and you answer; type "cancel" to leave it.
+ai > Looking for a read-only command for: see the free space on the disks
+ai > This is the command:
+
+  command:  Get-Volume | Select-Object DriveLetter, SizeRemaining
+  rules:    passes (Get-Volume | Select-Object)
+  network:  does not leave this computer
+  checking with the model...
+  model, with the Microsoft documentation in view:
+    This command retrieves information about all volumes on your system. It reads details like the drive letter and how much space is left on each volume. It only displays this information on your screen and makes no changes to your computer.
+
+ai > Is it OK like this? Answer "yes", or tell me what to change.
+User > yes
+ai > What name should I save it under? Press Enter for "disk-free". When you ask with those words, I'll run it.
+User > 
+ai > What is it for, in one sentence? I'll read it to know when to use it. Press Enter for "see the free space on the disks".
+User > 
+ai > I have no more questions. This is what I'm going to save:
+
+  name:     disk-free
+  command:  Get-Volume | Select-Object DriveLetter, SizeRemaining
+  purpose:  see the free space on the disks
+  network:  does not leave this computer
+
+ai > Shall I test it now and, if it works, keep it saved? ("yes" or "no")
+User > yes
+ai > Testing...
+ai > Test result (0.7 s):
+
+  DriveLetter SizeRemaining
+  ----------- -------------
+                  120684544
+  C            710011301888
+  D            518610120704
+
+ai > It worked and it's saved as "disk-free". Ask me with the words "disk free" and I'll run it, or type it yourself with /command disk-free.
+User > how much free space is left on my disks?
+ai > reading from this computer: disk
+ai > running the saved command: disk-free
+Disk C: (fixed): 930.5 GB in total; 661.2 GB free and 269.3 GB used. Disk D: (fixed, "Datos"): 931.5 GB in total; 483 GB free and 448.5 GB used.
+User > add a command for the population and area of Seattle from the internet
+ai > Let's save a web query: I read a page, take the data you want from it and give it to you as JSON. I ask and you answer; type "cancel" to leave it.
+ai > Searching DuckDuckGo: Seattle population and area official data
+ai > Which of these pages should I take the data from?
+
+  1. Population & Demographics - Planning and Community Development ...
+     https://www.seattle.gov/planning-and-community-development/population-and-demographics
+  2. U.S. Census Bureau QuickFacts: Seattle city, Washington
+     https://www.census.gov/quickfacts/seattlecitywashington
+  3. seattle - Census Bureau Tables
+     https://data.census.gov/table?q=seattle
+  4. Seattle city, Washington - Census Bureau Profile
+     https://data.census.gov/profile/Seattle_city,_Washington?g=160XX00US5363000
+  5. Data and Research - Seattle.gov
+     https://www.seattle.gov/data-and-research
+
+ai > Type the number (Enter for 1), paste another address or type another search.
+User > https://www.seattle.gov/planning-and-community-development/population-and-demographics/about-seattle
+ai > Reading www.seattle.gov...
+ai > Looking for the data in it...
+ai > This is what I get right now from www.seattle.gov:
+
+  page:     https://www.seattle.gov/planning-and-community-development/population-and-demographics/about-seattle
+  labels:   population="Population:" area="Area:"
+
+  {
+    "population": "816,600",
+    "area": "84.4 square miles"
+  }
+
+ai > Is it OK like this? Answer "yes", tell me what to change (remove or add a field, get several) or type "another" to choose another page.
+User > yes
+ai > What name should I save it under? Press Enter for "seattle-demographics". When you ask with those words, I'll check it.
+User > 
+ai > What is it for, in one sentence? I'll read it to know when to use it. Press Enter for "This data provides the population and area of Seattle from the seattle.gov website.".
+User > 
+ai > I have no more questions. This is what I'm going to save:
+
+  name:     seattle-demographics
+  page:     https://www.seattle.gov/planning-and-community-development/population-and-demographics/about-seattle
+  fields:   population="Population:" area="Area:"
+  purpose:  This data provides the population and area of Seattle from the seattle.gov website.
+
+ai > Shall I save it? ("yes" or "no")
+User > yes
+ai > It's saved as "seattle-demographics". Every time you ask with the words "seattle demographics" I read the page again and give you the current data; or type it yourself with /command seattle-demographics.
+User > bye
+bye

@@ -14,9 +14,17 @@
 #  el pie de cada escena lo dice.
 #  Comentarios y expresiones regulares en ASCII (ver tools\build.ps1).
 # ---------------------------------------------------------------------------
-param([string]$Dir)
+param([string]$Dir, [ValidateSet('es', 'en')][string]$Idioma = 'es')
 $ErrorActionPreference = 'Stop'
-if (-not $Dir) { $Dir = Split-Path -Parent $MyInvocation.MyCommand.Path }
+# El video en espanol es el proyecto de docs\video; el de ingles, el de
+# docs\video\en (su index.html, sus composiciones, su narracion y su voz).
+# Las capturas estan en capturas\ y capturas\en\.
+$Base = Split-Path -Parent $MyInvocation.MyCommand.Path
+if (-not $Dir) { $Dir = if ($Idioma -eq 'en') { Join-Path $Base 'en' } else { $Base } }
+$Capturas = if ($Idioma -eq 'en') { Join-Path $Base 'capturas\en' } else { Join-Path $Base 'capturas' }
+# Lo que el programa pone delante de cada linea, en cada idioma.
+$PU  = if ($Idioma -eq 'en') { 'User > ' } else { 'Usuario > ' }
+$PIA = if ($Idioma -eq 'en') { 'ai > ' } else { 'ia > ' }
 $utf8 = New-Object Text.UTF8Encoding $false
 
 # ---- Las escenas -------------------------------------------------------------
@@ -57,6 +65,49 @@ $escenas = @(
        Pie = 'Lo olvidado queda en una lista: /documentos recordar lo vuelve a usar.'
        Captura = '3-preferencias-documentos.out'; Lineas = '61-65'; Resalta = @('vuelvo a usar') }
 )
+$NOTA = 'Salida real de PRC AI 2.0 con Gemma 4 E4B en la propia laptop · las esperas del modelo se han acortado'
+
+# ---- Las escenas en ingles ----------------------------------------------------------
+#  Las mismas, con las capturas de capturas\en (el programa en ingles y la
+#  cafeteria de tests\negocio.ps1 -Idioma en).
+if ($Idioma -eq 'en') {
+    $NOTA = 'Real output of PRC AI 2.0 with Gemma 4 E4B on the laptop itself · the model''s waits have been shortened'
+    $escenas = @(
+        @{ Id = 'local'; Kicker = '1 · On your computer'; Titulo = 'Local chat with Gemma 4 E4B'
+           Pie = 'The model runs on the laptop itself: no key, no cloud, and the conversation goes nowhere.'
+           Captura = '1-chat-web-computer.out'; Lineas = '2-6'; Resalta = @('Gemma 4 E4B (local)') }
+        @{ Id = 'web'; Kicker = '2 · Internet, only when needed'; Titulo = 'It searches the internet when the question needs it'
+           Pie = 'The model decides whether it needs current data; it searches, reads the pages and cites the sources.'
+           Captura = '1-chat-web-computer.out'; Lineas = '7-10'; Resalta = @('ai > searching:', 'sources:') }
+        @{ Id = 'equipo'; Kicker = '3 · What the computer already knows'; Titulo = 'It knows facts about this computer'
+           Pie = 'Time, battery, memory, disks... read from Windows itself, without the internet.'
+           Captura = '1-chat-web-computer.out'; Lineas = '11-13'; Resalta = @('reading from this computer') }
+        @{ Id = 'comandos'; Kicker = '4 · Saved commands'; Titulo = 'It saves commands as you chat'
+           Pie = 'Read-only: fixed rules check it, it tests it and saves it. From then on it uses it when you ask.'
+           Captura = '2-commands-queries.out'; Lineas = '5,8,10-12,41-45'; Resalta = @('rules:    passes', 'running the saved command') }
+        @{ Id = 'consultas'; Kicker = '5 · Web queries'; Titulo = 'Data from a page, as JSON'
+           Pie = 'It picks the page (or you paste it), takes the data by its labels and shows it to you before saving.'
+           Captura = '2-commands-queries.out'; Lineas = '46,49,51-52,63,66,68-69,71-74'; Resalta = @('"population"', '"area"') }
+        @{ Id = 'preferencias'; Kicker = '6 · Preferences'; Titulo = 'It remembers how you want answers'
+           Pie = 'For this conversation and the next ones.'
+           Captura = '3-preferences-documents.out'; Lineas = '5-8'; Resalta = @('saved.') }
+        @{ Id = 'aprende'; Kicker = '7 · Your business documents'; Titulo = 'It learns from a folder of documents'
+           Pie = 'Word, Excel, PowerPoint, PDF, text... What it can''t read, like a scan, it says. It doesn''t train the model: it searches them.'
+           Captura = '3-preferences-documents.out'; Lineas = '9-16'; Resalta = @('There are 14 I can read', 'it has no text') }
+        @{ Id = 'pregunta'; Kicker = '7 · Your business documents'; Titulo = 'It answers with what they say, and from which one'
+           Pie = 'From a PDF too. And if something isn''t in the documents, it says so: it doesn''t make it up.'
+           Captura = '3-preferences-documents.out'; Lineas = '17-28'; Resalta = @('A whole carrot cake is $48.00', 'not stated in the documents') }
+        @{ Id = 'buscar'; Kicker = '7 · Your business documents'; Titulo = 'Check where every answer comes from'
+           Pie = '/documents search shows the excerpts the model would see, without asking it: here, the PDF''s table.'
+           Captura = '3-preferences-documents.out'; Lineas = '29-35,49'; Resalta = @('Carrot cake | $5.50 | $48.00') }
+        @{ Id = 'olvida'; Kicker = '8 · Forgetting'; Titulo = 'And it forgets what you ask it to'
+           Pie = 'It shows what it will forget and asks for a yes. Your files aren''t touched: it forgets what it read.'
+           Captura = '3-preferences-documents.out'; Lineas = '50-67'; Resalta = @('going to forget', 'Forgotten.') }
+        @{ Id = 'recuerda'; Kicker = '8 · Forgetting'; Titulo = 'And it can be undone'
+           Pie = 'What was forgotten stays on a list: /documents restore uses it again.'
+           Captura = '3-preferences-documents.out'; Lineas = '69-73'; Resalta = @('using again') }
+    )
+}
 $DUR_INTRO = 4.5
 $DUR_FINAL = 6.0
 
@@ -91,14 +142,14 @@ $CPS      = 70                       # letras por segundo al teclear
 $enc = { param($s) [System.Net.WebUtility]::HtmlEncode([string]$s) }
 
 function Read-Captura([string]$fichero) {
-    $t = [IO.File]::ReadAllText((Join-Path $Dir "capturas\$fichero"), [Text.Encoding]::UTF8)
+    $t = [IO.File]::ReadAllText((Join-Path $Capturas $fichero), [Text.Encoding]::UTF8)
     $ls = @($t -replace "`r`n", "`n" -split "`n")
     # Una linea que se reescribio con `r (el avance "leyendo 3 de 13: ...")
     # se queda como acabo en pantalla: lo ultimo que se escribio en ella.
     for ($i = 0; $i -lt $ls.Count; $i++) {
         if ($ls[$i].Contains("`r")) { $ls[$i] = (@($ls[$i] -split "`r" | Where-Object { $_.Trim() }))[-1] }
-        $k = $ls[$i].IndexOf('ia > ')
-        if ($ls[$i] -match '^\s+leyendo \d+ de \d+: ' -and $k -gt 0) { $ls[$i] = $ls[$i].Substring($k) }
+        $k = $ls[$i].IndexOf($PIA)
+        if ($ls[$i] -match '^\s+(leyendo \d+ de|reading \d+ of) \d+: ' -and $k -gt 0) { $ls[$i] = $ls[$i].Substring($k) }
     }
     return $ls
 }
@@ -112,7 +163,7 @@ function Get-Lineas($ls, [string]$rangos) {
         if ($null -ne $ant -and [int]$a -ne $ant + 1) { $out.Add(@{ Tipo = 'gap'; Texto = '...' }) }
         for ($n = [int]$a; $n -le [int]$b; $n++) {
             $l = $ls[$n - 1].TrimEnd()
-            $tipo = if ($l.StartsWith('Usuario > ')) { 'u' } elseif ($l.StartsWith('ia > ')) { 'ia' } elseif ($l -match '^\s|^\(' -or -not $l) { 'dim' } else { 'ia' }
+            $tipo = if ($l.StartsWith($PU)) { 'u' } elseif ($l.StartsWith($PIA)) { 'ia' } elseif ($l -match '^\s|^\(' -or -not $l) { 'dim' } else { 'ia' }
             $out.Add(@{ Tipo = $tipo; Texto = $l; N = $n })
         }
         $ant = [int]$b
@@ -143,9 +194,9 @@ function New-Escena($e) {
         if ($l.Tipo -eq 'u') {
             # Si antes hubo respuesta, una pausa para leerla.
             if ($palabras) { $t += [Math]::Min(3.0, 0.8 + $palabras * 0.07); $palabras = 0 }
-            $resto = $l.Texto.Substring('Usuario > '.Length)
+            $resto = $l.Texto.Substring($PU.Length)
             $chars = -join ($resto.ToCharArray() | ForEach-Object { '<span class="ch">' + (& $enc $_) + '</span>' })
-            [void]$html.AppendLine("          <div class=""ln u"" id=""$lid""><span class=""pr"">Usuario &gt; </span>$chars<span class=""cur"" id=""$lid-cur""></span></div>")
+            [void]$html.AppendLine("          <div class=""ln u"" id=""$lid""><span class=""pr"">$(& $enc $PU)</span>$chars<span class=""cur"" id=""$lid-cur""></span></div>")
             [void]$js.AppendLine("      tl.set('#$lid', { opacity: 1 }, $([Math]::Round($t, 2)));")
             [void]$js.AppendLine("      tl.set('#$lid-cur', { opacity: 1 }, $([Math]::Round($t, 2)));")
             $t0 = $t + 0.2
@@ -156,8 +207,11 @@ function New-Escena($e) {
         } else {
             $clase = if ($l.Tipo -eq 'gap') { 'gap' } else { $l.Tipo }
             $txt = $l.Texto
-            if ($txt.StartsWith('ia > ')) { $cuerpo = '<span class="pr">ia &gt; </span>' + (& $enc $txt.Substring(5)) }
+            if ($txt.StartsWith($PIA)) { $cuerpo = '<span class="pr">' + (& $enc $PIA) + '</span>' + (& $enc $txt.Substring($PIA.Length)) }
             else { $cuerpo = (& $enc $txt) }
+            # La negrita del modelo (**x**): la terminal la pinta en negrita;
+            # en la captura, con la salida redirigida, sale tal cual.
+            $cuerpo = [regex]::Replace($cuerpo, '\*\*(.+?)\*\*', '<b>$1</b>')
             if (-not $txt) { $cuerpo = '&#8203;' }
             [void]$html.AppendLine("          <div class=""ln $clase"" id=""$lid"">$hl<span class=""tx"">$cuerpo</span></div>")
             [void]$js.AppendLine("      tl.fromTo('#$lid', { opacity: 0 }, { opacity: 1, duration: 0.18 }, $([Math]::Round($t, 2)));")
@@ -209,7 +263,7 @@ function New-Escena($e) {
 $($html.ToString().TrimEnd())
       </div>
     </div>
-    <div id="$id-nota">Salida real de PRC AI 2.0 con Gemma 4 E4B en la propia laptop · las esperas del modelo se han acortado</div>
+    <div id="$id-nota">$NOTA</div>
   </div>
   <script>
     (function () {
@@ -289,6 +343,22 @@ $final = @'
 </template>
 '@
 
+if ($Idioma -eq 'en') {
+    $cambios = [ordered]@{
+        'Una IA en la terminal de Windows.'                         = 'An AI in the Windows terminal.'
+        'En tu equipo, sin nube.'                                   = 'On your computer, no cloud.'
+        'PowerShell puro · cero dependencias · en español'          = 'Pure PowerShell · zero dependencies · English and Spanish'
+        'Aprende de los documentos de tu negocio.'                  = 'It learns from your business documents.'
+        'Y olvida lo que le pidas.'                                 = 'And forgets what you ask it to.'
+        'Si un dato no está en tus documentos, te lo dice.'         = 'If something isn''t in your documents, it tells you.'
+        'guía de uso: docs/guia-documentos.md'                      = 'guide: docs/documents-guide.md'
+    }
+    foreach ($k in $cambios.Keys) {
+        if (-not ($intro.Contains($k) -or $final.Contains($k))) { throw "montar.ps1: no encuentro «$k» en la entrada ni en el cierre" }
+        $intro = $intro.Replace($k, $cambios[$k]); $final = $final.Replace($k, $cambios[$k])
+    }
+}
+
 # ---- Montaje ----------------------------------------------------------------
 New-Item -ItemType Directory -Path (Join-Path $Dir 'compositions') -Force | Out-Null
 [IO.File]::WriteAllText((Join-Path $Dir 'compositions\intro.html'), $intro, $utf8)
@@ -326,7 +396,7 @@ if ($voces.Count -and $faltan.Count) { Write-Warning "Escenas sin voz: $($faltan
 
 $index = @"
 <!doctype html>
-<html lang="es" data-resolution="landscape">
+<html lang="$Idioma" data-resolution="landscape">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />

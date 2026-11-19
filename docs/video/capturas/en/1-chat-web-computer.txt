@@ -1,0 +1,5 @@
+# Scene 1: local chat, internet search and this computer's data.
+explain in two lines the advantage of running an AI model on my own computer
+what's the weather like today in Seattle?
+how much RAM does this computer have and how much is free?
+bye

@@ -24,8 +24,9 @@ foreach ($f in 'Get-AIComandoOpinion', 'Show-AIComandoRevision', 'Save-AIComando
     if (-not $d) { throw "falta la funcion $f en bin\ai.ps1" }
     . ([scriptblock]::Create($d.Extent.Text))
 }
-# el orden de las ordenes de /comando, tal como estan en el guion
-$patrones = @($ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.StringConstantExpressionAst] -and $n.Value -like '^/comandos?*' }, $true) | ForEach-Object { $_.Value })
+# el orden de las ordenes de /comando, tal como estan en el guion: '^/comandos?...'
+# o, con el alias en ingles en el mismo patron, '^/(?:comandos?|commands?)...'
+$patrones = @($ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.StringConstantExpressionAst] -and $n.Value -match '^\^/(?:\(\?:)?comandos?' }, $true) | ForEach-Object { $_.Value })
 function Orden($linea) { $i = 0; foreach ($p in $patrones) { $i++; if ($linea -match $p) { return $i } }; return 0 }
 $mal = 0
 function Ver([string]$que, [bool]$ok, $extra = '') { if ($ok) { Write-Output "  ok   $que" } else { $script:mal++; Write-Output "  MAL  $que  $extra" } }

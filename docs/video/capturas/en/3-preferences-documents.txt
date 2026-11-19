@@ -1,0 +1,18 @@
+# Scene 3: a preference and, above all, the business documents.
+# The documents come from tests\negocio.ps1 -Crear <dir> -Idioma en (see GUION.md); the cakes
+# catalog is a PDF and there is a scanned invoice, which can't be read.
+remember to always answer me in short sentences
+y
+learn from the documents in D:\MyBusiness
+my coffee shop: menu, prices, staff, hours and procedures
+What time does the Riverside location open on Sundays?
+How much is a whole carrot cake?
+How much does Megan Reyes make?
+/documents search carrot cake
+forget about the extension
+yes
+/new
+What is Anna Walsh's extension?
+/documents forgotten
+/documents restore 1
+bye

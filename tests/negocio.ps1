@@ -16,13 +16,22 @@
                                          al modelo de verdad, con su nota
     .\tests\negocio.ps1 -Crear <carpeta> solo crea los documentos, para
                                          probarlos a mano
+    -Idioma en                           lo mismo con un negocio en ingles:
+                                         Linden Street Coffee House, una
+                                         cafeteria de Estados Unidos con dos
+                                         locales (tests\negocio-en.ps1), y el
+                                         programa hablando en ingles
 
   Todo es inventado: nombres, direcciones y telefonos no son de nadie.
 #>
-param([string]$Raiz = (Split-Path -Parent $PSScriptRoot), [string]$Crear, [switch]$Modelo, [string]$Proveedor = 'gemma')
+param([string]$Raiz = (Split-Path -Parent $PSScriptRoot), [string]$Crear, [switch]$Modelo, [string]$Proveedor = 'gemma',
+      [ValidateSet('es', 'en')][string]$Idioma = 'es')
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $root = $Raiz
+# En ingles, el idioma va antes que las bibliotecas: alguna puede preparar
+# sus mensajes al cargarse.
+if ($Idioma -eq 'en') { . (Join-Path $root 'lib\idioma.ps1'); Set-AIIdioma en }
 foreach ($l in 'providers', 'web', 'equipo', 'documentos') { . (Join-Path $root "lib\$l.ps1") }
 . (Join-Path $PSScriptRoot 'hacer-pdf.ps1')
 Add-Type -AssemblyName System.IO.Compression
@@ -67,9 +76,11 @@ function Docx($ruta, $bloques) {
     }
     Zip $ruta ([ordered]@{ 'word/document.xml' = "<?xml version=""1.0"" encoding=""UTF-8""?><w:document xmlns:w=""http://schemas.openxmlformats.org/wordprocessingml/2006/main""><w:body>$($sb.ToString())<w:sectPr/></w:body></w:document>" })
 }
-function Xlsx($ruta, $hojas) {
+function Xlsx($ruta, $hojas, $estilos = '') {
     # hojas: [ordered] nombre -> filas; una celda es texto, numero,
-    # @{ fecha = [datetime] }, @{ hora = 'hh:mm' } o @{ pct = 0.5 }
+    # @{ fecha = [datetime] }, @{ hora = 'hh:mm' }, @{ pct = 0.5 } o
+    # @{ usd = 4.5 } (este solo con unos $estilos que traigan el quinto
+    # formato, el de dolares: ver tests\negocio-en.ps1)
     $ss = New-Object 'System.Collections.Generic.List[string]'
     $id = { param($s) $i = $ss.IndexOf($s); if ($i -lt 0) { $ss.Add($s); $i = $ss.Count - 1 }; $i }
     $inv = [Globalization.CultureInfo]::InvariantCulture
@@ -89,6 +100,7 @@ function Xlsx($ruta, $hojas) {
                 if ($v -is [hashtable]) {
                     if ($v.ContainsKey('fecha')) { [void]$sb.Append("<c r=""$ref"" s=""1""><v>$((($v.fecha - [datetime]'1899-12-30').TotalDays).ToString($inv))</v></c>") }
                     elseif ($v.ContainsKey('hora')) { $h, $m = $v.hora -split ':'; [void]$sb.Append("<c r=""$ref"" s=""2""><v>$((([int]$h * 60 + [int]$m) / 1440.0).ToString('R', $inv))</v></c>") }
+                    elseif ($v.ContainsKey('usd')) { [void]$sb.Append("<c r=""$ref"" s=""4""><v>$(([double]$v.usd).ToString($inv))</v></c>") }
                     else { [void]$sb.Append("<c r=""$ref"" s=""3""><v>$(([double]$v.pct).ToString($inv))</v></c>") }
                 }
                 elseif ($v -is [string]) { [void]$sb.Append("<c r=""$ref"" t=""s""><v>$(& $id $v)</v></c>") }
@@ -103,7 +115,7 @@ function Xlsx($ruta, $hojas) {
     $ent['xl/workbook.xml'] = "<workbook xmlns:r=""http://schemas.openxmlformats.org/officeDocument/2006/relationships""><sheets>$libro</sheets></workbook>"
     $ent['xl/_rels/workbook.xml.rels'] = "<Relationships>$rels</Relationships>"
     $ent['xl/sharedStrings.xml'] = '<sst>' + (($ss | ForEach-Object { "<si><t xml:space=""preserve"">$(& $esc $_)</t></si>" }) -join '') + '</sst>'
-    $ent['xl/styles.xml'] = '<styleSheet><numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/></numFmts><cellXfs count="4"><xf numFmtId="0"/><xf numFmtId="164" applyNumberFormat="1"/><xf numFmtId="20" applyNumberFormat="1"/><xf numFmtId="9" applyNumberFormat="1"/></cellXfs></styleSheet>'
+    $ent['xl/styles.xml'] = if ($estilos) { $estilos } else { '<styleSheet><numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/></numFmts><cellXfs count="4"><xf numFmtId="0"/><xf numFmtId="164" applyNumberFormat="1"/><xf numFmtId="20" applyNumberFormat="1"/><xf numFmtId="9" applyNumberFormat="1"/></cellXfs></styleSheet>' }
     Zip $ruta $ent
 }
 function Pptx($ruta, $diapos) {
@@ -290,6 +302,9 @@ Los pedidos se hacen en caja o por WhatsApp al 8888-0000.
     Texto (Join-Path $n 'Procedimientos\~$Apertura y cierre.docx') 'temporal de Word'
     return $n
 }
+
+# El negocio en ingles y su bateria van aparte, con -Crear incluido.
+if ($Idioma -eq 'en') { . (Join-Path $PSScriptRoot 'negocio-en.ps1'); exit $mal }
 
 if ($Crear) { New-AINegocio $Crear; exit 0 }
 

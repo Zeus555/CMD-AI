@@ -8,7 +8,8 @@
 #    - corre sobre una copia de bin\ y lib\ en una carpeta temporal;
 #    - LOCALAPPDATA apunta a una carpeta vacia: documentos, comandos y
 #      preferencias empiezan de cero y no se mezclan con los del usuario;
-#    - USERNAME es "Usuario", asi el prompt no lleva el nombre de nadie.
+#    - USERNAME es "usuario" (en ingles, "user"), asi el prompt no lleva el
+#      nombre de nadie.
 #  Dos cambios en la copia, los dos de la entrada; lo que contesta el
 #  programa no se toca:
 #    - con la entrada entubada, ai.ps1 la toma entera como UNA pregunta
@@ -28,7 +29,10 @@ param(
     [Parameter(Mandatory)][string]$Entrada,
     [Parameter(Mandatory)][string]$Salida,
     [string]$Raiz,
-    [string]$Datos   # carpeta de datos (LOCALAPPDATA); se reusa entre capturas
+    [string]$Datos,  # carpeta de datos (LOCALAPPDATA); se reusa entre capturas
+    # El idioma del programa (AI_LANG). Se fija siempre: con la carpeta de
+    # datos vacia, sin el, el programa tomaria el idioma de Windows.
+    [ValidateSet('es', 'en')][string]$Idioma = 'es'
 )
 $ErrorActionPreference = 'Stop'
 if (-not $Raiz) { $Raiz = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)) }
@@ -63,13 +67,14 @@ $in = Join-Path $tmp 'entrada.txt'
 
 $ai = Join-Path $app 'bin\ai.ps1'
 $cmd = "[Console]::InputEncoding = New-Object Text.UTF8Encoding `$false; [Console]::OutputEncoding = New-Object Text.UTF8Encoding `$false; . '$ai'"
-$antes = @{ LOCALAPPDATA = $env:LOCALAPPDATA; USERNAME = $env:USERNAME }
-$env:LOCALAPPDATA = $Datos; $env:USERNAME = 'usuario'
+$antes = @{ LOCALAPPDATA = $env:LOCALAPPDATA; USERNAME = $env:USERNAME; AI_LANG = $env:AI_LANG }
+$env:LOCALAPPDATA = $Datos; $env:AI_LANG = $Idioma
+$env:USERNAME = if ($Idioma -eq 'en') { 'user' } else { 'usuario' }
 $err = Join-Path $tmp 'error.txt'
 try {
     $p = Start-Process powershell -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $cmd) `
         -NoNewWindow -Wait -PassThru -RedirectStandardInput $in -RedirectStandardOutput $Salida -RedirectStandardError $err
-} finally { $env:LOCALAPPDATA = $antes.LOCALAPPDATA; $env:USERNAME = $antes.USERNAME }
+} finally { $env:LOCALAPPDATA = $antes.LOCALAPPDATA; $env:USERNAME = $antes.USERNAME; $env:AI_LANG = $antes.AI_LANG }
 $e = [IO.File]::ReadAllText($err)
 if ($e.Trim()) { Write-Output "--- stderr ---`n$e" }
 Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

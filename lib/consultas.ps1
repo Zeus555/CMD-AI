@@ -26,7 +26,12 @@
 #  redireccion revisada antes de seguirla.
 #
 #  Comentarios y expresiones regulares en ASCII (ver tools\build.ps1).
+#
+#  IDIOMA: los mensajes, (L 'espanol' 'English') (idioma.ps1). Lo que teclea
+#  el usuario (registros= o records=) y lo que responde el modelo (CAMPO o
+#  FIELD...) se reconoce en los dos idiomas.
 # ============================================================================
+. (Join-Path $PSScriptRoot 'idioma.ps1')
 
 $AI_CONSULTA_MAX_CAMPOS    = 8
 $AI_CONSULTA_MAX_REGISTROS = 10
@@ -60,23 +65,23 @@ function Find-AIRotulo {
 function Test-AIConsultaCampos {
     <#  '' si los campos valen, o el motivo.  #>
     param([array]$Campos, [int]$Registros = 1)
-    if (-not $Campos -or $Campos.Count -eq 0) { return 'faltan los campos (nombre=rótulo)' }
-    if ($Campos.Count -gt $AI_CONSULTA_MAX_CAMPOS) { return "como mucho $AI_CONSULTA_MAX_CAMPOS campos" }
+    if (-not $Campos -or $Campos.Count -eq 0) { return (L 'faltan los campos (nombre=rótulo)' 'the fields are missing (name=label)') }
+    if ($Campos.Count -gt $AI_CONSULTA_MAX_CAMPOS) { return (L "como mucho $AI_CONSULTA_MAX_CAMPOS campos" "at most $AI_CONSULTA_MAX_CAMPOS fields") }
     $nombres = @{}; $rotulos = @{}
     foreach ($c in $Campos) {
         $n = [string]$c.Campo; $r = [string]$c.Rotulo
-        if ($n -cnotmatch '^[a-z][a-z0-9_]{0,29}$') { return "el campo «$n» no vale: en minúsculas, sin acentos ni espacios (ganador, fecha_sorteo)" }
-        if ($nombres.ContainsKey($n)) { return "el campo «$n» está repetido" }
+        if ($n -cnotmatch '^[a-z][a-z0-9_]{0,29}$') { return (L "el campo «$n» no vale: en minúsculas, sin acentos ni espacios (ganador, fecha_sorteo)" "the field ""$n"" is not valid: lowercase, without accents or spaces (winner, draw_date)") }
+        if ($nombres.ContainsKey($n)) { return (L "el campo «$n» está repetido" "the field ""$n"" is repeated") }
         if (-not $r.Trim() -or $r.Length -gt $AI_CONSULTA_MAX_ROTULO -or $r -match '[\x00-\x1F\x7F]') {
-            return "el rótulo de «$n» tiene que ser un texto corto de la página, de una sola fila"
+            return (L "el rótulo de «$n» tiene que ser un texto corto de la página, de una sola fila" "the label of ""$n"" must be a short text from the page, on a single line")
         }
         # Un rotulo con cifras suele llevar dentro el dato, que cambia.
-        if ($r -match '\d{3}') { return "el rótulo de «$n» («$r») lleva cifras: tiene que ser el texto fijo que va antes del dato, no el dato" }
+        if ($r -match '\d{3}') { return (L "el rótulo de «$n» («$r») lleva cifras: tiene que ser el texto fijo que va antes del dato, no el dato" "the label of ""$n"" (""$r"") has digits: it must be the fixed text that comes before the value, not the value") }
         $k = $r.Trim().ToLowerInvariant()
-        if ($rotulos.ContainsKey($k)) { return "«$n» y «$($rotulos[$k])» tienen el mismo rótulo" }
+        if ($rotulos.ContainsKey($k)) { return (L "«$n» y «$($rotulos[$k])» tienen el mismo rótulo" """$n"" and ""$($rotulos[$k])"" have the same label") }
         $nombres[$n] = 1; $rotulos[$k] = $n
     }
-    if ($Registros -lt 1 -or $Registros -gt $AI_CONSULTA_MAX_REGISTROS) { return "los registros van de 1 a $AI_CONSULTA_MAX_REGISTROS" }
+    if ($Registros -lt 1 -or $Registros -gt $AI_CONSULTA_MAX_REGISTROS) { return (L "los registros van de 1 a $AI_CONSULTA_MAX_REGISTROS" "records go from 1 to $AI_CONSULTA_MAX_REGISTROS") }
     return ''
 }
 
@@ -219,12 +224,12 @@ function Invoke-AIConsultaWeb {
     try { $html = Get-AIWebPage $url 12 }
     catch {
         $cod = $script:AIWebStatus
-        if ($cod -ge 400) { return (& $no "la página respondió con el código $cod") }
-        return (& $no "no pude leer la página ($($_.Exception.GetBaseException().Message))")
+        if ($cod -ge 400) { return (& $no (L "la página respondió con el código $cod" "the page answered with code $cod")) }
+        return (& $no (L "no pude leer la página ($($_.Exception.GetBaseException().Message))" "I couldn't read the page ($($_.Exception.GetBaseException().Message))"))
     }
     $d = Get-AIConsultaDatos (ConvertTo-AIPlainText $html) @($Consulta.Campos) $reg
     if ($d.Hallados -eq 0) {
-        return (& $no 'la página ya no trae esos rótulos: quizá cambió, o pinta los datos con JavaScript')
+        return (& $no (L 'la página ya no trae esos rótulos: quizá cambió, o pinta los datos con JavaScript' 'the page no longer has those labels: maybe it changed, or it draws the data with JavaScript'))
     }
     return @{ Ok = $true; Salida = (ConvertTo-AIConsultaJson $d.Registros -Lista:($reg -gt 1)); Motivo = ''; Url = $url; Datos = $d }
 }
@@ -233,14 +238,15 @@ function Format-AIConsultaCampos {
     <#  Los campos como se escriben a mano: sorteo="Sorteo" ganador="Ganador:"  #>
     param([array]$Campos, [int]$Registros = 1)
     $t = (@($Campos | ForEach-Object { "$($_.Campo)=""$($_.Rotulo)""" }) -join ' ')
-    if ($Registros -gt 1) { $t += " registros=$Registros" }
+    if ($Registros -gt 1) { $t += (L " registros=$Registros" " records=$Registros") }
     return $t
 }
 
 function ConvertFrom-AIConsultaCampos {
     <#  De lo que teclea el usuario en /comando web a @{ Campos; Registros }:
           sorteo=Sorteo ganador="Ganador:" "premio mayor"=Premio registros=5
-        El nombre del campo se normaliza (premio_mayor).  #>
+        El nombre del campo se normaliza (premio_mayor). "records=5" vale
+        igual que "registros=5".  #>
     param([string]$Texto)
     $campos = @(); $reg = 1
     $rx = [regex]'(?:"([^"]+)"|([^\s="]+))\s*=\s*(?:"([^"]*)"|(\S+))'
@@ -248,7 +254,7 @@ function ConvertFrom-AIConsultaCampos {
         $n = if ($m.Groups[1].Success) { $m.Groups[1].Value } else { $m.Groups[2].Value }
         $v = if ($m.Groups[3].Success) { $m.Groups[3].Value } else { $m.Groups[4].Value }
         $n = ConvertTo-AIConsultaCampo $n
-        if ($n -eq 'registros' -and $v -match '^\d+$') { $reg = [int]$v; continue }
+        if (($n -eq 'registros' -or $n -eq 'records') -and $v -match '^\d+$') { $reg = [int]$v; continue }
         $campos += [pscustomobject]@{ Campo = $n; Rotulo = $v.Trim() }
     }
     return @{ Campos = $campos; Registros = $reg }
@@ -270,10 +276,11 @@ function ConvertTo-AIConsultaCampo {
 # ---------------------------------------------------------------------------
 
 function Test-AIConsultaPedida {
-    <#  La peticion de un comando habla de internet o de una pagina?  #>
+    <#  La peticion de un comando habla de internet o de una pagina? En los
+        dos idiomas ("from the lottery website", "that reads the page").  #>
     param([string]$Texto)
     $p = ConvertTo-AIPlano ([string]$Texto)
-    return ($p -match '\b(?:internet|web|pagina|paginas|sitio|duckduckgo|html|curl|en linea|online)\b|https?://')
+    return ($p -match '\b(?:internet|web|pagina|paginas|sitio|duckduckgo|html|curl|en linea|online|page|pages|webpage|webpages|site|sites|website|websites)\b|https?://')
 }
 
 function Get-AIConsultaMuestra {
@@ -288,8 +295,25 @@ function Get-AIConsultaMuestra {
 function Get-AIConsultaGuia {
     <#  Lo que se le dice al modelo cuando tiene que proponer los campos. La
         barrera es Test-AIConsultaPropuesta: cada rotulo tiene que estar en
-        la pagina y dar un dato.  #>
-    return @"
+        la pagina y dar un dato. Las etiquetas de la respuesta, en el idioma
+        de los mensajes; ConvertFrom-AIConsultaPropuesta lee las dos.  #>
+    $en = @"
+I give you the text of a web page and what the user wants to get from it. You choose the data and, for each one, its label: the fixed text that comes RIGHT BEFORE the value on the page. A program will look for each label on the page and keep what follows it.
+Rules:
+- From 1 to $AI_CONSULTA_MAX_CAMPOS fields, only the ones the user asks for. If they ask for "the data" of something, all the ones in that block.
+- The label is copied exactly from the page, with its colon if it has one. If the page says "Winner: 12010", the field is winner and the label "Winner:". If it says "Draw 2304", the label is "Draw".
+- Never put the value in the label: the label is what stays fixed; the value, what changes.
+- If the page repeats the data in blocks (one per draw, per product, per day), the program takes the first one. If the user asks for several (the last 5), put RECORDS with that number.
+Answer ONLY with these lines, without explanations:
+NAME: one or two words for the query, lowercase and joined with a hyphen (lottery-results, dollar-price)
+DESCRIPTION: one sentence saying what data it gives and from which page
+FIELD field_name: label
+FIELD field_name: label
+RECORDS: 1
+If the text does not have that data, answer only:
+NODATA: the reason, in a few words
+"@
+    $es = @"
 Te paso el texto de una pagina web y lo que el usuario quiere sacar de ella. Eliges los datos y, para cada uno, su rotulo: el texto fijo que en la pagina va JUSTO ANTES del dato. Un programa buscara cada rotulo en la pagina y se quedara con lo que le sigue.
 Reglas:
 - De 1 a $AI_CONSULTA_MAX_CAMPOS campos, solo los que pide el usuario. Si pide "los datos" de algo, todos los de ese bloque.
@@ -305,6 +329,7 @@ REGISTROS: 1
 Si el texto no tiene esos datos, responde solo:
 NOHAY: el motivo, en pocas palabras
 "@
+    return (L $es $en)
 }
 
 function ConvertFrom-AIConsultaPropuesta {
@@ -313,19 +338,19 @@ function ConvertFrom-AIConsultaPropuesta {
     param([string]$Texto)
     $t = ([string]$Texto) -replace '(?m)^\s*```\w*\s*$', '' -replace '`', ''
     $r = @{ Campos = @(); Registros = 1; Nombre = ''; Descripcion = ''; NoHay = '' }
-    $m = [regex]::Match($t, '(?im)^\W*NOHAY\W*:\s*(.+?)\s*$')
+    $m = [regex]::Match($t, '(?im)^\W*(?:NOHAY|NODATA)\W*:\s*(.+?)\s*$')
     if ($m.Success) { $r.NoHay = $m.Groups[1].Value.Trim() }
-    foreach ($m in [regex]::Matches($t, '(?im)^\W*CAMPO\W+([^:=\r\n]{1,40}?)\s*[:=]\s*(.+?)\s*$')) {
+    foreach ($m in [regex]::Matches($t, '(?im)^\W*(?:CAMPO|FIELD)\W+([^:=\r\n]{1,40}?)\s*[:=]\s*(.+?)\s*$')) {
         $n = ConvertTo-AIConsultaCampo ($m.Groups[1].Value.Trim('*', '_', ' ', '"'))
         $v = $m.Groups[2].Value.Trim().Trim('*', ' ').Trim().Trim('"', "'", [char]0xAB, [char]0xBB, [char]0x201C, [char]0x201D)
         if ($n -and $v) { $r.Campos += [pscustomobject]@{ Campo = $n; Rotulo = $v } }
     }
     if ($r.Campos.Count) { $r.NoHay = '' }
-    $m = [regex]::Match($t, '(?im)^\W*REGISTROS\W*:\s*(\d{1,3})')
+    $m = [regex]::Match($t, '(?im)^\W*(?:REGISTROS|RECORDS)\W*:\s*(\d{1,3})')
     if ($m.Success) { $r.Registros = [Math]::Max(1, [int]$m.Groups[1].Value) }
-    $m = [regex]::Match($t, '(?im)^\W*NOMBRE\W*:\s*(.+?)\s*$')
+    $m = [regex]::Match($t, '(?im)^\W*(?:NOMBRE|NAME)\W*:\s*(.+?)\s*$')
     if ($m.Success) { $r.Nombre = ConvertTo-AIComandoNombreCorto $m.Groups[1].Value }
-    $m = [regex]::Match($t, '(?im)^\W*DESCRIPCI.N\W*:\s*(.+?)\s*$')
+    $m = [regex]::Match($t, '(?im)^\W*(?:DESCRIPCI.N|DESCRIPTION)\W*:\s*(.+?)\s*$')
     if ($m.Success) { $r.Descripcion = ConvertTo-AIComandoTexto ($m.Groups[1].Value.Trim('*', ' ', '"')) }
     return $r
 }
@@ -339,19 +364,19 @@ function Test-AIConsultaPropuesta {
     $campos = @($Propuesta.Campos | Select-Object -First $AI_CONSULTA_MAX_CAMPOS)
     $reg = [Math]::Min([Math]::Max(1, [int]$Propuesta.Registros), $AI_CONSULTA_MAX_REGISTROS)
     $no = { param($m) return @{ Ok = $false; Motivo = $m; Campos = @(); Registros = $reg; Quitados = @(); Datos = $null } }
-    if (-not $campos.Count) { return (& $no 'no diste ninguna linea CAMPO') }
+    if (-not $campos.Count) { return (& $no (L 'no diste ninguna linea CAMPO' 'you gave no FIELD line')) }
     $m = Test-AIConsultaCampos $campos $reg
     if ($m) { return (& $no $m) }
     $filas = @(([string]$Texto) -split "\r?\n" | ForEach-Object { ($_ -replace '\s+', ' ').Trim() } | Where-Object { $_ })
     foreach ($c in $campos) {
         $esta = $false
         foreach ($f in $filas) { if ((Find-AIRotulo $f $c.Rotulo) -ge 0) { $esta = $true; break } }
-        if (-not $esta) { return (& $no "el rótulo «$($c.Rotulo)» de $($c.Campo) no está en la página: cópialo tal cual del texto") }
+        if (-not $esta) { return (& $no (L "el rótulo «$($c.Rotulo)» de $($c.Campo) no está en la página: cópialo tal cual del texto" "the label ""$($c.Rotulo)"" of $($c.Campo) is not on the page: copy it exactly from the text")) }
     }
     $d = Get-AIConsultaDatos $Texto $campos $reg
     $quitados = @($d.Vacios)
     $quedan = @($campos | Where-Object { $quitados -notcontains $_.Campo })
-    if (-not $quedan.Count) { return (& $no 'con esos rótulos no sale ningún dato: el rótulo es el texto que va justo antes del dato') }
+    if (-not $quedan.Count) { return (& $no (L 'con esos rótulos no sale ningún dato: el rótulo es el texto que va justo antes del dato' 'those labels give no value: the label is the text that comes right before the value')) }
     if ($quitados.Count) { $d = Get-AIConsultaDatos $Texto $quedan $reg }
     return @{ Ok = $true; Motivo = ''; Campos = $quedan; Registros = $reg; Quitados = $quitados; Datos = $d }
 }

@@ -1,0 +1,58 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #F3EFE6; font-family: 'Inter', sans-serif; }
+    #equipo-head { position: absolute; left: 120px; top: 62px; width: 1680px; }
+    #equipo-kicker { font-weight: 700; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; color: #A85C14; }
+    #equipo-titulo { font-weight: 700; font-size: 56px; line-height: 1.1; letter-spacing: -0.02em; color: #1D1B18; margin-top: 12px; }
+    #equipo-pie { font-weight: 400; font-size: 27px; line-height: 1.35; color: #5B554C; margin-top: 12px; }
+    #equipo-term { position: absolute; left: 120px; top: 282px; width: 1680px; height: 730px; background: #15171B; border-radius: 14px; overflow: hidden; box-shadow: 0 28px 60px rgba(60, 40, 10, 0.22); }
+    #equipo-term .bar { height: 44px; background: #23262C; display: flex; align-items: center; padding: 0 18px; gap: 10px; }
+    #equipo-term .dot { width: 14px; height: 14px; border-radius: 50%; }
+    #equipo-term .bar-t { margin-left: 14px; font: 500 17px 'JetBrains Mono', monospace; color: #8B9099; }
+    #equipo-cuerpo { padding: 22px 32px; font: 400 24px/1.45 'JetBrains Mono', monospace; color: #E4DFD4; }
+    #equipo-term .ln { opacity: 0; position: relative; white-space: pre-wrap; word-break: break-word; }
+    #equipo-term .tx { position: relative; }
+    #equipo-term .u { color: #F6F2EA; }
+    #equipo-term .u .pr { color: #7CC7B2; }
+    #equipo-term .ia .pr { color: #8B9099; }
+    #equipo-term .dim { color: #A3A8B0; }
+    #equipo-term .gap { color: #7C8087; }
+    #equipo-term .ch { display: none; }
+    #equipo-term .cur { display: inline-block; width: 12px; height: 1.1em; background: #7CC7B2; vertical-align: -0.2em; opacity: 0; }
+    #equipo-term .hl-bg { position: absolute; left: -14px; right: -14px; top: -1px; bottom: -1px; background: rgba(232, 160, 72, 0.17); border-left: 4px solid #E8A048; transform-origin: left center; }
+    #equipo-nota { position: absolute; left: 120px; top: 1028px; font-weight: 400; font-size: 22px; color: #6A645A; }
+  </style>
+  <div id="root" data-composition-id="equipo" data-width="1920" data-height="1080">
+    <div id="equipo-head">
+      <div id="equipo-kicker">3 &#183; What the computer already knows</div>
+      <div id="equipo-titulo">It knows facts about this computer</div>
+      <div id="equipo-pie">Time, battery, memory, disks... read from Windows itself, without the internet.</div>
+    </div>
+    <div id="equipo-term" data-layout-allow-overflow>
+      <div class="bar"><span class="dot" style="background:#E5675B"></span><span class="dot" style="background:#E8B04A"></span><span class="dot" style="background:#5DBB72"></span><span class="bar-t" data-layout-ignore>AI  ·  PowerShell</span></div>
+      <div id="equipo-cuerpo">
+          <div class="ln u" id="equipo-l1"><span class="pr">User &gt; </span><span class="ch">h</span><span class="ch">o</span><span class="ch">w</span><span class="ch"> </span><span class="ch">m</span><span class="ch">u</span><span class="ch">c</span><span class="ch">h</span><span class="ch"> </span><span class="ch">R</span><span class="ch">A</span><span class="ch">M</span><span class="ch"> </span><span class="ch">d</span><span class="ch">o</span><span class="ch">e</span><span class="ch">s</span><span class="ch"> </span><span class="ch">t</span><span class="ch">h</span><span class="ch">i</span><span class="ch">s</span><span class="ch"> </span><span class="ch">c</span><span class="ch">o</span><span class="ch">m</span><span class="ch">p</span><span class="ch">u</span><span class="ch">t</span><span class="ch">e</span><span class="ch">r</span><span class="ch"> </span><span class="ch">h</span><span class="ch">a</span><span class="ch">v</span><span class="ch">e</span><span class="ch"> </span><span class="ch">a</span><span class="ch">n</span><span class="ch">d</span><span class="ch"> </span><span class="ch">h</span><span class="ch">o</span><span class="ch">w</span><span class="ch"> </span><span class="ch">m</span><span class="ch">u</span><span class="ch">c</span><span class="ch">h</span><span class="ch"> </span><span class="ch">i</span><span class="ch">s</span><span class="ch"> </span><span class="ch">f</span><span class="ch">r</span><span class="ch">e</span><span class="ch">e</span><span class="ch">?</span><span class="cur" id="equipo-l1-cur"></span></div>
+          <div class="ln ia" id="equipo-l2"><span class="hl-bg"></span><span class="tx"><span class="pr">ai &gt; </span>reading from this computer: memory</span></div>
+          <div class="ln ia" id="equipo-l3"><span class="tx"><span class="pr">ai &gt; </span>Your computer has 31.8 GB of RAM in total, with 12.5 GB currently free.</span></div>
+      </div>
+    </div>
+    <div id="equipo-nota">Real output of PRC AI 2.0 with Gemma 4 E4B on the laptop itself · the model's waits have been shortened</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo('#equipo-kicker', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 0);
+      tl.fromTo('#equipo-titulo', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 0.08);
+      tl.fromTo('#equipo-pie', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.35);
+      tl.fromTo('#equipo-term', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.2);
+      tl.set('#equipo-l1', { opacity: 1 }, 1);
+      tl.set('#equipo-l1-cur', { opacity: 1 }, 1);
+      tl.fromTo('#equipo-l1 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 1.2);
+      tl.set('#equipo-l1-cur', { opacity: 0 }, 2.28);
+      tl.fromTo('#equipo-l2', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.38);
+      tl.fromTo('#equipo-l2 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 2.63);
+      tl.fromTo('#equipo-l3', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.54);
+      window.__timelines["equipo"] = tl;
+    })();
+  </script>
+</template>

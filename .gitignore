@@ -27,4 +27,7 @@ docs/video/renders/
 docs/video/snapshots/
 docs/video/node_modules/
 docs/video/.hyperframes/
+docs/video/en/renders/
+docs/video/en/snapshots/
+docs/video/en/.hyperframes/
 *.mp4

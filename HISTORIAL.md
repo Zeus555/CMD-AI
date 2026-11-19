@@ -8,6 +8,93 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ---
 
+## 2026-11-19 — En inglés y en español
+
+**La petición.** Que el repositorio tenga una versión en inglés y otra en
+español; el video también, con un negocio popular en inglés; y explicar
+cuánta RAM hace falta para usarlo con fluidez. Decisiones del usuario:
+traducir el programa además de la documentación (si no, el video en inglés
+no podría enseñar salida real), el inglés primero en GitHub, una cafetería
+para el negocio y el video público en el canal A.M.
+
+**El programa habla los dos idiomas (`lib/idioma.ps1`).**
+
+- **`L 'es' 'en'`** devuelve el mensaje del idioma activo, en el sitio
+  donde se usa. Así no hay ficheros de traducciones que mantener aparte. El
+  español quedó igual byte a byte (las pruebas lo comprueban).
+- **Lo que escribe el usuario se entiende en los dos idiomas** siempre:
+  sí/yes, cancelar/cancel, «recuerda que…»/"remember that…", «aprende de los
+  documentos de…»/"learn from the documents in…", «olvida lo de…»/"forget
+  about…", «agrégame un comando para…»/"add a command to…". Las órdenes
+  tienen nombre en inglés (`/documents search`, `/command add`...) y los
+  dos nombres funcionan.
+- **Lo que va al modelo** (instrucciones, herramientas) también va en el
+  idioma activo, para que conteste en él.
+- **Cómo se elige.** Primero `-Lang`, luego `AI_LANG` y luego `"language"`
+  en settings.json. Si no hay nada de eso y la carpeta de datos ya existe,
+  español; si es la primera vez, el idioma de Windows. Lo de la carpeta es
+  por el autor: su Windows está en inglés y usa el programa en español.
+  Con solo el idioma de Windows, la actualización le habría cambiado el
+  idioma sin pedirlo. `/language en|es` lo cambia y lo guarda.
+- **La búsqueda en los documentos** tiene palabras vacías, terminaciones y
+  sinónimos en inglés, siempre activos: un negocio en español puede tener un
+  documento en inglés. Las etiquetas que el programa añade a los fragmentos
+  («Hoja:», «Diapositiva») se guardan en español y se traducen al
+  enseñarlas, así que cambiar de idioma no obliga a releer nada. La
+  excepción es Excel: en inglés, las fechas, las horas y los importes salen
+  a la americana (10/15/2026, 8:00 AM, $4.95), y sus ficheros se releen al
+  cambiar.
+- **Se hizo en paralelo**, con cuatro agentes, cada uno en su copia del
+  repositorio y con sus ficheros: el programa y las órdenes; los comandos y
+  las consultas web; los documentos, el PDF y el equipo; la cafetería de
+  prueba. Lo que quedaba en el fichero de otro se pasó de uno a otro, por
+  ejemplo el diálogo de los comandos, que vive en `ai.ps1`.
+- **Lo que cazaron las pruebas al juntarlo.** «Write a short poem about the
+  sea» traía el documento de vacaciones: «write» se queda en «writ», que
+  coincide con «writing» y «written». Se añadió a las palabras vacías, como
+  ya estaban «dime» y «explica». Las capturas, por su parte, enseñaron que
+  los grupos del equipo salían en español en inglés («reading from this
+  computer: memoria»).
+
+**La cafetería de prueba** (`tests/negocio-en.ps1`, `negocio.ps1 -Idioma en`)
+es Linden Street Coffee House: dos locales, precios en dólares y los mismos
+tipos de fichero que la panadería, con un catálogo en PDF y una factura
+escaneada como trampa.
+
+**La RAM, medida** en la laptop del autor (i5-10300H, 31,8 GB, GTX 1650 de
+4 GB):
+
+- Con Gemma 4 E4B cargado, llama-server usa unos 3,5 GB de RAM y 2,1 GB de
+  la gráfica, y escribe a unos 9 tokens por segundo. El programa en sí, unos
+  105 MB.
+- **Conclusión.** Con una gráfica NVIDIA de 4 GB, 8 GB de RAM como mínimo
+  (justo) y 16 para ir holgado. Sin gráfica, 16 como mínimo, y más lento.
+- No se midió sin gráfica ni en un equipo de 8 GB: esas cifras son
+  estimaciones y el README lo dice.
+
+**La documentación:**
+
+- `README.md` en inglés y `README.es.md` en español, con la sección del
+  idioma y la de la RAM.
+- La guía de los documentos en inglés (`docs/documents-guide.md`), con
+  ejemplos reales de la captura en inglés.
+- Este historial sigue solo en español.
+
+**El video en inglés** (`docs/video/en`), 2:09: las capturas reales del
+programa en inglés con la cafetería, la misma voz y el mismo montaje.
+Publicado en A.M., público: https://www.youtube.com/watch?v=7vM_9QslKjo. El
+título y la descripción los aprobó el usuario. La descripción del video en
+español no enlaza al de inglés: el token solo tiene permiso para subir y
+leer, no para editar.
+
+**Pruebas:**
+
+- `tests\probar.ps1`: las 8 pasan, con más comprobaciones en inglés (por
+  ejemplo, comandos 295, documentos 225, reconocer peticiones 90).
+- Las baterías del negocio sin el modelo: 0 fallos de 55 en español y 0 de
+  64 en inglés.
+- Con el modelo: 0 fallos de 91 en español y 0 de 102 en inglés.
+
 ## 2026-11-18 — El video, en YouTube
 
 **La petición.** Publicar el video en el canal de YouTube y referenciarlo en
