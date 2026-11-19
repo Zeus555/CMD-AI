@@ -163,7 +163,7 @@ are was were be been being am do does did done doing have has had having can can
 must will not yes you your yours we our ours us they their theirs them he him his she her hers it its this that these
 those there here what whats which who whom whose when where why how much many any some all each every more most
 other others such my mine myself me hi hello hey thanks thank please okay tell know want need like get got give let
-show say said explain don doesn didn isn aren wasn weren won wouldn couldn shouldn haven hasn re ve ll
+show say said explain write compose don doesn didn isn aren wasn weren won wouldn couldn shouldn haven hasn re ve ll
 '@ -split '\s+')) { if ($w) { [void]$script:AIDocVacias.Add($w) } }
 
 # Todo el recorte de palabras va en expresiones de .NET sobre el texto

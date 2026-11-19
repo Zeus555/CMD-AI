@@ -680,7 +680,7 @@ function Invoke-AITurn {
         $daDoc = $ofreceDoc -and $docConsultas -lt 1 -and $rondas -lt 4 -and -not $cerrado
         $herr  = @()
         if ($daWeb) { $herr += (Get-AIWebTool) }
-        if ($daEq)  { $herr += $AI_EQUIPO_TOOL }
+        if ($daEq)  { $herr += (Get-AIEquipoTool) }
         if ($daCmd) { $herr += (Get-AIComandoTool $script:Comandos) }
         if ($daDoc) { $herr += (Get-AIDocTool $docTema) }
         if ($herr.Count -eq 0) { $herr = $null }
