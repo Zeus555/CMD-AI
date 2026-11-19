@@ -15,6 +15,13 @@ Server-Sent Events: el servidor manda texto por HTTP en fragmentos a medida
 que lo genera, y el cliente lo pinta segun llega.
 ```
 
+**Video de presentación (2:13, narrado):**
+[PRC AI 2.0 en YouTube](https://www.youtube.com/watch?v=FhrSBxF6vFE). En
+él se ve el chat local, la búsqueda en internet, los comandos y consultas
+guardados, y cómo aprende de los documentos de un negocio y los olvida. Lo
+que sale en la terminal es salida real del programa. Cómo se hizo:
+[`docs/video/GUION.md`](docs/video/GUION.md).
+
 ## Características
 
 - **REPL interactivo con memoria**: la conversación se acumula y se envía

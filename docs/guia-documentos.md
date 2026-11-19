@@ -12,6 +12,11 @@ Espiga, la misma que usan las pruebas (la conversación entera está en
 [`docs/video/capturas`](video/capturas/3-preferencias-documentos.out)). Donde
 pone `Usuario >`, en tu pantalla saldrá tu nombre de usuario de Windows.
 
+Si prefieres verlo antes de leer, el [video de presentación en
+YouTube](https://www.youtube.com/watch?v=FhrSBxF6vFE) enseña esta misma
+panadería: aprender de la carpeta, preguntar, comprobar de dónde sale un
+dato y olvidar (desde el minuto 1:01).
+
 ## Lo que hace y lo que no
 
 - **Lee tus documentos y contesta con lo que dicen,** y te dice de qué
