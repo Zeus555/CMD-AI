@@ -1,10 +1,10 @@
 # Video: PRC AI 2.0 en 2 minutos
 
-Un video corto (1:59, 1920×1080, 30 fps, en español y sin sonido) con lo más
-relevante de PRC AI 2.0. Va sin voz a propósito: en LinkedIn y en la mayoría
-de redes el video arranca sin sonido, así que todo se lee en pantalla. El
-ritmo deja leer cada respuesta y es fácil ponerle voz encima si algún día se
-quiere.
+Un video corto (2:13, 1920×1080, 30 fps, en español) con lo más relevante
+de PRC AI 2.0, narrado. La voz cuenta lo que hace cada escena, así que se
+sigue sin leer la terminal; y como en LinkedIn el video arranca sin sonido,
+todo lo que dice también está escrito en pantalla (el título y el pie de
+cada escena). No lleva música.
 
 ## La regla: todo lo que sale en la terminal es real
 
@@ -26,6 +26,33 @@ lo que se tecleó y los `.out`, lo que salió.
 - **El negocio es inventado:** la Panadería y Cafetería La Espiga, de
   `tests\negocio.ps1 -Crear`. El catálogo de pasteles es un PDF; una factura
   escaneada, también, y es lo que dice que no puede leer.
+
+## La narración
+
+Está en [`narracion.txt`](narracion.txt), una línea por escena. No es salida
+del programa: es la voz que la presenta, y solo cuenta lo que se ve en la
+escena (el precio que dice es el de la captura: C$ 650).
+
+- **Escrita como se dice:** las cifras y las siglas van en letras
+  («seiscientos cincuenta córdobas», «pe erre ce, a i»), porque la voz lee lo
+  que hay.
+- **La voz** es la del canal de LinkedIn (`D:\PRC Channel Linkedin`,
+  `services\daily-impact\lib\voice.mjs`): `gpt-4o-mini-tts` con la voz
+  `cedar`, en español latinoamericano neutro, con un estilo más tranquilo que
+  el de las noticias y tempo 1,1 (allí, 1,2). `voz.ps1` quita el silencio de
+  los bordes, comprime y deja cada toma a −16 LUFS.
+- **Se comprueba que dice el guion.** Whisper transcribe cada toma y se
+  compara con el texto: si no se oye el 90 % de las palabras, o el final, la
+  toma se repite (tres veces como mucho). La primera versión de «pregunta»
+  terminaba en «No lo inventa.», y en las tres tomas esa frase no se oía; se
+  reescribió para que no quede sola al final.
+- **La voz manda en la duración:** cada toma empieza medio segundo después de
+  su escena, y si no cabe, la escena se alarga quedándose en su último
+  fotograma. Por eso el video pasa de 1:59 a 2:13.
+- **Las tomas van en git** (`assets/voz/*.mp3`, 1,7 MB) con `voz.json`, que
+  guarda de cada una su duración, lo que oyó Whisper y una huella del texto:
+  el video se vuelve a montar sin pagar otra vez la voz, y `voz.ps1` solo
+  rehace las líneas que cambiaron.
 
 ## Escenas
 
@@ -53,8 +80,9 @@ está en la plantilla `$final` del mismo fichero.
 
 Es la misma vía que los videos de `D:\PRC Channel Linkedin`: una composición
 [HyperFrames](https://hyperframes.heygen.com) (HTML que se renderiza a MP4
-fotograma a fotograma, siempre igual) con GSAP para las animaciones. No hay
-voz, ni música, ni modelos de pago: el coste es cero.
+fotograma a fotograma, siempre igual) con GSAP para las animaciones. Lo único
+de pago es la voz: unos 2 minutos, a 0,015 USD el minuto de voz y 0,006 el de
+transcripción, unos 5 centavos con las tomas repetidas.
 
 1. **Capturar** (hace falta el llama-server en marcha, e internet para las
    escenas que buscan). Cada captura lanza el `AI` de verdad con lo tecleado
@@ -68,13 +96,21 @@ voz, ni música, ni modelos de pago: el coste es cero.
 
    Las respuestas del modelo cambian de una vez a otra: si se vuelve a
    capturar, revisa los números de línea de las escenas en `montar.ps1`.
-2. **Montar:** `montar.ps1` escribe `index.html` y `compositions\*.html`.
-   No se editan a mano: se regeneran.
+2. **Poner voz** (hace falta `OPENAI_API_KEY` en el entorno, y ffmpeg).
+   Solo si cambió `narracion.txt`; `-Solo final` rehace una toma que dice el
+   guion pero suena mal:
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File docs\video\voz.ps1
+   ```
+3. **Montar:** `montar.ps1` escribe `index.html` y `compositions\*.html`,
+   con la voz de `assets\voz` (sin ella, el video sale mudo). No se editan a
+   mano: se regeneran.
 
    ```powershell
    powershell -NoProfile -ExecutionPolicy Bypass -File docs\video\montar.ps1
    ```
-3. **Revisar y renderizar** (Node; `npx` baja HyperFrames la primera vez):
+4. **Revisar y renderizar** (Node; `npx` baja HyperFrames la primera vez):
 
    ```powershell
    cd docs\video

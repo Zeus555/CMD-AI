@@ -8,6 +8,39 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ---
 
+## 2026-11-18 — El video, narrado
+
+**La petición.** Ponerle audio al video: «una narración sin depender
+únicamente del texto, no una música», con la voz que ya usan los videos de
+`D:\PRC Channel Linkedin`.
+
+**Cómo.** Una línea de narración por escena (`docs/video/narracion.txt`) y
+`docs/video/voz.ps1`, que la convierte en voz por la misma vía que ese
+proyecto: `gpt-4o-mini-tts` con la voz `cedar`, en español latinoamericano
+neutro, silencio de los bordes fuera, compresión y volumen igualado con
+ffmpeg, y whisper-1 para comprobar que la toma dice el guion. Está escrito en
+PowerShell, con `HttpClient` de .NET, sin añadir nada al equipo. `montar.ps1`
+pone cada toma medio segundo después de que empiece su escena y alarga la
+escena si la voz no cabe.
+
+- **Lo que se descartó.** Las voces de Windows (solo hay en inglés) y una
+  voz local (Kokoro pide Python, que no está). La música tampoco: no se pidió.
+- **Lo que cazó Whisper.** La escena «pregunta» acababa en «No lo inventa.»,
+  y en las tres tomas esa frase no se oía. Se reescribió («no lo inventa: te
+  dice que no viene») y pasó a la primera. En la final, una toma sonó «PRC,
+  ahí, 2.0»: «a i» dicho deprisa suena a «ahí». Se repitió hasta que Whisper
+  oyó «PRC AI 2.0».
+- **Duración.** De 1:59 a 2:13: la voz manda, y cinco escenas se alargan
+  entre 0,4 y 4 s, quedándose en su último fotograma.
+- **Las tomas van en git** (1,7 MB en MP3) con `voz.json`: con ellas el video
+  se vuelve a montar sin volver a pagar la voz. Costó unos 5 centavos.
+
+**Pruebas.** `hyperframes check`: 0 errores y el audio sin avisos. El render
+(2:13, 8,6 MB) se midió con ffmpeg: la pista de audio dura lo mismo que el
+video, la voz entra a los 0,5 s, el volumen integrado es de −13,6 LUFS y el
+pico, de −2,2 dBTP. Medido, no escuchado: falta que alguien lo oiga.
+`tests\probar.ps1`: las 8 pasan.
+
 ## 2026-11-18 — Leer los PDF
 
 **La petición.** Que lea los PDF: «es de los documentos más comunes que

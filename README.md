@@ -1001,8 +1001,9 @@ tests/hacer-pdf.ps1 escribe los PDF de prueba (no es una prueba)
 HISTORIAL.md        que cambio en cada version, por que y como se probo
 docs/guia-documentos.md  guia de uso de los documentos, para el dueno de
                     un negocio
-docs/video/         el video de presentacion: guion, capturas reales de la
-                    terminal y la composicion HyperFrames que lo renderiza
+docs/video/         el video de presentacion: guion, narracion y su voz,
+                    capturas reales de la terminal y la composicion
+                    HyperFrames que lo renderiza
 ```
 
 Si editas cualquier `.ps1` o `.bat`, pasa después `tools/build.ps1`: Windows

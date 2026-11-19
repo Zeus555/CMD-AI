@@ -60,6 +60,26 @@ $escenas = @(
 $DUR_INTRO = 4.5
 $DUR_FINAL = 6.0
 
+# ---- La voz -----------------------------------------------------------------------
+#  assets\voz\<id>.mp3 sale de narracion.txt con voz.ps1. Cada toma empieza
+#  VOZ_INICIO segundos despues de su escena, y si no cabe, la escena se alarga
+#  (se queda en su ultimo fotograma) hasta VOZ_COLA despues de que acabe.
+#  Sin voz.json el video sale mudo, como antes.
+$VOZ_INICIO = 0.5
+$VOZ_COLA   = 0.7
+$voces = @{}
+$fichVoz = Join-Path $Dir 'assets\voz\voz.json'
+if (Test-Path -LiteralPath $fichVoz) {
+    $j = [IO.File]::ReadAllText($fichVoz, [Text.Encoding]::UTF8) | ConvertFrom-Json
+    foreach ($p in $j.PSObject.Properties) {
+        if (Test-Path -LiteralPath (Join-Path $Dir "assets\voz\$($p.Name).mp3")) { $voces[$p.Name] = [double]$p.Value.duracion }
+    }
+}
+function Get-DurConVoz([string]$id, [double]$dur) {
+    if (-not $voces.ContainsKey($id)) { return $dur }
+    return [Math]::Round([Math]::Max($dur, $VOZ_INICIO + $voces[$id] + $VOZ_COLA), 1)
+}
+
 # ---- Medidas de la terminal -------------------------------------------------
 $FUENTE   = 24                       # px, JetBrains Mono
 $ALTO_LN  = [Math]::Round($FUENTE * 1.45, 2)
@@ -276,22 +296,33 @@ New-Item -ItemType Directory -Path (Join-Path $Dir 'compositions') -Force | Out-
 $hosts = New-Object System.Text.StringBuilder
 $t = 0.0
 $pista = 1
+$audios = New-Object System.Text.StringBuilder
 $add = {
     param($id, $dur)
     [void]$hosts.AppendLine(@"
       <div id="$id" class="escena" data-composition-id="$id" data-composition-src="compositions/$id.html"
            data-start="$t" data-duration="$dur" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
 "@)
+    if ($voces.ContainsKey($id)) {
+        $ini = [Math]::Round($t + $VOZ_INICIO, 2)
+        [void]$audios.AppendLine("      <audio id=""voz-$id"" src=""assets/voz/$id.mp3"" data-start=""$ini"" data-duration=""$($voces[$id])"" data-track-index=""10"" data-volume=""1""></audio>")
+    }
 }
-& $add 'intro' $DUR_INTRO; $t += $DUR_INTRO
-Write-Output ("  {0,-13} {1,5} s" -f 'intro', $DUR_INTRO)
+$d = Get-DurConVoz 'intro' $DUR_INTRO
+& $add 'intro' $d; $t = [Math]::Round($t + $d, 1)
+Write-Output ("  {0,-13} {1,5} s" -f 'intro', $d)
 foreach ($e in $escenas) {
-    $d = New-Escena $e
+    $d0 = New-Escena $e
+    $d = Get-DurConVoz $e.Id $d0
+    if ($d -gt $d0) { Write-Output ("  {0,-13} {1,5} s  con la voz" -f '', $d) }
     & $add $e.Id $d
     $t = [Math]::Round($t + $d, 1)
 }
-& $add 'final' $DUR_FINAL; $t = [Math]::Round($t + $DUR_FINAL, 1)
-Write-Output ("  {0,-13} {1,5} s" -f 'final', $DUR_FINAL)
+$d = Get-DurConVoz 'final' $DUR_FINAL
+& $add 'final' $d; $t = [Math]::Round($t + $d, 1)
+Write-Output ("  {0,-13} {1,5} s" -f 'final', $d)
+$faltan = @(@('intro') + @($escenas | ForEach-Object { $_.Id }) + @('final') | Where-Object { -not $voces.ContainsKey($_) })
+if ($voces.Count -and $faltan.Count) { Write-Warning "Escenas sin voz: $($faltan -join ', ') (pasa voz.ps1)." }
 
 $index = @"
 <!doctype html>
@@ -311,6 +342,7 @@ $index = @"
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="$t" data-width="1920" data-height="1080">
 $($hosts.ToString().TrimEnd())
+$($audios.ToString().TrimEnd())
     </div>
     <script>
       window.__timelines = window.__timelines || {};
