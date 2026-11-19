@@ -1,0 +1,67 @@
+
+  PRC AI 2.0  Gemma 4 E4B (local) / gemma-4-e4b  -  busca en internet si hace falta
+  bye para salir  -  /help para los comandos
+
+Usuario > recuerda que me contestes siempre en frases cortas
+  preferencia: Me contestes siempre en frases cortas
+  ¿La guardo para esta y las próximas conversaciones? (s/n) s
+guardada. La tendré en cuenta en esta y en las próximas conversaciones (/preferencias las lista).
+Usuario > aprende de los documentos de D:\MiNegocio
+ia > Voy a leer los documentos de D:\MiNegocio para contestarte con lo que dicen. No los cambio ni los mando a ningún sitio: lo que lea se queda en este equipo.
+ia > Hay 14 que sé leer (3 Word, 2 texto, 2 OpenDocument, 2 PDF, 1 RTF, 1 PowerPoint, 1 CSV, 1 HTML, 1 Excel).
+ia > ¿De qué tratan, en pocas palabras? Así sé cuándo mirarlos; por ejemplo «mi ferretería: servicios, empleados, horarios y procedimientos». (Enter: «MiNegocio»; «cancelar» para dejarlo)
+Usuario > mi panadería: servicios, precios, empleados, horarios y procedimientos
+  leyendo 1 de 14: Catálogo de pasteles.pdf                             leyendo 2 de 14: Empleados.csv                                        leyendo 3 de 14: Inventario mínimo.ods                                leyendo 4 de 14: Necesidades y metas 2027.pptx                        leyendo 5 de 14: Proveedores.html                                     leyendo 6 de 14: Quiénes somos.docx                                   leyendo 7 de 14: Seguridad alimentaria.rtf                            leyendo 8 de 14: Servicios y precios.xlsx                             leyendo 9 de 14: Facturas\Factura harina noviembre.pdf                leyendo 10 de 14: Procedimientos\Apertura y cierre.docx               leyendo 11 de 14: Procedimientos\Atención de quejas.md                leyendo 12 de 14: Procedimientos\Pedidos para eventos.txt             leyendo 13 de 14: Recursos humanos\Reglamento interno.odt             leyendo 14 de 14: Recursos humanos\Vacaciones y permisos.docx                                                                             ia > Listo: leí 13 documentos (29 fragmentos) en 1.4 s. Pregúntame lo que quieras sobre mi panadería: servicios, precios, empleados, horarios y procedimientos y te diré de qué documento sale cada dato. Si cambias o añades ficheros en la carpeta, los vuelvo a leer solo.
+ia > Estos no los pude leer:
+  Facturas\Factura harina noviembre.pdf: no tiene texto (¿es una imagen escaneada?)
+Usuario > ¿A qué hora abre la sucursal Norte los domingos?
+ia > consultando tus documentos: Servicios y precios.xlsx, Procedimientos\Apertura y cierre.docx, Quiénes somos.docx
+ia > Abre a las 08:00. Esto viene del documento Servicios y precios.xlsx, apartado «Hoja: Horarios».
+   documentos: Servicios y precios.xlsx  Procedimientos\Apertura y cierre.docx  Quiénes somos.docx
+Usuario > ¿Cuánto cuesta un pastel de tres leches entero?
+ia > consultando tus documentos: Catálogo de pasteles.pdf, Servicios y precios.xlsx
+ia > Cuesta C$ 650. Esto viene del documento Catálogo de pasteles.pdf, apartado «Catálogo de pasteles > Precios».
+   documentos: Catálogo de pasteles.pdf  Servicios y precios.xlsx
+Usuario > ¿Cuánto gana Lucía Martínez?
+ia > consultando tus documentos: Procedimientos\Apertura y cierre.docx, Catálogo de pasteles.pdf, Empleados.csv
+ia > No viene en los documentos.
+   documentos: Procedimientos\Apertura y cierre.docx  Catálogo de pasteles.pdf  Empleados.csv
+Usuario > /documentos buscar pastel tres leches
+  1. Catálogo de pasteles.pdf > Catálogo de pasteles > Precios  (6.5 puntos)
+     Pastel | Porción | Entero (12 porciones)
+     Tres leches | C$ 60 | C$ 650
+     Chocolate con avellana | C$ 75 | C$ 820
+     Zanahoria y nuez | C$ 70 | C$ 760
+     Selva negra | C$ 80 | C$ 880
+  2. Servicios y precios.xlsx > Hoja: Panadería  (4.35 puntos)
+     Producto: Pan francés | Precio: 5 | Unidad: unidad | Vigente desde: 01/10/2026
+     Producto: Baguette | Precio: 35 | Unidad: unidad | Vigente desde: 01/10/2026
+     Producto: Croissant | Precio: 28 | Unidad: unidad | Vigente desde: 01/10/2026
+     Producto: Pastel de tres leches | Precio: 60 | Unidad: porción | Vigente desde: 01/10/2026
+(viajarían solos con esa pregunta; cobertura 1)
+Usuario > olvida lo de la extensión
+ia > Voy a olvidar lo que hable de «extension» (6 líneas de Empleados.csv). Tus ficheros no se tocan.
+  por ejemplo:
+  - Empleados.csv: Extensión: 101
+  - Empleados.csv: Extensión: 102
+  - Empleados.csv: Extensión: 103
+  - Empleados.csv: Extensión: 200
+  - Empleados.csv: Extensión: 201
+    y 1 más
+ia > ¿Lo olvido? («sí» o «no»)
+Usuario > sí
+ia > Olvidado. Si te arrepientes: /documentos olvidos y /documentos recordar <número>.
+ia > Lo que ya te dije en esta conversación sigue en su memoria; /new la vacía.
+Usuario > /new
+memoria vaciada
+Usuario > ¿Cuál es la extensión de Ana Torres?
+ia > consultando tus documentos: Procedimientos\Apertura y cierre.docx, Empleados.csv
+ia > Ana Torres es Encargada de sucursal. Este dato sale de Empleados.csv.
+   documentos: Procedimientos\Apertura y cierre.docx  Empleados.csv
+Usuario > /documentos olvidos
+  1. lo que hable de «extension»  (2026-11-18)
+(/documentos recordar <número> deshace uno)
+Usuario > /documentos recordar 1
+vuelvo a usar lo que hable de «extension»
+Usuario > bye
+hasta luego

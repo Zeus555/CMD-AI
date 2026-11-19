@@ -20,3 +20,11 @@ url_result.txt
 Thumbs.db
 [Dd]esktop.ini
 .DS_Store
+
+# Video de presentacion (docs/video): el render y lo que genera HyperFrames.
+# Las fuentes (guion, capturas, montar.ps1 y las composiciones) si van.
+docs/video/renders/
+docs/video/snapshots/
+docs/video/node_modules/
+docs/video/.hyperframes/
+*.mp4

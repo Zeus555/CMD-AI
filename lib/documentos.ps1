@@ -12,8 +12,8 @@
 #    pocos sinonimos. Sin dependencias, sin tocar llama-server y en
 #    milisegundos.
 #  - Lee texto (txt, md, csv, tsv, json, xml, html, rtf), Word (docx), Excel
-#    (xlsx), PowerPoint (pptx) y OpenDocument (odt, ods, odp). Los PDF y los
-#    formatos viejos de Office (doc, xls, ppt) todavia no: se dice cuales.
+#    (xlsx), PowerPoint (pptx), OpenDocument (odt, ods, odp) y PDF (lib\pdf.ps1).
+#    Los formatos viejos de Office (doc, xls, ppt) no: se dice cuales.
 #  - Las tablas (Excel, CSV, las de Word) se leen fila a fila. Una primera
 #    fila solo se toma por cabecera ("Precio: 150") si alguna columna trae
 #    cifras debajo; si no, va como "Columnas (primera fila)" y cada fila tal
@@ -24,6 +24,8 @@
 #    equipo: solo viajan a los locales, salvo que el usuario lo permita.
 #  Comentarios y expresiones regulares en ASCII (ver tools\build.ps1).
 # ---------------------------------------------------------------------------
+
+. (Join-Path $PSScriptRoot 'pdf.ps1')
 
 $AI_DOC_MAX_CARPETAS = 10
 $AI_DOC_MAX_FICHEROS = 3000      # entre todas las carpetas
@@ -45,18 +47,17 @@ $AI_DOC_LEE = @{
     '.csv' = 'tabla'; '.tsv' = 'tabla'; '.html' = 'html'; '.htm' = 'html'; '.rtf' = 'rtf'
     '.docx' = 'word'; '.docm' = 'word'; '.xlsx' = 'excel'; '.xlsm' = 'excel'
     '.pptx' = 'powerpoint'; '.pptm' = 'powerpoint'
-    '.odt' = 'odt'; '.ods' = 'ods'; '.odp' = 'odp'
+    '.odt' = 'odt'; '.ods' = 'ods'; '.odp' = 'odp'; '.pdf' = 'pdf'
 }
 # Documentos que no se saben leer: se dice por que y que hacer.
 $AI_DOC_NO_LEE = @{
-    '.pdf' = 'PDF: todavía no sé leerlos; guárdalo como Word (.docx) o como texto'
     '.doc' = 'Word antiguo (.doc): ábrelo en Word y guárdalo como .docx'
     '.xls' = 'Excel antiguo (.xls): ábrelo en Excel y guárdalo como .xlsx'
     '.ppt' = 'PowerPoint antiguo (.ppt): ábrelo y guárdalo como .pptx'
 }
 $AI_DOC_TIPO = @{
     texto = 'texto'; tabla = 'CSV'; html = 'HTML'; rtf = 'RTF'; word = 'Word'; excel = 'Excel'
-    powerpoint = 'PowerPoint'; odt = 'OpenDocument'; ods = 'OpenDocument'; odp = 'OpenDocument'
+    powerpoint = 'PowerPoint'; odt = 'OpenDocument'; ods = 'OpenDocument'; odp = 'OpenDocument'; pdf = 'PDF'
 }
 
 # Palabras que no ayudan a encontrar nada (ya sin acentos).
@@ -542,8 +543,10 @@ function Read-AIDocTexto {
     if ($Bytes -lt 0) { $Bytes = (Get-Item -LiteralPath $Ruta).Length }
     if ($Bytes -gt $AI_DOC_MAX_BYTES) { return @{ Ok = $false; Texto = ''; Motivo = "demasiado grande ($([Math]::Round($Bytes / 1MB)) MB; el tope es $($AI_DOC_MAX_BYTES / 1MB) MB)" } }
     $tipo = $AI_DOC_LEE[$ext]
+    $aviso = ''
     try {
         $t = switch ($tipo) {
+            'pdf'   { $p = Read-AIPdf $Ruta; $aviso = $p.Aviso; $p.Texto }
             'texto' { Read-AIDocPlano $Ruta }
             'tabla' { ConvertFrom-AIDocCsv (Read-AIDocPlano $Ruta) ($ext -eq '.tsv') }
             'html'  { ConvertTo-AIPlainText (Read-AIDocPlano $Ruta) }
@@ -557,7 +560,7 @@ function Read-AIDocTexto {
     }
     $t = ([string]$t) -replace "`r", '' -replace '[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', ' ' -replace '[ \t\u00A0]+\n', "`n" -replace '\n{3,}', "`n`n"
     if (-not $t.Trim()) { return @{ Ok = $false; Texto = ''; Motivo = 'no tiene texto (¿es una imagen escaneada?)' } }
-    $motivo = ''
+    $motivo = $aviso
     if ($t.Length -gt $AI_DOC_MAX_TEXTO) { $t = $t.Substring(0, $AI_DOC_MAX_TEXTO); $motivo = "solo se leyeron los primeros $AI_DOC_MAX_TEXTO caracteres" }
     return @{ Ok = $true; Texto = $t.Trim(); Motivo = $motivo }
 }
@@ -772,10 +775,14 @@ function Find-AIDocTrozos {
     if (-not $q.Count) { return $r }
     $N = $Indice.N
     $idfMax = [Math]::Log(1 + ($N + 0.5) / 0.5)
+    # Las palabras de una categoria (las que tienen sinonimos: precio,
+    # horario, empleado...) dicen de que va la pregunta, no de que cosa: en
+    # "cuanto cuesta el horno" manda "horno". Con el mismo peso, un catalogo
+    # que dice "cuesta" y "costo" tapaba al documento del horno.
     $peso = @{}
-    foreach ($t in $q) { $peso[$t] = 1.0 }
+    foreach ($t in $q) { $peso[$t] = if ($script:AIDocSinonimos.ContainsKey($t)) { 0.6 } else { 1.0 } }
     foreach ($t in $q) {
-        if ($script:AIDocSinonimos.ContainsKey($t)) { foreach ($s in $script:AIDocSinonimos[$t]) { if (-not $peso.ContainsKey($s)) { $peso[$s] = 0.5 } } }
+        if ($script:AIDocSinonimos.ContainsKey($t)) { foreach ($s in $script:AIDocSinonimos[$t]) { if (-not $peso.ContainsKey($s)) { $peso[$s] = 0.3 } } }
     }
     if ($Previa -and $q.Count -le 3) {
         foreach ($t in @((ConvertTo-AIDocTerminos $Previa) | Select-Object -Unique)) { if (-not $peso.ContainsKey($t)) { $peso[$t] = 0.35 } }
@@ -1042,7 +1049,8 @@ function Update-AIDocIndice {
         $m = $null
         if ($man.ContainsKey($ruta)) { $m = $man[$ruta] }
         $guardado = if ($m) { Join-Path $textos ($m.Clave + '.txt') } else { '' }
-        if ($m -and $m.Ticks -eq $ticks -and $m.Bytes -eq $bytes -and ($m.Estado -ne 'ok' -or (Test-Path -LiteralPath $guardado))) { $est.Reusados++ }
+        # Lo que antes "todavia" no se sabia leer (los PDF) se vuelve a probar.
+        if ($m -and $m.Ticks -eq $ticks -and $m.Bytes -eq $bytes -and ($m.Estado -ne 'ok' -or (Test-Path -LiteralPath $guardado)) -and -not ($m.Estado -eq 'mal' -and $m.Motivo -match 'todav')) { $est.Reusados++ }
         else {
             if ($Aviso) { & $Aviso "leyendo $k de $($pend.Count): $rel" }
             $lt = Read-AIDocTexto $ruta $bytes

@@ -210,7 +210,8 @@ $($c.Bullet)EN EL MODO INTERACTIVO$($c.Off)
   /preferencias  lista de las guardadas     /preferencia agregar X   guardar X
   /preferencia quitar N   borrar la numero N
   aprende de los documentos de D:\MiNegocio   leer una carpeta de documentos
-                 (Word, Excel, PowerPoint, OpenDocument, texto, CSV, HTML, RTF)
+                 (Word, Excel, PowerPoint, PDF, OpenDocument, texto, CSV,
+                 HTML, RTF)
                  para contestar con lo que dicen: servicios, empleados,
                  horarios, procedimientos, politicas... Dice de que documento
                  sale cada dato y no inventa lo que no dicen
@@ -711,14 +712,14 @@ function Add-AIDocCarpeta {
     $censo = Get-AIDocCenso $Ruta
     $no = @($censo.NoLeibles.GetEnumerator() | ForEach-Object { "$($_.Value) $($_.Key.TrimStart('.').ToUpperInvariant())" })
     if ($censo.Leibles -eq 0) {
-        $extra = if ($no.Count) { " Hay $($no -join ', '), que todavía no sé leer: guarda esos ficheros como Word (.docx) o como texto." } else { '' }
-        & $di "En $Ruta no hay documentos que sepa leer (Word, Excel, PowerPoint, OpenDocument, texto, CSV, HTML o RTF).$extra"
+        $extra = if ($no.Count) { " Hay $($no -join ', '), del Office antiguo, que no sé leer: ábrelos y guárdalos como .docx, .xlsx o .pptx." } else { '' }
+        & $di "En $Ruta no hay documentos que sepa leer (Word, Excel, PowerPoint, PDF, OpenDocument, texto, CSV, HTML o RTF).$extra"
         return
     }
     $tipos = (@($censo.PorTipo.GetEnumerator() | Sort-Object Value -Descending | ForEach-Object { "$($_.Value) $($_.Key)" }) -join ', ')
     & $di "Voy a leer los documentos de $Ruta para contestarte con lo que dicen. No los cambio ni los mando a ningún sitio: lo que lea se queda en este equipo."
     $linea = "Hay $($censo.Leibles) que sé leer ($tipos)."
-    if ($no.Count) { $linea += " También hay $($no -join ', '), que todavía no sé leer." }
+    if ($no.Count) { $linea += " También hay $($no -join ', '), del Office antiguo, que no sé leer." }
     if ($censo.Tope) { $linea += " Son muchos: leeré los primeros $AI_DOC_MAX_FICHEROS." }
     & $di $linea
     $sug = Split-Path -Leaf $Ruta

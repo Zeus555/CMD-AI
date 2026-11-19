@@ -1,0 +1,106 @@
+{
+    "intro":  {
+                  "huella":  "a4b4b06ad9c20694",
+                  "duracion":  7.128,
+                  "cobertura":  1,
+                  "toma":  1,
+                  "texto":  "Pe erre ce, a i, dos punto cero. Una inteligencia artificial en la terminal de Windows, en tu propio equipo.",
+                  "oido":  "PRC-AI 2.0, una inteligencia artificial en la terminal de Windows, en tu propio equipo."
+              },
+    "local":  {
+                  "huella":  "01936beea944ea0d",
+                  "duracion":  7.536,
+                  "cobertura":  1,
+                  "toma":  1,
+                  "texto":  "El modelo, Gemma cuatro, corre en la propia laptop. No necesita clave ni nube, y la conversación no sale de tu equipo.",
+                  "oido":  "El modelo Gemma 4 corre en la propia laptop, no necesita clave ni nube, y la conversación no sale de tu equipo."
+              },
+    "web":  {
+                "huella":  "7fc1f27fdf5ec163",
+                "duracion":  6.408,
+                "cobertura":  1,
+                "toma":  1,
+                "texto":  "Si la pregunta necesita datos actuales, busca en internet, lee las páginas y cita sus fuentes.",
+                "oido":  "Si la pregunta necesita datos actuales, busca en Internet, lee las páginas y cita sus fuentes."
+            },
+    "equipo":  {
+                   "huella":  "10b7e737a5485c3f",
+                   "duracion":  4.536,
+                   "cobertura":  1,
+                   "toma":  1,
+                   "texto":  "Y lo que el equipo ya sabe, como la memoria libre, lo lee del propio Windows.",
+                   "oido":  "Y lo que el equipo ya sabe, como la memoria libre, lo lee del propio Windows."
+               },
+    "comandos":  {
+                     "huella":  "c4c77be34aba75d8",
+                     "duracion":  10.752,
+                     "cobertura":  1,
+                     "toma":  1,
+                     "texto":  "Le puedes pedir un comando nuevo conversando. Solo de lectura: unas reglas fijas lo revisan, lo prueba y lo guarda. Desde ese momento lo usa cuando le preguntas.",
+                     "oido":  "Le puedes pedir un comando nuevo conversando, solo de lectura. Unas reglas fijas lo revisan, lo prueba y lo guarda. Desde ese momento, lo usa cuando le preguntas."
+                 },
+    "consultas":  {
+                      "huella":  "ad35994dbdbd9641",
+                      "duracion":  7.176,
+                      "cobertura":  1,
+                      "toma":  1,
+                      "texto":  "Con las páginas web hace lo mismo: elige la página, saca los datos que le pides y te los enseña antes de guardarla.",
+                      "oido":  "Con las páginas web hace lo mismo. Elige la página, saca los datos que le pides y te los enseña antes de guardarla."
+                  },
+    "preferencias":  {
+                         "huella":  "61edef358760be13",
+                         "duracion":  6.096,
+                         "cobertura":  1,
+                         "toma":  1,
+                         "texto":  "También recuerda cómo quieres que te conteste, en esta conversación y en las próximas.",
+                         "oido":  "También, recuerda cómo quieres que te conteste, en esta conversación y en las próximas."
+                     },
+    "aprende":  {
+                    "huella":  "6205308e84012806",
+                    "duracion":  10.32,
+                    "cobertura":  1,
+                    "toma":  1,
+                    "texto":  "Y lo más nuevo: aprende de la carpeta de tu negocio. Lee Word, Excel, PowerPoint y PDF, y te avisa de lo que no puede leer, como una factura escaneada.",
+                    "oido":  "Y lo más nuevo, aprende de la carpeta de tu negocio. Lee Word, Excel, PowerPoint y PDF y te avisa de lo que no puede leer como una factura escaneada."
+                },
+    "pregunta":  {
+                     "huella":  "1e89002de52b1979",
+                     "duracion":  16.584,
+                     "cobertura":  1,
+                     "toma":  1,
+                     "texto":  "Le preguntas, y contesta con lo que dicen tus documentos y de cuál sale: un pastel de tres leches cuesta seiscientos cincuenta córdobas, según el catálogo en PDF. Y si un dato no está, como un sueldo, no lo inventa: te dice que no viene.",
+                     "oido":  "Le preguntas, y contesta con lo que dice en tus documentos y de cuál sale. Un pastel de tres leches cuesta 650 córdobas, según el catálogo en PRF. Y si un dato no está, como un sueldo, no lo inventa, te dice que no viene."
+                 },
+    "buscar":  {
+                   "huella":  "1f372d63f4552685",
+                   "duracion":  7.368,
+                   "cobertura":  1,
+                   "toma":  1,
+                   "texto":  "Con documentos buscar ves de dónde sale cada dato, sin preguntarle al modelo. Aquí, la tabla de precios del PDF.",
+                   "oido":  "Con Documentos Buscar, ves de dónde sale cada dato, sin preguntarle al modelo. Aquí, la tabla de precios del PDF."
+               },
+    "olvida":  {
+                   "huella":  "db0ad72ebb02db23",
+                   "duracion":  10.728,
+                   "cobertura":  1,
+                   "toma":  1,
+                   "texto":  "Y también olvida. Le pides que olvide lo de las extensiones: te enseña qué va a olvidar y espera tu sí. Tus ficheros no se tocan, y en una conversación nueva ese dato ya no sale.",
+                   "oido":  "Y también Olvida. Le pides que olvide lo de las extensiones. Te enseña qué va a olvidar y espera tu sí. Tus ficheros no se tocan. Y en una conversación nueva, ese dato ya no sale."
+               },
+    "recuerda":  {
+                     "huella":  "198d5c939020e28d",
+                     "duracion":  5.952,
+                     "cobertura":  1,
+                     "toma":  1,
+                     "texto":  "Y se puede deshacer: lo olvidado queda en una lista, y con recordar lo vuelve a usar.",
+                     "oido":  "y se puede deshacer. Lo olvidado queda en una lista. Y con recordar, lo vuelve a usar."
+                 },
+    "final":  {
+                  "huella":  "1a7bb58dd073e424",
+                  "duracion":  8.928,
+                  "cobertura":  1,
+                  "toma":  1,
+                  "texto":  "Pe erre ce, a i, dos punto cero. Aprende de los documentos de tu negocio, olvida lo que le pidas y, si un dato no está, te lo dice.",
+                  "oido":  "PRC AI 2.0. Aprende de los documentos de tu negocio, olvida lo que le pidas, y si un dato no está, te lo dice."
+              }
+}

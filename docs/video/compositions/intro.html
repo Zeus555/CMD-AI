@@ -1,0 +1,26 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #15171B; font-family: 'Inter', sans-serif; }
+    #intro-marca { position: absolute; left: 160px; top: 300px; font: 700 132px/1 'JetBrains Mono', monospace; color: #F6F2EA; letter-spacing: -0.03em; }
+    #intro-cur { display: inline-block; width: 64px; height: 118px; background: #E8A048; vertical-align: -12px; margin-left: 18px; }
+    #intro-l1 { position: absolute; left: 164px; top: 500px; font-weight: 700; font-size: 54px; color: #F6F2EA; letter-spacing: -0.02em; }
+    #intro-l2 { position: absolute; left: 164px; top: 580px; font-weight: 400; font-size: 54px; color: #E8A048; letter-spacing: -0.02em; }
+    #intro-l3 { position: absolute; left: 164px; top: 700px; font: 400 28px 'JetBrains Mono', monospace; color: #8B9099; }
+  </style>
+  <div id="root" data-composition-id="intro" data-width="1920" data-height="1080">
+    <div id="intro-marca">PRC AI 2.0<span id="intro-cur"></span></div>
+    <div id="intro-l1">Una IA en la terminal de Windows.</div>
+    <div id="intro-l2">En tu equipo, sin nube.</div>
+    <div id="intro-l3">PowerShell puro · cero dependencias · en español</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5].forEach(function (s, i) { tl.set('#intro-cur', { opacity: i % 2 ? 1 : 0 }, s); });
+      tl.fromTo('#intro-l1', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 1.1);
+      tl.fromTo('#intro-l2', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 1.8);
+      tl.fromTo('#intro-l3', { opacity: 0 }, { opacity: 1, duration: 0.6 }, 2.8);
+      window.__timelines["intro"] = tl;
+    })();
+  </script>
+</template>

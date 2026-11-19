@@ -1,0 +1,5 @@
+# Escena 1: chat local, buscar en internet y datos del equipo.
+explica en dos líneas qué ventaja tiene usar un modelo de IA en mi propio equipo
+¿cómo está el clima hoy en Managua?
+¿cuánta memoria RAM tiene este equipo y cuánta está libre?
+bye

@@ -1,0 +1,21 @@
+# Narración del video: una línea por escena, «id: lo que dice la voz».
+#
+# Se escribe como se dice, no como se lee: las cifras y las siglas van en
+# letras («seiscientos cincuenta córdobas», «pe erre ce»), porque la voz lee
+# lo que hay. voz.ps1 la convierte en assets\voz\<id>.mp3 y montar.ps1 alarga
+# la escena si la voz no cabe en ella. Si cambias una línea, vuelve a pasar
+# voz.ps1 (solo rehace las que cambiaron) y luego montar.ps1.
+
+intro: Pe erre ce, a i, dos punto cero. Una inteligencia artificial en la terminal de Windows, en tu propio equipo.
+local: El modelo, Gemma cuatro, corre en la propia laptop. No necesita clave ni nube, y la conversación no sale de tu equipo.
+web: Si la pregunta necesita datos actuales, busca en internet, lee las páginas y cita sus fuentes.
+equipo: Y lo que el equipo ya sabe, como la memoria libre, lo lee del propio Windows.
+comandos: Le puedes pedir un comando nuevo conversando. Solo de lectura: unas reglas fijas lo revisan, lo prueba y lo guarda. Desde ese momento lo usa cuando le preguntas.
+consultas: Con las páginas web hace lo mismo: elige la página, saca los datos que le pides y te los enseña antes de guardarla.
+preferencias: También recuerda cómo quieres que te conteste, en esta conversación y en las próximas.
+aprende: Y lo más nuevo: aprende de la carpeta de tu negocio. Lee Word, Excel, PowerPoint y PDF, y te avisa de lo que no puede leer, como una factura escaneada.
+pregunta: Le preguntas, y contesta con lo que dicen tus documentos y de cuál sale: un pastel de tres leches cuesta seiscientos cincuenta córdobas, según el catálogo en PDF. Y si un dato no está, como un sueldo, no lo inventa: te dice que no viene.
+buscar: Con documentos buscar ves de dónde sale cada dato, sin preguntarle al modelo. Aquí, la tabla de precios del PDF.
+olvida: Y también olvida. Le pides que olvide lo de las extensiones: te enseña qué va a olvidar y espera tu sí. Tus ficheros no se tocan, y en una conversación nueva ese dato ya no sale.
+recuerda: Y se puede deshacer: lo olvidado queda en una lista, y con recordar lo vuelve a usar.
+final: Pe erre ce, a i, dos punto cero. Aprende de los documentos de tu negocio, olvida lo que le pidas y, si un dato no está, te lo dice.

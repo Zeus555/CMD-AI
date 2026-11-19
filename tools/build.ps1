@@ -25,6 +25,7 @@ $objetivos = @(
     (Join-Path $Root 'lib')
     (Join-Path $Root 'tools')
     (Join-Path $Root 'tests')
+    (Join-Path $Root 'docs')       # docs\video: capturar.ps1 y montar.ps1
 )
 
 $ficheros = foreach ($o in $objetivos) {

@@ -1,0 +1,70 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #F3EFE6; font-family: 'Inter', sans-serif; }
+    #buscar-head { position: absolute; left: 120px; top: 62px; width: 1680px; }
+    #buscar-kicker { font-weight: 700; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; color: #A85C14; }
+    #buscar-titulo { font-weight: 700; font-size: 56px; line-height: 1.1; letter-spacing: -0.02em; color: #1D1B18; margin-top: 12px; }
+    #buscar-pie { font-weight: 400; font-size: 27px; line-height: 1.35; color: #5B554C; margin-top: 12px; }
+    #buscar-term { position: absolute; left: 120px; top: 282px; width: 1680px; height: 730px; background: #15171B; border-radius: 14px; overflow: hidden; box-shadow: 0 28px 60px rgba(60, 40, 10, 0.22); }
+    #buscar-term .bar { height: 44px; background: #23262C; display: flex; align-items: center; padding: 0 18px; gap: 10px; }
+    #buscar-term .dot { width: 14px; height: 14px; border-radius: 50%; }
+    #buscar-term .bar-t { margin-left: 14px; font: 500 17px 'JetBrains Mono', monospace; color: #8B9099; }
+    #buscar-cuerpo { padding: 22px 32px; font: 400 24px/1.45 'JetBrains Mono', monospace; color: #E4DFD4; }
+    #buscar-term .ln { opacity: 0; position: relative; white-space: pre-wrap; word-break: break-word; }
+    #buscar-term .tx { position: relative; }
+    #buscar-term .u { color: #F6F2EA; }
+    #buscar-term .u .pr { color: #7CC7B2; }
+    #buscar-term .ia .pr { color: #8B9099; }
+    #buscar-term .dim { color: #A3A8B0; }
+    #buscar-term .gap { color: #7C8087; }
+    #buscar-term .ch { display: none; }
+    #buscar-term .cur { display: inline-block; width: 12px; height: 1.1em; background: #7CC7B2; vertical-align: -0.2em; opacity: 0; }
+    #buscar-term .hl-bg { position: absolute; left: -14px; right: -14px; top: -1px; bottom: -1px; background: rgba(232, 160, 72, 0.17); border-left: 4px solid #E8A048; transform-origin: left center; }
+    #buscar-nota { position: absolute; left: 120px; top: 1028px; font-weight: 400; font-size: 22px; color: #6A645A; }
+  </style>
+  <div id="root" data-composition-id="buscar" data-width="1920" data-height="1080">
+    <div id="buscar-head">
+      <div id="buscar-kicker">7 &#183; Los documentos de tu negocio</div>
+      <div id="buscar-titulo">Comprueba de d&#243;nde sale cada dato</div>
+      <div id="buscar-pie">/documentos buscar ense&#241;a los trozos que ver&#237;a el modelo, sin preguntarle: aqu&#237;, la tabla del PDF.</div>
+    </div>
+    <div id="buscar-term" data-layout-allow-overflow>
+      <div class="bar"><span class="dot" style="background:#E5675B"></span><span class="dot" style="background:#E8B04A"></span><span class="dot" style="background:#5DBB72"></span><span class="bar-t" data-layout-ignore>AI  ·  PowerShell</span></div>
+      <div id="buscar-cuerpo">
+          <div class="ln u" id="buscar-l1"><span class="pr">Usuario &gt; </span><span class="ch">/</span><span class="ch">d</span><span class="ch">o</span><span class="ch">c</span><span class="ch">u</span><span class="ch">m</span><span class="ch">e</span><span class="ch">n</span><span class="ch">t</span><span class="ch">o</span><span class="ch">s</span><span class="ch"> </span><span class="ch">b</span><span class="ch">u</span><span class="ch">s</span><span class="ch">c</span><span class="ch">a</span><span class="ch">r</span><span class="ch"> </span><span class="ch">p</span><span class="ch">a</span><span class="ch">s</span><span class="ch">t</span><span class="ch">e</span><span class="ch">l</span><span class="ch"> </span><span class="ch">t</span><span class="ch">r</span><span class="ch">e</span><span class="ch">s</span><span class="ch"> </span><span class="ch">l</span><span class="ch">e</span><span class="ch">c</span><span class="ch">h</span><span class="ch">e</span><span class="ch">s</span><span class="cur" id="buscar-l1-cur"></span></div>
+          <div class="ln dim" id="buscar-l2"><span class="tx">  1. Cat&#225;logo de pasteles.pdf &gt; Cat&#225;logo de pasteles &gt; Precios  (6.5 puntos)</span></div>
+          <div class="ln dim" id="buscar-l3"><span class="tx">     Pastel | Porci&#243;n | Entero (12 porciones)</span></div>
+          <div class="ln dim" id="buscar-l4"><span class="hl-bg"></span><span class="tx">     Tres leches | C$ 60 | C$ 650</span></div>
+          <div class="ln dim" id="buscar-l5"><span class="tx">     Chocolate con avellana | C$ 75 | C$ 820</span></div>
+          <div class="ln dim" id="buscar-l6"><span class="tx">     Zanahoria y nuez | C$ 70 | C$ 760</span></div>
+          <div class="ln dim" id="buscar-l7"><span class="tx">     Selva negra | C$ 80 | C$ 880</span></div>
+          <div class="ln gap" id="buscar-l8"><span class="tx">...</span></div>
+          <div class="ln dim" id="buscar-l9"><span class="tx">(viajar&#237;an solos con esa pregunta; cobertura 1)</span></div>
+      </div>
+    </div>
+    <div id="buscar-nota">Salida real de PRC AI 2.0 con Gemma 4 E4B en la propia laptop · las esperas del modelo se han acortado</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo('#buscar-kicker', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 0);
+      tl.fromTo('#buscar-titulo', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 0.08);
+      tl.fromTo('#buscar-pie', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.35);
+      tl.fromTo('#buscar-term', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.2);
+      tl.set('#buscar-l1', { opacity: 1 }, 1);
+      tl.set('#buscar-l1-cur', { opacity: 1 }, 1);
+      tl.fromTo('#buscar-l1 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 1.2);
+      tl.set('#buscar-l1-cur', { opacity: 0 }, 1.98);
+      tl.fromTo('#buscar-l2', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.08);
+      tl.fromTo('#buscar-l3', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.24);
+      tl.fromTo('#buscar-l4', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.4);
+      tl.fromTo('#buscar-l4 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 2.65);
+      tl.fromTo('#buscar-l5', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.56);
+      tl.fromTo('#buscar-l6', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.72);
+      tl.fromTo('#buscar-l7', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.88);
+      tl.fromTo('#buscar-l8', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 3.04);
+      tl.fromTo('#buscar-l9', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 3.34);
+      window.__timelines["buscar"] = tl;
+    })();
+  </script>
+</template>

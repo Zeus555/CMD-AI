@@ -1,0 +1,18 @@
+# Escena 3: una preferencia y, sobre todo, los documentos del negocio.
+# Los documentos los crea tests\negocio.ps1 -Crear (ver GUION.md); el catalogo de
+# pasteles es un PDF y hay una factura escaneada, que no se puede leer.
+recuerda que me contestes siempre en frases cortas
+s
+aprende de los documentos de D:\MiNegocio
+mi panadería: servicios, precios, empleados, horarios y procedimientos
+¿A qué hora abre la sucursal Norte los domingos?
+¿Cuánto cuesta un pastel de tres leches entero?
+¿Cuánto gana Lucía Martínez?
+/documentos buscar pastel tres leches
+olvida lo de la extensión
+sí
+/new
+¿Cuál es la extensión de Ana Torres?
+/documentos olvidos
+/documentos recordar 1
+bye

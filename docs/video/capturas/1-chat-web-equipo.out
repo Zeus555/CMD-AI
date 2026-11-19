@@ -1,0 +1,15 @@
+
+  PRC AI 2.0  Gemma 4 E4B (local) / gemma-4-e4b  -  busca en internet si hace falta
+  bye para salir  -  /help para los comandos
+
+Usuario > explica en dos líneas qué ventaja tiene usar un modelo de IA en mi propio equipo
+ia > Usar un modelo de IA localmente garantiza privacidad total, ya que tus datos nunca salen de tu equipo. Además, permite operar sin conexión a internet, siendo útil en entornos sin conectividad.
+Usuario > ¿cómo está el clima hoy en Managua?
+ia > buscando: clima hoy en Managua
+ia > El clima en Managua hoy es mayormente soleado, con temperaturas alrededor de 92°F (33°C) y una probabilidad de lluvia muy baja. La calidad del aire se reporta como mala en algunas fuentes.
+   fuentes: https://www.accuweather.com/es/ni/managua/253810/hourly-weather-forecast/253810  https://weather.com/es-US/tiempo/hoy/l/c09e9f2f67633bbdc642c9f10353c8dd199918a6ce98499a235c862e3872a8dd
+Usuario > ¿cuánta memoria RAM tiene este equipo y cuánta está libre?
+ia > leyendo de este equipo: memoria
+ia > El equipo tiene 31,8 GB de Memoria RAM en total, y actualmente hay 9,7 GB libres.
+Usuario > bye
+hasta luego

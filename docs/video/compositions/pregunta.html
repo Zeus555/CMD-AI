@@ -1,0 +1,83 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #F3EFE6; font-family: 'Inter', sans-serif; }
+    #pregunta-head { position: absolute; left: 120px; top: 62px; width: 1680px; }
+    #pregunta-kicker { font-weight: 700; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; color: #A85C14; }
+    #pregunta-titulo { font-weight: 700; font-size: 56px; line-height: 1.1; letter-spacing: -0.02em; color: #1D1B18; margin-top: 12px; }
+    #pregunta-pie { font-weight: 400; font-size: 27px; line-height: 1.35; color: #5B554C; margin-top: 12px; }
+    #pregunta-term { position: absolute; left: 120px; top: 282px; width: 1680px; height: 730px; background: #15171B; border-radius: 14px; overflow: hidden; box-shadow: 0 28px 60px rgba(60, 40, 10, 0.22); }
+    #pregunta-term .bar { height: 44px; background: #23262C; display: flex; align-items: center; padding: 0 18px; gap: 10px; }
+    #pregunta-term .dot { width: 14px; height: 14px; border-radius: 50%; }
+    #pregunta-term .bar-t { margin-left: 14px; font: 500 17px 'JetBrains Mono', monospace; color: #8B9099; }
+    #pregunta-cuerpo { padding: 22px 32px; font: 400 24px/1.45 'JetBrains Mono', monospace; color: #E4DFD4; }
+    #pregunta-term .ln { opacity: 0; position: relative; white-space: pre-wrap; word-break: break-word; }
+    #pregunta-term .tx { position: relative; }
+    #pregunta-term .u { color: #F6F2EA; }
+    #pregunta-term .u .pr { color: #7CC7B2; }
+    #pregunta-term .ia .pr { color: #8B9099; }
+    #pregunta-term .dim { color: #A3A8B0; }
+    #pregunta-term .gap { color: #7C8087; }
+    #pregunta-term .ch { display: none; }
+    #pregunta-term .cur { display: inline-block; width: 12px; height: 1.1em; background: #7CC7B2; vertical-align: -0.2em; opacity: 0; }
+    #pregunta-term .hl-bg { position: absolute; left: -14px; right: -14px; top: -1px; bottom: -1px; background: rgba(232, 160, 72, 0.17); border-left: 4px solid #E8A048; transform-origin: left center; }
+    #pregunta-nota { position: absolute; left: 120px; top: 1028px; font-weight: 400; font-size: 22px; color: #6A645A; }
+  </style>
+  <div id="root" data-composition-id="pregunta" data-width="1920" data-height="1080">
+    <div id="pregunta-head">
+      <div id="pregunta-kicker">7 &#183; Los documentos de tu negocio</div>
+      <div id="pregunta-titulo">Contesta con lo que dicen, y dice de d&#243;nde</div>
+      <div id="pregunta-pie">Tambi&#233;n de un PDF, con su apartado. Y si un dato no est&#225; en los documentos, lo dice: no lo inventa.</div>
+    </div>
+    <div id="pregunta-term" data-layout-allow-overflow>
+      <div class="bar"><span class="dot" style="background:#E5675B"></span><span class="dot" style="background:#E8B04A"></span><span class="dot" style="background:#5DBB72"></span><span class="bar-t" data-layout-ignore>AI  ·  PowerShell</span></div>
+      <div id="pregunta-cuerpo">
+          <div class="ln u" id="pregunta-l1"><span class="pr">Usuario &gt; </span><span class="ch">&#191;</span><span class="ch">A</span><span class="ch"> </span><span class="ch">q</span><span class="ch">u</span><span class="ch">&#233;</span><span class="ch"> </span><span class="ch">h</span><span class="ch">o</span><span class="ch">r</span><span class="ch">a</span><span class="ch"> </span><span class="ch">a</span><span class="ch">b</span><span class="ch">r</span><span class="ch">e</span><span class="ch"> </span><span class="ch">l</span><span class="ch">a</span><span class="ch"> </span><span class="ch">s</span><span class="ch">u</span><span class="ch">c</span><span class="ch">u</span><span class="ch">r</span><span class="ch">s</span><span class="ch">a</span><span class="ch">l</span><span class="ch"> </span><span class="ch">N</span><span class="ch">o</span><span class="ch">r</span><span class="ch">t</span><span class="ch">e</span><span class="ch"> </span><span class="ch">l</span><span class="ch">o</span><span class="ch">s</span><span class="ch"> </span><span class="ch">d</span><span class="ch">o</span><span class="ch">m</span><span class="ch">i</span><span class="ch">n</span><span class="ch">g</span><span class="ch">o</span><span class="ch">s</span><span class="ch">?</span><span class="cur" id="pregunta-l1-cur"></span></div>
+          <div class="ln ia" id="pregunta-l2"><span class="tx"><span class="pr">ia &gt; </span>consultando tus documentos: Servicios y precios.xlsx, Procedimientos\Apertura y cierre.docx, Qui&#233;nes somos.docx</span></div>
+          <div class="ln ia" id="pregunta-l3"><span class="tx"><span class="pr">ia &gt; </span>Abre a las 08:00. Esto viene del documento Servicios y precios.xlsx, apartado &#171;Hoja: Horarios&#187;.</span></div>
+          <div class="ln dim" id="pregunta-l4"><span class="tx">   documentos: Servicios y precios.xlsx  Procedimientos\Apertura y cierre.docx  Qui&#233;nes somos.docx</span></div>
+          <div class="ln u" id="pregunta-l5"><span class="pr">Usuario &gt; </span><span class="ch">&#191;</span><span class="ch">C</span><span class="ch">u</span><span class="ch">&#225;</span><span class="ch">n</span><span class="ch">t</span><span class="ch">o</span><span class="ch"> </span><span class="ch">c</span><span class="ch">u</span><span class="ch">e</span><span class="ch">s</span><span class="ch">t</span><span class="ch">a</span><span class="ch"> </span><span class="ch">u</span><span class="ch">n</span><span class="ch"> </span><span class="ch">p</span><span class="ch">a</span><span class="ch">s</span><span class="ch">t</span><span class="ch">e</span><span class="ch">l</span><span class="ch"> </span><span class="ch">d</span><span class="ch">e</span><span class="ch"> </span><span class="ch">t</span><span class="ch">r</span><span class="ch">e</span><span class="ch">s</span><span class="ch"> </span><span class="ch">l</span><span class="ch">e</span><span class="ch">c</span><span class="ch">h</span><span class="ch">e</span><span class="ch">s</span><span class="ch"> </span><span class="ch">e</span><span class="ch">n</span><span class="ch">t</span><span class="ch">e</span><span class="ch">r</span><span class="ch">o</span><span class="ch">?</span><span class="cur" id="pregunta-l5-cur"></span></div>
+          <div class="ln ia" id="pregunta-l6"><span class="tx"><span class="pr">ia &gt; </span>consultando tus documentos: Cat&#225;logo de pasteles.pdf, Servicios y precios.xlsx</span></div>
+          <div class="ln ia" id="pregunta-l7"><span class="hl-bg"></span><span class="tx"><span class="pr">ia &gt; </span>Cuesta C$ 650. Esto viene del documento Cat&#225;logo de pasteles.pdf, apartado &#171;Cat&#225;logo de pasteles &gt; Precios&#187;.</span></div>
+          <div class="ln dim" id="pregunta-l8"><span class="tx">   documentos: Cat&#225;logo de pasteles.pdf  Servicios y precios.xlsx</span></div>
+          <div class="ln u" id="pregunta-l9"><span class="pr">Usuario &gt; </span><span class="ch">&#191;</span><span class="ch">C</span><span class="ch">u</span><span class="ch">&#225;</span><span class="ch">n</span><span class="ch">t</span><span class="ch">o</span><span class="ch"> </span><span class="ch">g</span><span class="ch">a</span><span class="ch">n</span><span class="ch">a</span><span class="ch"> </span><span class="ch">L</span><span class="ch">u</span><span class="ch">c</span><span class="ch">&#237;</span><span class="ch">a</span><span class="ch"> </span><span class="ch">M</span><span class="ch">a</span><span class="ch">r</span><span class="ch">t</span><span class="ch">&#237;</span><span class="ch">n</span><span class="ch">e</span><span class="ch">z</span><span class="ch">?</span><span class="cur" id="pregunta-l9-cur"></span></div>
+          <div class="ln ia" id="pregunta-l10"><span class="tx"><span class="pr">ia &gt; </span>consultando tus documentos: Procedimientos\Apertura y cierre.docx, Cat&#225;logo de pasteles.pdf, Empleados.csv</span></div>
+          <div class="ln ia" id="pregunta-l11"><span class="hl-bg"></span><span class="tx"><span class="pr">ia &gt; </span>No viene en los documentos.</span></div>
+          <div class="ln dim" id="pregunta-l12"><span class="tx">   documentos: Procedimientos\Apertura y cierre.docx  Cat&#225;logo de pasteles.pdf  Empleados.csv</span></div>
+      </div>
+    </div>
+    <div id="pregunta-nota">Salida real de PRC AI 2.0 con Gemma 4 E4B en la propia laptop · las esperas del modelo se han acortado</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo('#pregunta-kicker', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 0);
+      tl.fromTo('#pregunta-titulo', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 0.08);
+      tl.fromTo('#pregunta-pie', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.35);
+      tl.fromTo('#pregunta-term', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.2);
+      tl.set('#pregunta-l1', { opacity: 1 }, 1);
+      tl.set('#pregunta-l1-cur', { opacity: 1 }, 1);
+      tl.fromTo('#pregunta-l1 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 1.2);
+      tl.set('#pregunta-l1-cur', { opacity: 0 }, 2.14);
+      tl.fromTo('#pregunta-l2', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.24);
+      tl.fromTo('#pregunta-l3', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.4);
+      tl.fromTo('#pregunta-l4', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.56);
+      tl.set('#pregunta-l5', { opacity: 1 }, 5.72);
+      tl.set('#pregunta-l5-cur', { opacity: 1 }, 5.72);
+      tl.fromTo('#pregunta-l5 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 5.92);
+      tl.set('#pregunta-l5-cur', { opacity: 0 }, 6.84);
+      tl.fromTo('#pregunta-l6', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 6.94);
+      tl.fromTo('#pregunta-l7', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 7.1);
+      tl.fromTo('#pregunta-l7 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 7.35);
+      tl.fromTo('#pregunta-l8', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 7.26);
+      tl.set('#pregunta-l9', { opacity: 1 }, 10.42);
+      tl.set('#pregunta-l9-cur', { opacity: 1 }, 10.42);
+      tl.fromTo('#pregunta-l9 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 10.62);
+      tl.set('#pregunta-l9-cur', { opacity: 0 }, 11.27);
+      tl.fromTo('#pregunta-l10', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 11.37);
+      tl.fromTo('#pregunta-l11', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 11.53);
+      tl.fromTo('#pregunta-l11 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 11.78);
+      tl.fromTo('#pregunta-l12', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 11.69);
+      window.__timelines["pregunta"] = tl;
+    })();
+  </script>
+</template>

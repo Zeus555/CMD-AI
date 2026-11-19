@@ -1,0 +1,61 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #F3EFE6; font-family: 'Inter', sans-serif; }
+    #web-head { position: absolute; left: 120px; top: 62px; width: 1680px; }
+    #web-kicker { font-weight: 700; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; color: #A85C14; }
+    #web-titulo { font-weight: 700; font-size: 56px; line-height: 1.1; letter-spacing: -0.02em; color: #1D1B18; margin-top: 12px; }
+    #web-pie { font-weight: 400; font-size: 27px; line-height: 1.35; color: #5B554C; margin-top: 12px; }
+    #web-term { position: absolute; left: 120px; top: 282px; width: 1680px; height: 730px; background: #15171B; border-radius: 14px; overflow: hidden; box-shadow: 0 28px 60px rgba(60, 40, 10, 0.22); }
+    #web-term .bar { height: 44px; background: #23262C; display: flex; align-items: center; padding: 0 18px; gap: 10px; }
+    #web-term .dot { width: 14px; height: 14px; border-radius: 50%; }
+    #web-term .bar-t { margin-left: 14px; font: 500 17px 'JetBrains Mono', monospace; color: #8B9099; }
+    #web-cuerpo { padding: 22px 32px; font: 400 24px/1.45 'JetBrains Mono', monospace; color: #E4DFD4; }
+    #web-term .ln { opacity: 0; position: relative; white-space: pre-wrap; word-break: break-word; }
+    #web-term .tx { position: relative; }
+    #web-term .u { color: #F6F2EA; }
+    #web-term .u .pr { color: #7CC7B2; }
+    #web-term .ia .pr { color: #8B9099; }
+    #web-term .dim { color: #A3A8B0; }
+    #web-term .gap { color: #7C8087; }
+    #web-term .ch { display: none; }
+    #web-term .cur { display: inline-block; width: 12px; height: 1.1em; background: #7CC7B2; vertical-align: -0.2em; opacity: 0; }
+    #web-term .hl-bg { position: absolute; left: -14px; right: -14px; top: -1px; bottom: -1px; background: rgba(232, 160, 72, 0.17); border-left: 4px solid #E8A048; transform-origin: left center; }
+    #web-nota { position: absolute; left: 120px; top: 1028px; font-weight: 400; font-size: 22px; color: #6A645A; }
+  </style>
+  <div id="root" data-composition-id="web" data-width="1920" data-height="1080">
+    <div id="web-head">
+      <div id="web-kicker">2 &#183; Internet, solo si hace falta</div>
+      <div id="web-titulo">Busca en internet cuando la pregunta lo pide</div>
+      <div id="web-pie">El modelo decide si necesita datos actuales; busca, lee las p&#225;ginas y cita las fuentes.</div>
+    </div>
+    <div id="web-term" data-layout-allow-overflow>
+      <div class="bar"><span class="dot" style="background:#E5675B"></span><span class="dot" style="background:#E8B04A"></span><span class="dot" style="background:#5DBB72"></span><span class="bar-t" data-layout-ignore>AI  ·  PowerShell</span></div>
+      <div id="web-cuerpo">
+          <div class="ln u" id="web-l1"><span class="pr">Usuario &gt; </span><span class="ch">&#191;</span><span class="ch">c</span><span class="ch">&#243;</span><span class="ch">m</span><span class="ch">o</span><span class="ch"> </span><span class="ch">e</span><span class="ch">s</span><span class="ch">t</span><span class="ch">&#225;</span><span class="ch"> </span><span class="ch">e</span><span class="ch">l</span><span class="ch"> </span><span class="ch">c</span><span class="ch">l</span><span class="ch">i</span><span class="ch">m</span><span class="ch">a</span><span class="ch"> </span><span class="ch">h</span><span class="ch">o</span><span class="ch">y</span><span class="ch"> </span><span class="ch">e</span><span class="ch">n</span><span class="ch"> </span><span class="ch">M</span><span class="ch">a</span><span class="ch">n</span><span class="ch">a</span><span class="ch">g</span><span class="ch">u</span><span class="ch">a</span><span class="ch">?</span><span class="cur" id="web-l1-cur"></span></div>
+          <div class="ln ia" id="web-l2"><span class="hl-bg"></span><span class="tx"><span class="pr">ia &gt; </span>buscando: clima hoy en Managua</span></div>
+          <div class="ln ia" id="web-l3"><span class="tx"><span class="pr">ia &gt; </span>El clima en Managua hoy es mayormente soleado, con temperaturas alrededor de 92&#176;F (33&#176;C) y una probabilidad de lluvia muy baja. La calidad del aire se reporta como mala en algunas fuentes.</span></div>
+          <div class="ln dim" id="web-l4"><span class="hl-bg"></span><span class="tx">   fuentes: https://www.accuweather.com/es/ni/managua/253810/hourly-weather-forecast/253810  https://weather.com/es-US/tiempo/hoy/l/c09e9f2f67633bbdc642c9f10353c8dd199918a6ce98499a235c862e3872a8dd</span></div>
+      </div>
+    </div>
+    <div id="web-nota">Salida real de PRC AI 2.0 con Gemma 4 E4B en la propia laptop · las esperas del modelo se han acortado</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo('#web-kicker', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 0);
+      tl.fromTo('#web-titulo', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 0.08);
+      tl.fromTo('#web-pie', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.35);
+      tl.fromTo('#web-term', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.2);
+      tl.set('#web-l1', { opacity: 1 }, 1);
+      tl.set('#web-l1-cur', { opacity: 1 }, 1);
+      tl.fromTo('#web-l1 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 1.2);
+      tl.set('#web-l1-cur', { opacity: 0 }, 1.95);
+      tl.fromTo('#web-l2', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.05);
+      tl.fromTo('#web-l2 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 2.3);
+      tl.fromTo('#web-l3', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.21);
+      tl.fromTo('#web-l4', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.37);
+      tl.fromTo('#web-l4 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 2.62);
+      window.__timelines["web"] = tl;
+    })();
+  </script>
+</template>

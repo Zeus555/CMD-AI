@@ -8,6 +8,192 @@ Las fechas son las de los commits. Lo más nuevo va arriba.
 
 ---
 
+## 2026-11-18 — El video, narrado
+
+**La petición.** Ponerle audio al video: «una narración sin depender
+únicamente del texto, no una música», con la voz que ya usan los videos de
+`D:\PRC Channel Linkedin`.
+
+**Cómo.** Una línea de narración por escena (`docs/video/narracion.txt`) y
+`docs/video/voz.ps1`, que la convierte en voz por la misma vía que ese
+proyecto: `gpt-4o-mini-tts` con la voz `cedar`, en español latinoamericano
+neutro, silencio de los bordes fuera, compresión y volumen igualado con
+ffmpeg, y whisper-1 para comprobar que la toma dice el guion. Está escrito en
+PowerShell, con `HttpClient` de .NET, sin añadir nada al equipo. `montar.ps1`
+pone cada toma medio segundo después de que empiece su escena y alarga la
+escena si la voz no cabe.
+
+- **Lo que se descartó.** Las voces de Windows (solo hay en inglés) y una
+  voz local (Kokoro pide Python, que no está). La música tampoco: no se pidió.
+- **Lo que cazó Whisper.** La escena «pregunta» acababa en «No lo inventa.»,
+  y en las tres tomas esa frase no se oía. Se reescribió («no lo inventa: te
+  dice que no viene») y pasó a la primera. En la final, una toma sonó «PRC,
+  ahí, 2.0»: «a i» dicho deprisa suena a «ahí». Se repitió hasta que Whisper
+  oyó «PRC AI 2.0».
+- **Duración.** De 1:59 a 2:13: la voz manda, y cinco escenas se alargan
+  entre 0,4 y 4 s, quedándose en su último fotograma.
+- **Las tomas van en git** (1,7 MB en MP3) con `voz.json`: con ellas el video
+  se vuelve a montar sin volver a pagar la voz. Costó unos 5 centavos.
+
+**Pruebas.** `hyperframes check`: 0 errores y el audio sin avisos. El render
+(2:13, 8,6 MB) se midió con ffmpeg: la pista de audio dura lo mismo que el
+video, la voz entra a los 0,5 s, el volumen integrado es de −13,6 LUFS y el
+pico, de −2,2 dBTP. Medido, no escuchado: falta que alguien lo oiga.
+`tests\probar.ps1`: las 8 pasan.
+
+## 2026-11-18 — Leer los PDF
+
+**La petición.** Que lea los PDF: «es de los documentos más comunes que
+existen». Hasta ahora se decía cuáles había y que se pasaran a Word.
+
+**Por qué ahora sí, y qué cambió de la decisión anterior.** Se habían dejado
+fuera porque, sin una biblioteca, sus tipos de letra dan texto roto en
+muchos ficheros, y un texto roto acaba en datos falsos. El riesgo sigue: lo
+que cambia es que ahora se mide. Se cuentan las letras que no se pudieron
+descifrar y se mira si lo leído parece texto. Un PDF que no pasa no se lee, y
+se dice por qué. Así se leen los PDF normales y se rechazan los raros, en
+vez de rechazarlos todos.
+
+**Cómo, sin dependencias (`lib/pdf.ps1`).**
+
+- **Fichero en Latin-1.** Se lee así, que es un carácter por byte, y las
+  expresiones regulares de .NET hacen el trabajo pesado: los objetos, los
+  streams (Flate con el `DeflateStream` de .NET, ASCII85, hexadecimal), los
+  objetos guardados dentro de streams (`/ObjStm`, lo que hacen Word y Chrome)
+  y el contenido de cada página.
+- **No se lee la tabla xref:** se recorre el fichero. Vale también cuando la
+  tabla está mal, y si un objeto sale dos veces vale el último.
+- **Cada letra se descifra con su tipo de letra:** con su tabla ToUnicode
+  y, si no la trae, con su codificación (WinAnsi, MacRoman) y los nombres de
+  `/Differences` (`/aacute` es «á»).
+- **La posición decide el texto.** Con la matriz de texto y la de la
+  página, y el ancho de cada letra: un hueco pequeño es un espacio, uno de
+  columna es ` | `, un salto grande es un párrafo. Los títulos se sacan por
+  el tamaño de la letra (o por ser una línea corta toda en negrita) y salen
+  como `# título`, igual que con Word, para que los fragmentos lleven su
+  apartado y se pueda olvidar un apartado de un PDF.
+- **Lo que no se lee:** escaneados (sin texto; la capa de un OCR sí se lee),
+  protegidos (se propone imprimirlos en «Microsoft Print to PDF») y los que
+  tienen más de un 5 % de letras sin descifrar o no parecen texto.
+- **Lo leído se guarda como lo demás.** Un PDF que antes salió como
+  «todavía no sé leerlos» se vuelve a probar solo, sin `/documentos
+  actualizar`.
+
+**Velocidad, lo que más costó.** La primera versión tardaba 25 s en 15
+páginas de Chrome, que coloca cada letra por separado (53.000 operaciones).
+En PowerShell 5.1 cada llamada a una función cuesta unos 85 µs, y había
+varias por letra (convertir un número, por ejemplo: 87 µs como función,
+2,5 µs con `[double]::TryParse` en línea). El bucle del contenido se
+reescribió sin llamadas por letra, con variables locales y con una tabla por
+código para la letra y su ancho. `[void]` se cambió por `$null =`, que es
+cuatro veces más rápido. Quedó en 3 s: unas 8 veces más rápido. Es el peor
+caso, y solo la primera vez.
+
+**Una regresión que sacó el PDF.** Con el catálogo de pasteles ya legible,
+«¿cuánto cuesta el horno que necesitamos?» dejó de traer la presentación del
+horno. El catálogo dice «cuesta» y «costo», y esas palabras pesaban lo mismo
+que «horno». Las palabras de una categoría, las que tienen sinónimos
+(precio, horario, empleado…), dicen de qué va la pregunta, no de qué cosa:
+ahora pesan 0,6, y sus sinónimos 0,3. No se cambió el texto de la prueba
+para esquivarlo: en un negocio de verdad los catálogos dicen «cuesta».
+
+**Pruebas.**
+
+- **`tests/hacer-pdf.ps1`** escribe PDF de verdad, sin bibliotecas.
+  Pueden ir comprimidos, con objetos dentro de streams y tabla xref en
+  stream, con tipos de letra recortados con ToUnicode, con letras por su
+  nombre, con palabras separadas solo por desplazamientos y con tablas en
+  columnas.
+- **`documentos.ps1`** prueba doce casos de PDF, incluidos los que no se
+  leen: escaneado, protegido, sin tabla de letras y roto.
+- **`negocio.ps1`**: el catálogo de pasteles es ahora un PDF, coherente
+  con los precios del Excel. La trampa pasa a ser una factura escaneada.
+  Hay dos preguntas nuevas que salen del PDF; son 34 en total y pasan
+  todas.
+- **Comprobado a mano** con PDF reales de Edge (`--print-to-pdf`) y de
+  «Microsoft Print to PDF» (TrueType de Windows, dos páginas): salen los
+  títulos, las tablas y los acentos. Con un PDF hecho por Word no se probó:
+  no estaba instalado. Las 8 pruebas de `tests\probar.ps1` pasan.
+
+**El video** se volvió a grabar con la captura 3 nueva. La segunda pregunta
+es el precio de un pastel, que sale del PDF, y `/documentos buscar` enseña
+ese fragmento con su apartado. Lo que dice que no puede leer ya no es «el
+PDF», sino la factura escaneada.
+
+---
+
+## 2026-11-18 — Guía de los documentos y un video de presentación
+
+**Las peticiones.** «La documentación correspondiente» de lo último que se
+añadió (las carpetas de documentos, olvidar y la batería `negocio.ps1`), y un
+video corto con lo más relevante de PRC AI 2.0, hecho por la misma vía barata
+que los videos de `D:\PRC Channel Linkedin`.
+
+**La guía, `docs/guia-documentos.md`.** El README explica cómo funciona; la
+guía es para el dueño de un negocio sin conocimientos técnicos: preparar la
+carpeta, qué formatos sirven y qué hacer con los PDF, cómo preguntar, cómo
+comprobar de dónde sale un dato, olvidar y deshacer, privacidad, preguntas
+frecuentes y una chuleta. Sus ejemplos son salidas reales con Gemma 4 E4B y
+la panadería de las pruebas, no inventadas.
+
+**Lo que no cuadraba en el README con el código:**
+
+- **Deshacer un olvido.** Decía que todo se deshace con `/documentos
+  recordar`. No es así con una carpeta ni con «todo»: la carpeta sale de la
+  lista (y «todo» borra también la lista de olvidos). Se vuelve a leer con
+  `/documentos agregar`.
+- **Formatos.** Faltaban `.docm`, `.xlsm`, `.pptm`, `.markdown`, `.htm` y
+  `.yaml`, que sí se leen, y que se saltan los ocultos y los temporales de
+  Office.
+- **`/documentos quitar`** pide el nombre corto de la carpeta (`mi-negocio`),
+  no la ruta; no lo decía.
+- **La tabla del modo interactivo** no tenía ni las preferencias ni los
+  documentos.
+
+**El video, `docs/video/`.** 1:59, 1920×1080, en español, sin voz ni música:
+en LinkedIn el video arranca sin sonido, así que todo se lee. Coste cero: no
+usa ningún modelo de pago.
+
+- **Misma vía que el canal de LinkedIn:** HyperFrames, HTML que se renderiza
+  a MP4 fotograma a fotograma, con GSAP. Se usó la versión ya descargada en
+  el equipo (0.8.221).
+- **La terminal del video es real.** `capturar.ps1` lanza el `AI` de verdad
+  con lo que se teclea ya escrito, y `montar.ps1` copia las líneas de esas
+  capturas por su número; donde se salta un trozo sale `...`. Solo cambia el
+  ritmo, y el pie de cada escena lo dice.
+  - **La primera idea**, sacar las funciones del árbol de sintaxis como en
+    `negocio.ps1`, servía para las preguntas pero no para los diálogos
+    (aprender, olvidar, comandos), que viven en el bucle del REPL. Se probó
+    a darle la entrada por tubería al REPL entero, y con la entrada
+    redirigida `ai.ps1` la toma toda como una sola pregunta (el modo
+    `type fichero | AI`). La captura corre sobre una copia de `bin\` y
+    `lib\` con dos cambios, los dos de la entrada: se salta ese desvío y
+    `Read-AILine` repite lo leído, para que se vea qué se tecleó.
+  - **Con `-File` o `.` (dot-source), no con `&`.** Lanzado con `& ai.ps1`,
+    el bloque `{ Add-AIToken ... }.GetNewClosure()` del streaming no
+    encuentra la función y el turno falla: las funciones del script no
+    quedan en el ámbito global.
+- **Sin datos personales.** La captura usa una carpeta de datos vacía
+  (`LOCALAPPDATA` propio) y el usuario «usuario», así que el prompt sale como
+  `Usuario >`. Las preguntas se eligieron para no enseñar la IP, la wifi ni el
+  nombre del equipo.
+- **Lo que cazó la revisión de fotogramas:** líneas sin prefijo a las que el
+  montaje les ponía un `ia >` que el programa no escribió (habría sido un
+  dato falso en pantalla), y el cursor al final de la línea mientras se
+  tecleaba.
+- **El tiempo de lectura manda sobre la duración.** `hyperframes check` avisó
+  de que las respuestas finales se iban a los 2,5 s, cuando una frase de 30
+  palabras pide unos 7. Ahora la pausa tras cada respuesta crece con lo que
+  hay que leer, y para seguir por debajo de 2 minutos se teclea más rápido y
+  se quitaron dos confirmaciones intermedias. Aun así, las respuestas largas
+  están por debajo de ese mínimo: con once funciones en 2 minutos, el título
+  de cada escena lleva el mensaje y la terminal es la prueba.
+- **El MP4 no va en git** (`docs/video/renders/` está en `.gitignore`).
+  `tools/build.ps1` pasa ahora también por `docs\`, porque los dos scripts
+  del video llevan acentos y necesitan BOM.
+
+**Pruebas.** `tests\probar.ps1`: las 8 pasan. No se tocó el código del programa (`bin\` y `lib\`).
+
 ## 2026-11-17 — Olvidar, y una batería con un negocio entero
 
 Esta entrada y la de documentos, de la rama `documentos`, se fusionaron
