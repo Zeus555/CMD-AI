@@ -42,12 +42,18 @@
 #  Portable (tts\piper-server.ps1); aqui se lee en el propio proceso.
 # ============================================================================
 
+. (Join-Path $PSScriptRoot 'idioma.ps1')
+
 $AI_EQUIPO_GRUPOS = @('bateria', 'red', 'equipo', 'sistema', 'procesador', 'memoria', 'disco', 'grafica')
 
 # Como se llama cada grupo cuando hay que decir que no se pudo leer.
 $AI_EQUIPO_NOMBRE = @{
     bateria = 'Batería'; red = 'Red'; equipo = 'Equipo'; sistema = 'Sistema'
     procesador = 'Procesador'; memoria = 'Memoria RAM'; disco = 'Discos'; grafica = 'Tarjeta gráfica'
+}
+$AI_EQUIPO_NAME = @{
+    bateria = 'Battery'; red = 'Network'; equipo = 'Computer'; sistema = 'System'
+    procesador = 'Processor'; memoria = 'RAM'; disco = 'Disks'; grafica = 'Graphics card'
 }
 
 # Otras formas de pedir un grupo. El esquema de la herramienta ya limita los
@@ -60,28 +66,44 @@ $AI_EQUIPO_ALIAS = @{
     cpu = 'procesador'; ram = 'memoria'
     discos = 'disco'; almacenamiento = 'disco'; espacio = 'disco'
     gpu = 'grafica'; video = 'grafica'
+    # en ingles (/computer network disk)
+    battery = 'bateria'; power = 'bateria'; charge = 'bateria'
+    network = 'red'; connection = 'red'; gateway = 'red'
+    computer = 'equipo'; name = 'equipo'; user = 'equipo'; model = 'equipo'; brand = 'equipo'; make = 'equipo'; machine = 'equipo'
+    system = 'sistema'; os = 'sistema'; uptime = 'sistema'
+    processor = 'procesador'; memory = 'memoria'
+    disk = 'disco'; disks = 'disco'; drive = 'disco'; drives = 'disco'; storage = 'disco'; space = 'disco'
+    graphics = 'grafica'; card = 'grafica'
 }
 
 # La herramienta tal como viaja en la peticion. La descripcion es lo que el
-# modelo lee para decidir.
-$AI_EQUIPO_TOOL = @{
-    type     = 'function'
-    function = @{
-        name        = 'datos_equipo'
-        description = 'Lee datos de ESTE equipo (la computadora del usuario, donde corre este programa) y de su red local. No necesita internet. Usala cuando el usuario pregunte por los datos de su propio equipo: su bateria; su conexion (si tiene internet, a que red wifi esta conectado, la senal, su direccion IP, la puerta de enlace o router, los DNS); el nombre del equipo o del usuario, la marca y el modelo; la version de Windows y cuanto lleva encendido; el procesador; la memoria RAM; los discos y su espacio libre; la tarjeta grafica. Solo sabe de este equipo: los datos de cualquier otro aparato (un telefono, otro modelo de computadora) son una pregunta normal, que se contesta con lo que sepas o buscando en internet.'
-        parameters  = @{
-            type       = 'object'
-            properties = @{
-                datos = @{
-                    type        = 'array'
-                    items       = @{ type = 'string'; enum = $AI_EQUIPO_GRUPOS }
-                    description = 'que grupos leer: bateria; red (internet, wifi, IP, puerta de enlace, DNS); equipo (nombre, usuario, marca y modelo); sistema (Windows, tiempo encendido); procesador; memoria (RAM); disco; grafica'
+# modelo lee para decidir; va en el idioma activo, asi que se pide con
+# Get-AIEquipoTool en cada peticion ($AI_EQUIPO_TOOL es la de al cargar, en
+# espanol salvo que ya se hubiera elegido otro idioma). Los nombres de los
+# grupos son identificadores: no se traducen.
+function Get-AIEquipoTool {
+    return @{
+        type     = 'function'
+        function = @{
+            name        = 'datos_equipo'
+            description = (L 'Lee datos de ESTE equipo (la computadora del usuario, donde corre este programa) y de su red local. No necesita internet. Usala cuando el usuario pregunte por los datos de su propio equipo: su bateria; su conexion (si tiene internet, a que red wifi esta conectado, la senal, su direccion IP, la puerta de enlace o router, los DNS); el nombre del equipo o del usuario, la marca y el modelo; la version de Windows y cuanto lleva encendido; el procesador; la memoria RAM; los discos y su espacio libre; la tarjeta grafica. Solo sabe de este equipo: los datos de cualquier otro aparato (un telefono, otro modelo de computadora) son una pregunta normal, que se contesta con lo que sepas o buscando en internet.' `
+                             "Reads data from THIS computer (the user's computer, where this program runs) and its local network. It does not need the internet. Use it when the user asks about their own computer: its battery; its connection (whether it has internet, which Wi-Fi network it is on, the signal, its IP address, the gateway or router, the DNS servers); the computer's name or the user's, the make and model; the Windows version and how long it has been on; the processor; the RAM; the disks and their free space; the graphics card. It only knows about this computer: the data of any other device (a phone, another computer model) is a normal question, answered with what you know or by searching the internet.")
+            parameters  = @{
+                type       = 'object'
+                properties = @{
+                    datos = @{
+                        type        = 'array'
+                        items       = @{ type = 'string'; enum = $AI_EQUIPO_GRUPOS }
+                        description = (L 'que grupos leer: bateria; red (internet, wifi, IP, puerta de enlace, DNS); equipo (nombre, usuario, marca y modelo); sistema (Windows, tiempo encendido); procesador; memoria (RAM); disco; grafica' `
+                                         'which groups to read: bateria (battery); red (network: internet, Wi-Fi, IP, gateway, DNS); equipo (computer: name, user, make and model); sistema (Windows, uptime); procesador (processor); memoria (RAM); disco (disks); grafica (graphics card)')
+                    }
                 }
+                required   = @('datos')
             }
-            required   = @('datos')
         }
     }
 }
+$AI_EQUIPO_TOOL = Get-AIEquipoTool
 
 # ---------------------------------------------------------------------------
 #  El reloj. Los nombres de dia y mes van escritos aqui: los de la cultura de
@@ -90,19 +112,26 @@ $AI_EQUIPO_TOOL = @{
 $AI_DIAS  = @('domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado')
 $AI_MESES = @('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
               'septiembre', 'octubre', 'noviembre', 'diciembre')
+$AI_DAYS   = @('Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday')
+$AI_MONTHS = @('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+               'September', 'October', 'November', 'December')
 
 function Get-AIClock {
     <#  Las tres piezas del reloj: hora "10:07 a. m.", fecha "domingo 15 de
         noviembre de 2026" y zona "UTC-08:00".  #>
     param([DateTime]$Now = (Get-Date))
+    $en = $script:AI_IDIOMA -eq 'en'
     $h12 = $Now.Hour % 12
     if ($h12 -eq 0) { $h12 = 12 }
-    $ampm = if ($Now.Hour -lt 12) { 'a. m.' } else { 'p. m.' }
+    $ampm = if ($Now.Hour -lt 12) { (L 'a. m.' 'AM') } else { (L 'p. m.' 'PM') }
     $off = [TimeZoneInfo]::Local.GetUtcOffset($Now)
     $signo = if ($off -lt [TimeSpan]::Zero) { '-' } else { '+' }
+    # En ingles: "Sunday, November 15, 2026".
+    $fecha = if ($en) { '{0}, {1} {2}, {3}' -f $AI_DAYS[[int]$Now.DayOfWeek], $AI_MONTHS[$Now.Month - 1], $Now.Day, $Now.Year }
+             else { '{0} {1} de {2} de {3}' -f $AI_DIAS[[int]$Now.DayOfWeek], $Now.Day, $AI_MESES[$Now.Month - 1], $Now.Year }
     return @{
         Hora  = '{0}:{1:00} {2}' -f $h12, $Now.Minute, $ampm
-        Fecha = '{0} {1} de {2} de {3}' -f $AI_DIAS[[int]$Now.DayOfWeek], $Now.Day, $AI_MESES[$Now.Month - 1], $Now.Year
+        Fecha = $fecha
         Zona  = 'UTC{0}{1:00}:{2:00}' -f $signo, [Math]::Abs($off.Hours), [Math]::Abs($off.Minutes)
     }
 }
@@ -111,7 +140,7 @@ function Get-AIClockText {
     <#  "domingo 15 de noviembre de 2026, 10:07 a. m. (zona UTC-08:00)"  #>
     param([DateTime]$Now = (Get-Date))
     $r = Get-AIClock $Now
-    return "$($r.Fecha), $($r.Hora) (zona $($r.Zona))"
+    return (L "$($r.Fecha), $($r.Hora) (zona $($r.Zona))" "$($r.Fecha), $($r.Hora) (time zone $($r.Zona))")
 }
 
 function Get-AIClockNote {
@@ -121,8 +150,11 @@ function Get-AIClockNote {
         junto a la hora, el modelo la repetia al contestar "que hora es".  #>
     param([DateTime]$Now = (Get-Date))
     $r = Get-AIClock $Now
-    return ("Hoy es $($Now.ToString('yyyy-MM-dd')). Según el reloj de este equipo, ahora mismo la hora es $($r.Hora) y la fecha es $($r.Fecha). " +
-            "La zona horaria del equipo es $($r.Zona). Si el usuario pregunta qué hora es o qué día es, dile la hora o la fecha del reloj de este equipo.")
+    $iso = $Now.ToString('yyyy-MM-dd')
+    return (L ("Hoy es $iso. Según el reloj de este equipo, ahora mismo la hora es $($r.Hora) y la fecha es $($r.Fecha). " +
+               "La zona horaria del equipo es $($r.Zona). Si el usuario pregunta qué hora es o qué día es, dile la hora o la fecha del reloj de este equipo.") `
+              ("Today is $iso. According to this computer's clock, the time right now is $($r.Hora) and the date is $($r.Fecha). " +
+               "The computer's time zone is $($r.Zona). If the user asks what time or what day it is, tell them the time or the date from this computer's clock."))
 }
 
 # ---------------------------------------------------------------------------
@@ -243,19 +275,22 @@ function Read-AIEquipo {
 #  De la lectura al texto. Es lo que lee el modelo y lo que ensena /equipo.
 # ---------------------------------------------------------------------------
 function Format-AINumber {
-    <#  Con coma decimal y sin depender de la cultura de Windows.  #>
+    <#  Con coma decimal (en ingles, punto) y sin depender de la cultura de
+        Windows.  #>
     param([double]$N)
-    return $N.ToString('0.#', [Globalization.CultureInfo]::InvariantCulture).Replace('.', ',')
+    $s = $N.ToString('0.#', [Globalization.CultureInfo]::InvariantCulture)
+    if ($script:AI_IDIOMA -eq 'en') { return $s }
+    return $s.Replace('.', ',')
 }
 
 function Format-AIDuration {
-    <#  130 -> "2 h 10 min"; 3000 -> "2 dias 2 h"  #>
+    <#  130 -> "2 h 10 min"; 3000 -> "2 dias 2 h" ("2 days 2 h")  #>
     param([int]$Min)
     if ($Min -lt 60) { return "$Min min" }
     $h = [Math]::Floor($Min / 60); $m = $Min % 60
     if ($h -lt 24) { if ($m) { return "$h h $m min" } else { return "$h h" } }
     $d = [Math]::Floor($h / 24); $h = $h % 24
-    $dias = if ($d -eq 1) { '1 día' } else { "$d días" }
+    $dias = if ($d -eq 1) { (L '1 día' '1 day') } else { (L "$d días" "$d days") }
     if ($h) { return "$dias $h h" } else { return $dias }
 }
 
@@ -265,65 +300,67 @@ function Format-AIEquipo {
     $l = @()
     switch ($Grupo) {
         'bateria' {
-            if (-not $D.hay) { $l += '- Batería: este equipo no tiene batería (o Windows no la ve): funciona enchufado a la corriente.'; break }
-            $s = "- Batería: $($D.porcentaje) %"
-            if ($D.enchufado) { $s += if ($D.cargando) { ', enchufado a la corriente y cargando.' } else { ', enchufado a la corriente.' } }
+            if (-not $D.hay) { $l += (L '- Batería: este equipo no tiene batería (o Windows no la ve): funciona enchufado a la corriente.' "- Battery: this computer has no battery (or Windows can't see it): it runs plugged in."); break }
+            $s = L "- Batería: $($D.porcentaje) %" "- Battery: $($D.porcentaje)%"
+            if ($D.enchufado) { $s += if ($D.cargando) { (L ', enchufado a la corriente y cargando.' ', plugged in and charging.') } else { (L ', enchufado a la corriente.' ', plugged in.') } }
             else {
-                $s += ', sin enchufar a la corriente.'
-                if ($D.minutos) { $s += " Windows calcula que quedan unas $(Format-AIDuration $D.minutos)." }
-                else { $s += ' Windows todavía no calcula cuánto tiempo queda.' }
+                $s += (L ', sin enchufar a la corriente.' ', not plugged in.')
+                if ($D.minutos) { $s += (L " Windows calcula que quedan unas $(Format-AIDuration $D.minutos)." " Windows estimates about $(Format-AIDuration $D.minutos) left.") }
+                else { $s += (L ' Windows todavía no calcula cuánto tiempo queda.' ' Windows has not yet estimated how much time is left.') }
             }
             $l += $s
         }
         'red' {
-            if ($D.internet -eq $true)      { $l += '- Internet: sí, este equipo tiene conexión a internet ahora (según el indicador de red de Windows).' }
-            elseif ($D.internet -eq $false) { $l += '- Internet: no, este equipo no tiene conexión a internet ahora (según el indicador de red de Windows).' }
+            if ($D.internet -eq $true)      { $l += (L '- Internet: sí, este equipo tiene conexión a internet ahora (según el indicador de red de Windows).' '- Internet: yes, this computer is connected to the internet now (according to the Windows network indicator).') }
+            elseif ($D.internet -eq $false) { $l += (L '- Internet: no, este equipo no tiene conexión a internet ahora (según el indicador de red de Windows).' '- Internet: no, this computer is not connected to the internet now (according to the Windows network indicator).') }
             if ($D.wifi) {
-                $s = "- Red wifi a la que está conectado: `"$($D.wifi.ssid)`""
-                if ($null -ne $D.wifi.senal) { $s += ", con señal del $($D.wifi.senal) %" }
+                $s = L "- Red wifi a la que está conectado: `"$($D.wifi.ssid)`"" "- Wi-Fi network it is connected to: `"$($D.wifi.ssid)`""
+                if ($null -ne $D.wifi.senal) { $s += (L ", con señal del $($D.wifi.senal) %" ", with $($D.wifi.senal)% signal") }
                 $l += $s + '.'
             }
             $cons = @($D.conexiones)
-            if ($cons.Count -eq 0) { $l += '- Conexiones de red: ninguna activa (ni wifi ni cable).' }
+            if ($cons.Count -eq 0) { $l += (L '- Conexiones de red: ninguna activa (ni wifi ni cable).' '- Network connections: none active (no Wi-Fi or cable).') }
             foreach ($c in $cons) {
-                $via = switch ($c.tipo) { 'wifi' { 'por wifi' } 'cable' { 'por cable' } default { 'otro tipo de conexión' } }
-                $s = "- Dirección IP de este equipo en la red local: $($c.ip) ($via, adaptador `"$($c.nombre)`")"
-                if ($c.puerta) { $s += "; puerta de enlace (router): $($c.puerta)" }
-                if (@($c.dns).Count) { $s += "; servidores DNS: $(@($c.dns) -join ' y ')" }
-                if ($c.mbps -gt 0) { $s += "; velocidad del enlace: $($c.mbps) Mbps" }
+                $via = switch ($c.tipo) { 'wifi' { (L 'por wifi' 'over Wi-Fi') } 'cable' { (L 'por cable' 'over cable') } default { (L 'otro tipo de conexión' 'another type of connection') } }
+                $s = L "- Dirección IP de este equipo en la red local: $($c.ip) ($via, adaptador `"$($c.nombre)`")" "- IP address of this computer on the local network: $($c.ip) ($via, adapter `"$($c.nombre)`")"
+                if ($c.puerta) { $s += (L "; puerta de enlace (router): $($c.puerta)" "; gateway (router): $($c.puerta)") }
+                if (@($c.dns).Count) { $s += (L "; servidores DNS: $(@($c.dns) -join ' y ')" "; DNS servers: $(@($c.dns) -join ' and ')") }
+                if ($c.mbps -gt 0) { $s += (L "; velocidad del enlace: $($c.mbps) Mbps" "; link speed: $($c.mbps) Mbps") }
                 $l += $s + '.'
             }
-            $l += '- La IP pública (la que ven los sitios de internet) no está en el equipo: la asigna el proveedor de internet. La de arriba es la IP local.'
+            $l += (L '- La IP pública (la que ven los sitios de internet) no está en el equipo: la asigna el proveedor de internet. La de arriba es la IP local.' "- The public IP (the one internet sites see) is not on the computer: the internet provider assigns it. The one above is the local IP.")
         }
         'equipo' {
-            $s = "- Nombre de este equipo: $($D.nombre). Usuario de Windows: $($D.usuario)."
+            $s = L "- Nombre de este equipo: $($D.nombre). Usuario de Windows: $($D.usuario)." "- Name of this computer: $($D.nombre). Windows user: $($D.usuario)."
             $mm = (@($D.fabricante, $D.modelo) | Where-Object { $_ }) -join ' '
-            if ($mm) { $s += " Marca y modelo: $mm." } else { $s += ' Marca y modelo: el fabricante no los dejó anotados.' }
+            if ($mm) { $s += (L " Marca y modelo: $mm." " Make and model: $mm.") } else { $s += (L ' Marca y modelo: el fabricante no los dejó anotados.' ' Make and model: the manufacturer did not record them.') }
             $l += $s
         }
         'sistema' {
-            $l += "- Sistema operativo: $($D.nombre), versión $($D.version), $($D.arquitectura). El equipo lleva encendido $(Format-AIDuration $D.minutosEncendido)."
+            $l += (L "- Sistema operativo: $($D.nombre), versión $($D.version), $($D.arquitectura). El equipo lleva encendido $(Format-AIDuration $D.minutosEncendido)." "- Operating system: $($D.nombre), version $($D.version), $($D.arquitectura). The computer has been on for $(Format-AIDuration $D.minutosEncendido).")
         }
         'procesador' {
-            $l += "- Procesador: $($D.nombre), con $($D.nucleos) núcleos y $($D.hilos) hilos."
+            $l += (L "- Procesador: $($D.nombre), con $($D.nucleos) núcleos y $($D.hilos) hilos." "- Processor: $($D.nombre), with $($D.nucleos) cores and $($D.hilos) threads.")
         }
         'memoria' {
             $tot = $D.totalMB / 1024; $lib = $D.libreMB / 1024
-            $l += "- Memoria RAM: $(Format-AINumber $tot) GB en total; ahora hay $(Format-AINumber $lib) GB libres y $(Format-AINumber ($tot - $lib)) GB en uso."
+            $l += (L "- Memoria RAM: $(Format-AINumber $tot) GB en total; ahora hay $(Format-AINumber $lib) GB libres y $(Format-AINumber ($tot - $lib)) GB en uso." "- RAM: $(Format-AINumber $tot) GB in total; right now $(Format-AINumber $lib) GB free and $(Format-AINumber ($tot - $lib)) GB in use.")
         }
         'disco' {
             $us = @($D.unidades)
-            if ($us.Count -eq 0) { $l += '- Discos: Windows no muestra ninguna unidad lista.' }
+            if ($us.Count -eq 0) { $l += (L '- Discos: Windows no muestra ninguna unidad lista.' '- Disks: Windows shows no ready drive.') }
             foreach ($u in $us) {
                 $et = if ($u.etiqueta) { ", `"$($u.etiqueta)`"" } else { '' }
-                $l += "- Disco $($u.unidad) ($($u.tipo)$et): $(Format-AINumber $u.totalGB) GB en total; $(Format-AINumber $u.libreGB) GB libres y $(Format-AINumber ($u.totalGB - $u.libreGB)) GB ocupados."
+                # El tipo se lee en espanol ('fijo', 'extraible'): aqui se dice.
+                $tipo = if ($script:AI_IDIOMA -ne 'en') { $u.tipo } elseif ($u.tipo -eq 'fijo') { 'fixed' } else { 'removable' }
+                $l += (L "- Disco $($u.unidad) ($tipo$et): $(Format-AINumber $u.totalGB) GB en total; $(Format-AINumber $u.libreGB) GB libres y $(Format-AINumber ($u.totalGB - $u.libreGB)) GB ocupados." "- Disk $($u.unidad) ($tipo$et): $(Format-AINumber $u.totalGB) GB in total; $(Format-AINumber $u.libreGB) GB free and $(Format-AINumber ($u.totalGB - $u.libreGB)) GB used.")
             }
         }
         'grafica' {
             $ns = @($D.nombres)
-            if ($ns.Count -eq 0) { $l += '- Tarjeta gráfica: Windows no muestra ninguna.' }
-            elseif ($ns.Count -eq 1) { $l += "- Tarjeta gráfica: $($ns[0])." }
-            else { $l += "- Tarjetas gráficas ($($ns.Count)): $($ns -join '; ')." }
+            if ($ns.Count -eq 0) { $l += (L '- Tarjeta gráfica: Windows no muestra ninguna.' '- Graphics card: Windows shows none.') }
+            elseif ($ns.Count -eq 1) { $l += (L "- Tarjeta gráfica: $($ns[0])." "- Graphics card: $($ns[0]).") }
+            else { $l += (L "- Tarjetas gráficas ($($ns.Count)): $($ns -join '; ')." "- Graphics cards ($($ns.Count)): $($ns -join '; ').") }
         }
     }
     return , @($l)
@@ -365,22 +402,23 @@ function Get-AIEquipoText {
     $lineas   = New-Object System.Collections.ArrayList
     $leidos   = @()
     $fallidos = @()
-    if ($Reloj) { [void]$lineas.Add("- Fecha y hora: $(Get-AIClockText)") }
+    if ($Reloj) { [void]$lineas.Add((L "- Fecha y hora: $(Get-AIClockText)" "- Date and time: $(Get-AIClockText)")) }
     foreach ($g in $AI_EQUIPO_GRUPOS) {
         if ($Grupos -notcontains $g) { continue }
         $d = $null
         try { $d = Read-AIEquipo $g } catch { $d = $null }
         if ($null -eq $d) {
             $fallidos += $g
-            [void]$lineas.Add("- $($AI_EQUIPO_NOMBRE[$g]): no se pudo leer; Windows no dio ese dato.")
+            [void]$lineas.Add((L "- $($AI_EQUIPO_NOMBRE[$g]): no se pudo leer; Windows no dio ese dato." "- $($AI_EQUIPO_NAME[$g]): could not be read; Windows did not provide that information."))
             continue
         }
         $leidos += $g
         foreach ($x in (Format-AIEquipo $g $d)) { [void]$lineas.Add($x) }
     }
     $cab = if ($ParaModelo) {
-        'Datos de este equipo, leídos ahora mismo por el programa (no vienen de internet). Son solo de este equipo: si la pregunta es sobre otro aparato, no los uses. Si es sobre este, responde con ellos sin cambiar las cifras ni los nombres; si un dato dice que no se pudo leer, dilo y no lo inventes:'
-    } else { 'Datos de este equipo, leídos ahora:' }
+        L 'Datos de este equipo, leídos ahora mismo por el programa (no vienen de internet). Son solo de este equipo: si la pregunta es sobre otro aparato, no los uses. Si es sobre este, responde con ellos sin cambiar las cifras ni los nombres; si un dato dice que no se pudo leer, dilo y no lo inventes:' `
+          'Data from this computer, just read by the program (not from the internet). It is only about this computer: if the question is about another device, do not use it. If it is about this one, answer with it without changing the figures or the names; if an item says it could not be read, say so and do not make it up:'
+    } else { (L 'Datos de este equipo, leídos ahora:' 'Data from this computer, read just now:') }
     return [pscustomobject]@{
         Text     = ($cab + "`n" + ($lineas -join "`n"))
         Leidos   = $leidos
@@ -405,30 +443,30 @@ function Get-AIEquipoText {
 #  Las expresiones trabajan sobre el texto en minusculas y sin acentos.
 # ---------------------------------------------------------------------------
 # "equipo" a secas tambien es el de futbol: solo cuenta "mi equipo" o "este equipo".
-$AI_EQUIPO_APARATO = '(?:pc|computador|computadora|compu|laptop|portatil|ordenador|notebook|(?:mi|esta) maquina|(?:mi|este) equipo)'
+$AI_EQUIPO_APARATO = '(?:pc|computador|computadora|compu|laptop|portatil|ordenador|notebook|computer|(?:mi|esta) maquina|(?:mi|este) equipo|(?:my|this) (?:machine|device|system))'
 
 $AI_EQUIPO_TEMA = [ordered]@{
-    bateria    = '\bbateria\b|\bcuanta (?:carga|pila)\b|\b(?:esta|estoy|sigue) (?:enchufad[oa]|cargando)\b'
-    red        = '\b(?:ip|wi-?fi|dns|router|ruteador)\b|\bpuerta de enlace\b|\bgateway\b|\b(?:mi|esta|que|cual) red\b|\bred (?:wifi|local|inalambrica)\b|\b(?:tengo|hay|tiene|sin|mi) (?:conexion a |acceso a |salida a )?internet\b|\bestoy (?:conectad[oa]|en linea|sin conexion|sin internet)\b|\b(?:tengo|hay|mi) conexion\b|\binternet (?:funciona|anda|sirve|esta)\b'
-    equipo     = "\b(?:como se llama|nombre|marca|modelo|usuario)\b.{0,40}\b(?:$AI_EQUIPO_APARATO|windows)\b|\b(?:que|cual) $AI_EQUIPO_APARATO (?:tengo|es esta|es este|estoy usando|uso)\b"
-    sistema    = "\b(?:que|cual|mi|version de) windows\b|\bwindows (?:tengo|tiene|uso|es)\b|\b(?:mi|que|cual) sistema operativo\b|\b(?:encendid[oa]|prendid[oa])\b.{0,30}\b$AI_EQUIPO_APARATO\b|\b$AI_EQUIPO_APARATO\b.{0,30}\b(?:encendid[oa]|prendid[oa])\b|\bcuanto (?:tiempo )?lleva (?:encendid|prendid)[oa]\b|\bsin (?:apagar|reiniciar)\b|\bultimo reinicio\b"
-    procesador = '\b(?:procesador|cpu)\b|\bcuantos (?:nucleos|hilos)\b'
-    memoria    = '\bram\b|\bcuanta memoria\b|\bmemoria (?:ram|libre|disponible|instalada|en uso|usada|ocupada|total|fisica)\b'
-    disco      = '\bdiscos? (?:duros?|ssd|solido|locales?|[a-z])\b|\b(?:que|cuantos) discos (?:tengo|tiene|hay)\b|\bcuanto espacio (?:libre|disponible|me queda|queda|tengo|tiene)\b|\bespacio (?:libre|en disco|disponible|ocupado|usado|me queda|queda|tengo)\b|\b(?:mi|cuanto) almacenamiento\b|\bunidad [a-z]\b'
-    grafica    = '\btarjetas? graficas?\b|\btarjeta de video\b|\b(?:gpu|vram)\b|\b(?:que|cual|mi) grafica\b'
+    bateria    = '\bbateria\b|\bcuanta (?:carga|pila)\b|\b(?:esta|estoy|sigue) (?:enchufad[oa]|cargando)\b|\bbattery\b|\b(?:am i|is it|is the laptop|is this laptop|is the computer) (?:plugged in|charging)\b|\bhow much charge\b'
+    red        = '\b(?:ip|wi-?fi|dns|router|ruteador)\b|\bpuerta de enlace\b|\bgateway\b|\b(?:mi|esta|que|cual) red\b|\bred (?:wifi|local|inalambrica)\b|\b(?:tengo|hay|tiene|sin|mi) (?:conexion a |acceso a |salida a )?internet\b|\bestoy (?:conectad[oa]|en linea|sin conexion|sin internet)\b|\b(?:tengo|hay|mi) conexion\b|\binternet (?:funciona|anda|sirve|esta)\b|\b(?:my|this|which|what) network\b|\blocal network\b|\b(?:do i have|have i got|is there|i have|i\x27ve got|we have|do we have|no|my) (?:an? )?(?:internet|connection)\b|\bam i (?:connected|online|offline)\b|\binternet (?:connection|working|down|slow|is)\b|\bthe connection\b'
+    equipo     = "\b(?:como se llama|nombre|marca|modelo|usuario)\b.{0,40}\b(?:$AI_EQUIPO_APARATO|windows)\b|\b(?:que|cual) $AI_EQUIPO_APARATO (?:tengo|es esta|es este|estoy usando|uso)\b|\b(?:name|make|brand|model|user ?name|user)\b.{0,40}\b(?:$AI_EQUIPO_APARATO|windows)\b|\bwhat is (?:this|my) (?:computer|pc|laptop|machine) called\b|\b(?:what|which) $AI_EQUIPO_APARATO (?:do i have|is this|am i using|do i use)\b"
+    sistema    = "\b(?:que|cual|mi|version de) windows\b|\bwindows (?:tengo|tiene|uso|es)\b|\b(?:mi|que|cual) sistema operativo\b|\b(?:encendid[oa]|prendid[oa])\b.{0,30}\b$AI_EQUIPO_APARATO\b|\b$AI_EQUIPO_APARATO\b.{0,30}\b(?:encendid[oa]|prendid[oa])\b|\bcuanto (?:tiempo )?lleva (?:encendid|prendid)[oa]\b|\bsin (?:apagar|reiniciar)\b|\bultimo reinicio\b|\b(?:which|what|my) (?:version of )?windows\b|\bwindows version\b|\b(?:my|which|what) operating system\b|\bhow long\b.{0,40}\bbeen (?:on|running|up)\b|\buptime\b|\blast (?:restart|reboot)\b|\bwithout (?:restarting|rebooting|shutting down|turning (?:it )?off)\b"
+    procesador = '\b(?:procesador|cpu)\b|\bcuantos (?:nucleos|hilos)\b|\bprocessor\b|\bhow many (?:cores|threads)\b'
+    memoria    = '\bram\b|\bcuanta memoria\b|\bmemoria (?:ram|libre|disponible|instalada|en uso|usada|ocupada|total|fisica)\b|\bhow much memory\b|\bmemory (?:free|available|installed|in use|used|total)\b|\b(?:free|available|installed|total|used) memory\b'
+    disco      = '\bdiscos? (?:duros?|ssd|solido|locales?|[a-z])\b|\b(?:que|cuantos) discos (?:tengo|tiene|hay)\b|\bcuanto espacio (?:libre|disponible|me queda|queda|tengo|tiene)\b|\bespacio (?:libre|en disco|disponible|ocupado|usado|me queda|queda|tengo)\b|\b(?:mi|cuanto) almacenamiento\b|\bunidad [a-z]\b|\bdisks?\b|\b(?:hard|ssd|solid state|local|usb) drives?\b|\bdrive [a-z]\b|\b[a-z]: drive\b|\bhow much (?:free |disk )?(?:space|storage)\b|\b(?:free|available|disk|storage) space\b|\bspace (?:left|free|available|is left|do i have)\b|\bmy storage\b|\bhow many (?:disks|drives)\b'
+    grafica    = '\btarjetas? graficas?\b|\btarjeta de video\b|\b(?:gpu|vram)\b|\b(?:que|cual|mi) grafica\b|\bgraphics? cards?\b|\bvideo cards?\b|\b(?:my|what|which) graphics\b'
 }
 # "dame un resumen de esta laptop": el equipo entero menos la red y la bateria.
-$AI_EQUIPO_RESUMEN = "\b(?:resumen|especificaciones|caracteristicas|specs|datos|informacion|hardware|componentes)\b.{0,30}\b$AI_EQUIPO_APARATO\b|\bque (?:tiene|trae) (?:(?:mi|esta|este) )?$AI_EQUIPO_APARATO\b"
+$AI_EQUIPO_RESUMEN = "\b(?:resumen|especificaciones|caracteristicas|specs|datos|informacion|hardware|componentes)\b.{0,30}\b$AI_EQUIPO_APARATO\b|\bque (?:tiene|trae) (?:(?:mi|esta|este) )?$AI_EQUIPO_APARATO\b|\b(?:summary|specs|specifications|features|details|data|info|information|hardware|components)\b.{0,30}\b$AI_EQUIPO_APARATO\b|\bwhat (?:does|do) (?:my |this |the )?$AI_EQUIPO_APARATO have\b|\bwhat(?:\x27s| is) in (?:my |this )?$AI_EQUIPO_APARATO\b"
 
 # Otro aparato. Con uno de estos en el mensaje no se lee nada NI se ofrece la
 # herramienta en ese turno: medido el 2026-11-15, con la herramienta a la
 # vista Gemma 4 E4B contestaba "no puedo saber la bateria de un iPhone 15"
 # (3 de 3) en vez de buscarlo en internet, que es lo que hace sin ella (3 de 3).
-$AI_EQUIPO_AJENO = '\b(?:iphone|ipad|android|samsung|galaxy|xiaomi|redmi|huawei|motorola|pixel|celular|telefono|movil|tablet|tableta|consola|playstation|ps[45]|xbox|switch|televisor|tele|tv|smart ?tv|reloj|smartwatch|audifonos|auriculares|carro|coche|auto|moto|servidor|impresora|camara|dron|kindle|macbook|mac|imac|chromebook)\b'
+$AI_EQUIPO_AJENO = '\b(?:iphone|ipad|android|samsung|galaxy|xiaomi|redmi|huawei|motorola|pixel|celular|telefono|movil|tablet|tableta|consola|playstation|ps[45]|xbox|switch|televisor|tele|tv|smart ?tv|reloj|smartwatch|audifonos|auriculares|carro|coche|auto|moto|servidor|impresora|camara|dron|kindle|macbook|mac|imac|chromebook|phones?|cellphone|cell phone|mobile|smartphone|console|television|apple watch|headphones|earbuds|airpods|car|motorcycle|printer|camera|drone)\b'
 
 # La marca de que se habla de ESTE equipo: primera persona, o el equipo
 # senalado ("esta laptop", "la laptop", "hay internet").
-$AI_EQUIPO_PROPIO = '\b(?:mi|mis|tengo|tenemos|me queda|me quedan|me dura|me alcanza|estoy|estamos)\b|\best[ae] (?:laptop|pc|computadora|computador|compu|maquina|portatil|ordenador|notebook|equipo)\b|\b(?:la laptop|la pc|la compu|la computadora|el equipo|el ordenador)\b|\bhay (?:internet|conexion|wifi|red|senal)\b|\bcuanto (?:tiempo )?lleva (?:encendid|prendid)[oa]\b'
+$AI_EQUIPO_PROPIO = '\b(?:mi|mis|tengo|tenemos|me queda|me quedan|me dura|me alcanza|estoy|estamos)\b|\best[ae] (?:laptop|pc|computadora|computador|compu|maquina|portatil|ordenador|notebook|equipo)\b|\b(?:la laptop|la pc|la compu|la computadora|el equipo|el ordenador)\b|\bhay (?:internet|conexion|wifi|red|senal)\b|\bcuanto (?:tiempo )?lleva (?:encendid|prendid)[oa]\b|\bnivel de (?:la )?bateria\b|\b(?:my|i|i\x27m|im|i\x27ve|we|our|am i|do i|have i)\b|\bthis (?:laptop|pc|computer|machine|notebook|device)\b|\bthe (?:laptop|pc|computer)\b|\bis there (?:an? )?(?:internet|connection|wifi|wi-fi|network|signal)\b|\bhow long has (?:it|the \w+|this \w+) been (?:on|running|up)\b|\bbattery (?:level|percentage)\b'
 
 $AI_EQUIPO_VETO = @(
     # una marca o un modelo: se pregunta por un producto, no por este equipo
@@ -445,6 +483,13 @@ $AI_EQUIPO_VETO = @(
     '\b(?:script|codigo|programa|comando|funcion|python|powershell|bash|cmd|javascript|regex|sql|linux|ubuntu|macos)\b'
     # una compra o una comparacion
     '\b(?:mejor|recomiend\w*|comprar?|conviene|vs|versus|precio|cuesta|cuestan|barat\w*|vale la pena|requisitos|necesita|necesitan|compatible)\b'
+    # Lo mismo en ingles ("what is a public IP" es una pregunta general).
+    '\b(?:brother|sister|friend|dad|father|mom|mum|mother|daughter|husband|wife|boyfriend|girlfriend|boss|neighbou?r|coworker|co-worker|colleague|cousin|uncle|aunt|grandpa|grandma|grandfather|grandmother|customer|partner)\b'
+    '\b(?:a|an|another|any|some|every) (?:good |new |gaming |cheap |normal |office )?(?:laptop|pc|computer|machine|notebook)s?\b|\b(?:computers|machines)\b'
+    '\bwhat(?: is| are|\x27s|s) (?:an?|the meaning|the difference)\b|\bwhat does \w+(?: \w+)? mean\b|\bmeaning of\b|\bdifference between\b|\bhow (?:does|do) (?:an? |the )?\w+(?: \w+)? work\b|\bexplain\w*\b|\bdefinition\b|\bhistory of\b'
+    '\bhow (?:can i|do i|to|should i|could i|would i|do you|can you)\b'
+    '\b(?:code|program|command|function)\b'
+    '\b(?:best|better|recommend\w*|buy|buying|purchase|worth it|price|cost|costs|cheap\w*|requirements|requires?|need|needs|upgrade)\b'
 )
 
 function ConvertTo-AIPlano {

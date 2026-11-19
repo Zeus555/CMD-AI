@@ -356,6 +356,169 @@ Ver '/documentos y /docs    -> lista' ((Orden '/documentos') -eq 10 -and (Orden 
 Ver '/documentos otra cosa  -> modo de uso' ((Orden '/documentos agregar') -eq 11 -and (Orden '/documentos nube') -eq 11 -and (Orden '/documentos recordar x') -eq 11)
 Ver '/documental            -> al modelo' ((Orden '/documental') -eq 0)
 
+# ---- En ingles ------------------------------------------------------------------
+# El idioma decide lo que se escribe; lo que escribe el usuario y la busqueda
+# valen en los dos. Primero la ferreteria ya leida, vista en ingles (lo
+# guardado no depende del idioma); despues un negocio en ingles.
+Write-Output '--- en ingles'
+Set-AIIdioma en
+$en1 = Update-AIDocIndice $carpetas $cache $null $null
+$noE = @($en1.Ficheros | Where-Object { $_.Estado -eq 'mal' })
+Ver 'en: los motivos guardados en espanol salen en ingles' (@($noE | Where-Object { $_.Motivo -eq 'it has no text (is it a scanned image?)' }).Count -eq 1 -and @($noE | Where-Object { $_.Motivo -eq 'could not be read: the file is damaged or is not what its extension says' }).Count -eq 1) (@($noE | ForEach-Object { $_.Motivo }) -join ' / ')
+Ver 'en: solo se relee el Excel (sus fechas y horas cambian)' ($en1.Nuevos -eq 1) $en1.Nuevos
+$h = Find-AIDocTrozos $en1.Indice 'what time does the warehouse open?'
+$hb = @($h.Trozos | Where-Object { $_.Fichero -eq 'precios.xlsx' })
+Ver 'en: Excel con horas de 12 y la hoja como "Sheet:"' ($hb.Count -and $hb[0].Seccion -like 'Sheet: *' -and ($hb.Texto -join "`n") -match 'Abre: 7:30 AM \| Cierra: 5:30 PM') (($h.Trozos | ForEach-Object { "$($_.Seccion): $($_.Texto)" }) -join ' // ')
+Ver 'en: fechas MM/dd/yyyy' (($en1.Indice.Texto -join "`n") -match 'Desde: 11/10/2025')
+$h = Find-AIDocTrozos $en1.Indice '¿quién es el responsable del cierre del sábado, Ana Pérez o Marta?'
+Ver 'en: "Columns (first row)"' (@($h.Trozos | Where-Object { $_.Texto -match '(?m)^Columns \(first row\): D.a \| Responsable del cierre' -and $_.Texto -notmatch 'Columnas' }).Count -ge 1) (($h.Trozos | ForEach-Object { $_.Texto }) -join ' // ')
+Ver 'en: lo guardado sigue en espanol' ((@($en1.Indice.Seccion) -join '|') -match 'Hoja: Servicios' -and (@($en1.Indice.Seccion) -join '|') -notmatch 'Sheet:')
+Ver 'en: tipos en ingles' ((Get-AIDocCenso $neg).PorTipo.ContainsKey('text') -and @($en1.Ficheros | Where-Object { $_.Tipo -eq 'text' }).Count -ge 1)
+Ver 'motivo: ida y vuelta entre idiomas' ((ConvertTo-AIDocMotivo 'demasiado grande (31 MB; el tope es 30 MB)') -eq 'too big (31 MB; the limit is 30 MB)' -and (ConvertTo-AIDocMotivo 'no se pudo leer: el PDF está dañado: no se encuentran sus páginas') -eq "could not be read: the PDF is damaged: its pages can't be found" -and (ConvertTo-AIDocMotivo 'Access denied') -eq 'Access denied')
+$r = Read-AIDocTexto (Join-Path $pdfs 'protegido.pdf')
+Ver 'en: PDF protegido' ($r.Motivo -like 'could not be read: the PDF is protected*"Microsoft Print to PDF"*') $r.Motivo
+$r = Read-AIDocTexto (Join-Path $pdfs 'sin tabla.pdf')
+Ver 'en: PDF con letras que no se descifran' ($r.Motivo -like "could not be read: the PDF uses fonts I can't decode*") $r.Motivo
+
+# El negocio en ingles: una cafeteria.
+$eng = Join-Path $tmp 'Blue Bean Cafe'
+$cacheE = Join-Path $tmp 'cache-en'
+New-Item -ItemType Directory -Path (Join-Path $eng 'policies'), $cacheE -Force | Out-Null
+function EscribeE($nombre, $texto) { [IO.File]::WriteAllText((Join-Path $eng $nombre), $texto, $utf8) }
+function ZipE($nombre, $entradas) {
+    $fs = [IO.File]::Create((Join-Path $eng $nombre))
+    $z = New-Object IO.Compression.ZipArchive($fs, [IO.Compression.ZipArchiveMode]::Create)
+    foreach ($k in $entradas.Keys) { $w = New-Object IO.StreamWriter($z.CreateEntry($k).Open(), $utf8); $w.Write($entradas[$k]); $w.Dispose() }
+    $z.Dispose(); $fs.Dispose()
+}
+EscribeE 'staff.csv' "Name,Role,Shift,Extension`nOlivia Brown,Manager,Morning,201`nNoah Smith,Barista,Afternoon,202`nAva Jones,Baker,Morning,203`n"
+EscribeE 'policies\delivery.txt' "DELIVERY`nWe deliver within 5 miles of the shop for a `$3 fee. Orders over `$25 ship free.`nDeliveries run from 9 AM to 4 PM.`n"
+ZipE 'handbook.docx' ([ordered]@{ 'word/document.xml' = @'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Employee Handbook</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>Vacation</w:t></w:r></w:p>
+<w:p><w:r><w:t>Full-time employees get 10 paid vacation days per year, requested two weeks in advance.</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>Uniform</w:t></w:r></w:p>
+<w:p><w:r><w:t>Staff wear a green apron with the shop logo.</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>Pay</w:t></w:r></w:p>
+<w:p><w:r><w:t>Wages are paid by bank transfer every other Friday.</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>Shift leads</w:t></w:r></w:p>
+<w:tbl><w:tr><w:tc><w:p><w:r><w:t>Day</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Lead</w:t></w:r></w:p></w:tc></w:tr>
+<w:tr><w:tc><w:p><w:r><w:t>Monday</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Olivia Brown</w:t></w:r></w:p></w:tc></w:tr>
+<w:tr><w:tc><w:p><w:r><w:t>Saturday</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Noah Smith</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+<w:p/><w:sectPr/></w:body></w:document>
+'@ })
+ZipE 'menu.xlsx' ([ordered]@{
+    'xl/workbook.xml' = '<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Menu" sheetId="1" r:id="rId1"/><sheet name="Hours" sheetId="2" r:id="rId2"/></sheets></workbook>'
+    'xl/_rels/workbook.xml.rels' = '<Relationships><Relationship Id="rId1" Type="w" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="w" Target="worksheets/sheet2.xml"/></Relationships>'
+    'xl/sharedStrings.xml' = '<sst><si><t>Item</t></si><si><t>Price</t></si><si><t>Since</t></si><si><t>Latte</t></si><si><t>Cappuccino</t></si><si><t>Blueberry muffin</t></si><si><t>Day</t></si><si><t>Opens</t></si><si><t>Closes</t></si><si><t>Monday to Friday</t></si><si><t>Saturday</t></si></sst>'
+    'xl/styles.xml' = '<styleSheet><numFmts count="1"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0.00"/></numFmts><cellXfs count="4"><xf numFmtId="0"/><xf numFmtId="164" applyNumberFormat="1"/><xf numFmtId="20"/><xf numFmtId="14"/></cellXfs></styleSheet>'
+    'xl/worksheets/sheet1.xml' = '<worksheet><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c></row><row r="2"><c r="A2" t="s"><v>3</v></c><c r="B2" s="1"><v>4.95</v></c><c r="C2" s="3"><v>45971</v></c></row><row r="3"><c r="A3" t="s"><v>4</v></c><c r="B3" s="1"><v>4.5</v></c></row><row r="4"><c r="A4" t="s"><v>5</v></c><c r="B4" s="1"><v>1250</v></c></row></sheetData></worksheet>'
+    'xl/worksheets/sheet2.xml' = '<worksheet><sheetData><row r="1"><c r="A1" t="s"><v>6</v></c><c r="B1" t="s"><v>7</v></c><c r="C1" t="s"><v>8</v></c></row><row r="2"><c r="A2" t="s"><v>9</v></c><c r="B2" s="2"><v>0.29166666666666669</v></c><c r="C2" s="2"><v>0.75</v></c></row><row r="3"><c r="A3" t="s"><v>10</v></c><c r="B3" s="2"><v>0.33333333333333331</v></c><c r="C3" s="2"><v>0.625</v></c></row></sheetData></worksheet>'
+})
+New-AIPdfPrueba (Join-Path $eng 'catering.pdf') @(, @(
+    @{ T = 'Catering Menu'; Tam = 20; F = 'B' }
+    @{ T = 'Orders must be placed 48 hours in advance.'; Hueco = 8 }
+    @{ Celdas = @('Package', 'Price'); X = @(72, 300); F = 'B'; Hueco = 10 }
+    @{ Celdas = @('Office breakfast box', '$45'); X = @(72, 300) }
+    @{ Celdas = @('Party pastry tray', '$60'); X = @(72, 300) }
+)) -Comprimir
+New-AIPdfPrueba (Join-Path $eng 'scanned receipt.pdf') @(,@(@{ T = 'x' })) -Imagen
+EscribeE 'old notes.doc' 'not really a doc'
+EscribeE 'broken.docx' 'this is not a zip'
+
+$cE = @([pscustomobject]@{ Nombre = 'cafe'; Ruta = $eng; Tema = 'the Blue Bean Cafe'; Creado = '2026-11-18' })
+$avE = New-Object System.Collections.Generic.List[string]
+$eE = Update-AIDocIndice $cE $cacheE { param($t) $avE.Add($t) } $null
+$okE = @($eE.Ficheros | Where-Object { $_.Estado -eq 'ok' })
+Ver 'en: lee los cinco documentos' ($okE.Count -eq 5) (@($okE | ForEach-Object { $_.Fichero }) -join ', ')
+Ver 'en: avisa en ingles' ($avE.Count -ge 1 -and $avE[0] -match '^reading 1 of 8: ') ($avE -join ' / ')
+$mot = @{}; foreach ($x in @($eE.Ficheros | Where-Object { $_.Estado -ne 'ok' })) { $mot[$x.Fichero] = $x.Motivo }
+Ver 'en: escaneado' ($mot['scanned receipt.pdf'] -eq 'it has no text (is it a scanned image?)') $mot['scanned receipt.pdf']
+Ver 'en: Word antiguo' ($mot['old notes.doc'] -eq 'old Word file (.doc): open it in Word and save it as .docx') $mot['old notes.doc']
+Ver 'en: danado' ($mot['broken.docx'] -eq 'could not be read: the file is damaged or is not what its extension says') $mot['broken.docx']
+$tE = (Read-AIDocTexto (Join-Path $eng 'menu.xlsx')).Texto
+Ver 'en: Excel con moneda, fecha y horas' ($tE -match 'Item: Latte \| Price: \$4\.95 \| Since: 11/10/2025' -and $tE -match 'Price: \$1,250\.00' -and $tE -match 'Opens: 7:00 AM \| Closes: 6:00 PM') $tE
+Set-AIIdioma es
+$tS = (Read-AIDocTexto (Join-Path $eng 'menu.xlsx')).Texto
+Ver 'es: el mismo Excel como siempre' ($tS -match 'Item: Latte \| Price: 4\.95 \| Since: 10/11/2025' -and $tS -match 'Opens: 07:00 \| Closes: 18:00') $tS
+Set-AIIdioma en
+$ix = $eE.Indice
+Busca 'How much is a latte?' 'menu.xlsx' 'Latte \| Price: \$4\.95'
+Busca 'What time do you open on Saturdays?' 'menu.xlsx' 'Saturday \| Opens: 8:00 AM'
+Busca 'When do you close on weekdays?' 'menu.xlsx' 'Closes: 6:00 PM'
+Busca 'Who is the manager?' 'staff.csv' 'Role: Manager'
+Busca "What's Olivia's phone extension?" 'staff.csv' 'Extension: 201'
+Busca 'How many vacation days do employees get?' 'handbook.docx' '10 paid vacation days'
+Busca 'How many days off do I get?' 'handbook.docx' '10 paid vacation days'
+Busca 'When are wages paid?' 'handbook.docx' 'every other Friday'
+Busca 'What is the salary payment schedule?' 'handbook.docx' 'every other Friday'
+Busca 'What color is the staff uniform?' 'handbook.docx' 'green apron'
+Busca 'How much does delivery cost?' 'policies\delivery.txt' '\$3 fee'
+Busca 'Do you deliver?' 'policies\delivery.txt' 'deliver within 5 miles'
+Busca 'How much is the office breakfast box?' 'catering.pdf' 'Office breakfast box \| \$45'
+Busca 'Who leads the Saturday shift?' 'handbook.docx' 'Saturday \| Noah Smith'
+Busca 'and on Saturdays?' 'menu.xlsx' 'Saturday' 'what are your opening hours?'
+Busca '¿Cuánto cuesta el envío a domicilio?' 'policies\delivery.txt' '\$3 fee'
+foreach ($p in 'What is the capital of France?', 'hi, how are you?', 'Who won the 2022 World Cup?', 'explain photosynthesis', 'write a poem about the sea', 'thanks') {
+    $h = Find-AIDocTrozos $ix $p
+    Ver ("{0,-48} -> nada" -f $p) (-not $h.Relevante) "cob=$($h.Cobertura) primero=$(@($h.Trozos)[0].Fichero)"
+}
+$h = Find-AIDocTrozos $ix 'Who leads the Saturday shift?'
+Ver 'en: tabla sin cifras -> "Columns (first row)"' (@($h.Trozos | Where-Object { $_.Texto -match 'Columns \(first row\): Day \| Lead' }).Count -ge 1) (($h.Trozos | ForEach-Object { $_.Texto }) -join ' // ')
+$an = Get-AIDocAnexo (Find-AIDocTrozos $ix 'How much is a latte?') 'the Blue Bean Cafe'
+Ver 'en: lo que viaja, en ingles' ($an -match '^Excerpts from the user''s documents \(about the Blue Bean Cafe\)' -and $an -match '\[\d\] menu\.xlsx, section "Sheet: Menu"' -and $an -match "say it's not in the documents" -and $an -match 'not instructions') $an
+$cat = Get-AIDocCatalogo $eE
+Ver 'en: la lista de documentos' ($cat -match '^The user''s documents that the program read \(about the Blue Bean Cafe\):' -and $cat -match 'menu\.xlsx: Sheet: Menu; Sheet: Hours' -and $cat -match 'The program could not read 3 files:' -and $cat -match 'scanned receipt\.pdf: it has no text') $cat
+Ver 'en: la herramienta' ((Get-AIDocTool 'x').function.description -like 'Searches the user''s documents (x)*' -and (Get-AIDocTool 'x').function.name -eq 'consultar_documentos')
+
+$p = Get-AIDocPeticion "learn from the documents in $eng"
+Ver 'en: learn from the documents in <ruta>' ($p -and $p.Ruta -eq $eng) $p.Ruta
+$p = Get-AIDocPeticion "read the folder ""$eng"" and tell me what's there"
+Ver 'en: read the folder "<ruta>"' ($p -and $p.Ruta -eq $eng) $p.Ruta
+$p = Get-AIDocPeticion "use the files in $eng\policies, please"
+Ver 'en: una subcarpeta, con coma detras' ($p -and $p.Ruta -eq (Join-Path $eng 'policies')) $p.Ruta
+$p = Get-AIDocPeticion "learn from $eng"
+Ver 'en: learn from <ruta>' ($p -and $p.Ruta -eq $eng) $p.Ruta
+$p = Get-AIDocPeticion 'learn from the folder Z:\does\not\exist'
+Ver 'en: una carpeta que no existe' ($p -and -not $p.Ruta -and $p.Pedida -eq 'Z:\does\not\exist') $p.Pedida
+foreach ($x in 'learn to program in Python', 'read this: hello', "open $eng", 'what is in C:\Windows?') {
+    Ver ("{0,-48} -> no" -f $x) ($null -eq (Get-AIDocPeticion $x))
+}
+foreach ($x in 'what documents do you have?', 'Which files did you read?', 'what do you know about my business?', 'how many documents did you learn?') { Ver ("{0,-48} -> lista" -f $x) (Test-AIDocCatalogoPedido $x) }
+foreach ($x in 'what does the vacation document say?', 'what time do you open?') { Ver ("{0,-48} -> no lista" -f $x) (-not (Test-AIDocCatalogoPedido $x)) }
+foreach ($x in 'What time is it?', "what's the time", 'what day is it today?', "what's today's date?", 'what is the date') { Ver ("{0,-48} -> reloj" -f $x) (Test-AIDocReloj $x) }
+foreach ($x in 'what time do you open?', 'what day do you close?', 'what time is the cash count?') { Ver ("{0,-48} -> no reloj" -f $x) (-not (Test-AIDocReloj $x)) }
+foreach ($x in @(
+    @('forget everything you learned', 'TODO'), @('forget all the documents', 'TODO'), @('Forget what you learned.', 'TODO'),
+    @('forget the document staff.csv', 'staff.csv'), @('forget staff.csv', 'staff.csv'), @('forget about the salaries', 'salaries'),
+    @('forget about the extension', 'extension'), @('stop using the folder cafe', 'cafe'), @('forget the section on vacation', 'vacation'),
+    @('please forget everything about the uniform', 'uniform'))) {
+    $pe = Get-AIDocOlvidoPeticion $x[0]
+    $ok = if ($x[1] -eq 'TODO') { $pe -and $pe.Todo } else { $pe -and -not $pe.Todo -and $pe.Que -eq $x[1] }
+    Ver ("{0,-48} -> {1}" -f $x[0], $x[1]) $ok "$($pe.Todo) / $($pe.Que)"
+}
+foreach ($x in 'forget what I told you', 'forget about it', 'remove the accent from this word', 'delete this from my head', 'how do I forget a document?') {
+    Ver ("{0,-48} -> no" -f $x) ($null -eq (Get-AIDocOlvidoPeticion $x))
+}
+$o = Find-AIDocOlvido $eE 'staff'
+Ver 'en: olvidar "staff" -> el documento' ($o.Tipo -eq 'fichero' -and $o.Que -eq 'the document staff.csv') $o.Que
+$o = Find-AIDocOlvido $eE 'cafe'
+Ver 'en: olvidar "cafe" -> la carpeta' ($o.Tipo -eq 'carpeta' -and $o.Que -like 'the folder "cafe" (*), with its 5 documents') $o.Que
+$o = Find-AIDocOlvido $eE 'Vacation'
+Ver 'en: olvidar "Vacation" -> el apartado' ($o.Tipo -eq 'apartado' -and $o.Que -eq 'the section "Employee Handbook > Vacation" of handbook.docx') $o.Que
+$o = Find-AIDocOlvido $eE 'Sheet: Hours'
+Ver 'en: olvidar una hoja por su nombre en ingles' ($o.Tipo -eq 'apartado' -and $o.Reglas[0].Apartado -eq 'Hoja: Hours' -and $o.Que -eq 'the section "Sheet: Hours" of menu.xlsx') $o.Que
+Ver 'en: la regla en palabras' ((Format-AIDocOlvido $o.Reglas[0]) -eq 'the section "Sheet: Hours" of menu.xlsx')
+$o = Find-AIDocOlvido $eE 'green apron'
+Ver 'en: olvidar un tema' ($o.Tipo -eq 'tema' -and $o.Que -eq 'what mentions "green apron" (1 lines of handbook.docx)' -and $o.Ejemplos[0] -match 'handbook\.docx: Staff wear') "$($o.Que) / $($o.Ejemplos)"
+$reglasE = @((Find-AIDocOlvido $eE 'salaries').Reglas)
+$o = Find-AIDocOlvido $eE 'wages'
+$eo = Update-AIDocIndice $cE $cacheE $null $eE @($o.Reglas)
+Ver 'en: el tema olvidado ya no sale' (($eo.Indice.Texto -join "`n") -notmatch 'Wages' -and ($eo.Indice.Texto -join "`n") -match 'green apron')
+Set-AIIdioma es
+
 Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 Write-Output "MAL = $mal"
 exit $mal
