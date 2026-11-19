@@ -18,12 +18,13 @@ Server-Sent Events: the server sends text over HTTP in chunks as it
 generates it, and the client draws it as it arrives.
 ```
 
-**Presentation video:** an English video is coming. For now, the Spanish one
-(2:13, narrated): [PRC AI 2.0 on YouTube](https://www.youtube.com/watch?v=FhrSBxF6vFE)
-(Spanish). It shows the local chat, internet search, saved commands and
-queries, and how it learns from a business's documents and forgets them.
-What appears in the terminal is real program output. How it was made:
-[`docs/video/GUION.md`](docs/video/GUION.md) (in Spanish).
+**Presentation video (2:09, narrated):**
+[PRC AI 2.0 on YouTube](https://www.youtube.com/watch?v=7vM_9QslKjo). It shows the local chat, internet search,
+saved commands and web queries, and how it learns from a coffee shop's
+documents and forgets them. What appears in the terminal is real program
+output, in English. There is also a
+[Spanish version](https://www.youtube.com/watch?v=FhrSBxF6vFE). How they were
+made: [`docs/video/GUION.md`](docs/video/GUION.md) (in Spanish).
 
 ## Features
 
@@ -64,8 +65,7 @@ What appears in the terminal is real program output. How it was made:
   policies... It says which document each fact comes from, and if a fact is
   not there, it says so instead of making it up. Everything stays on the
   computer. See "Documents" and, for day-to-day use, the
-  [usage guide](docs/guia-documentos.md) (in Spanish; an English guide is
-  coming).
+  [usage guide](docs/documents-guide.md).
 - **Diagnostics** with `AI -Check`: key status and connectivity of the
   providers without spending tokens.
 - **Local by default**: with nothing configured it talks to Gemma 4 E4B on
@@ -893,8 +893,7 @@ saved. I will keep it in mind in this and future conversations (/preferences lis
 A folder with your business's documents (services, prices, staff, opening
 hours, procedures, internal policies...) and the terminal answers with what
 they say. For people who will use it in their business without technical
-knowledge there is the [documents usage guide](docs/guia-documentos.md) (in
-Spanish; an English guide is coming): how to prepare the folder, which PDFs
+knowledge there is the [documents usage guide](docs/documents-guide.md): how to prepare the folder, which PDFs
 work, how to ask, check and forget. The example here is an invented hardware
 store, the one used in the tests (there its documents are in Spanish;
 `tests/negocio.ps1 -Idioma en` creates an English business, a coffee shop):
@@ -1140,8 +1139,8 @@ tests/negocio-en.ps1 the test business in English (loaded by negocio.ps1
                     with -Idioma en)
 HISTORIAL.md        what changed in each version, why and how it was tested
                     (in Spanish)
-docs/guia-documentos.md  usage guide for the documents, for a business
-                    owner (in Spanish)
+docs/documents-guide.md  usage guide for the documents, for a business
+                    owner (in Spanish: docs/guia-documentos.md)
 docs/video/         the presentation video: script, narration and its voice,
                     real terminal captures and the HyperFrames composition
                     that renders it

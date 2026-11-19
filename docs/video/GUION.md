@@ -7,6 +7,10 @@ Linkedin` (`services\security-alerts\lib\youtube.mjs`), que antes de subir
 comprueba que el token es de ese canal. Si se vuelve a renderizar, el video
 de YouTube no cambia: hay que subirlo de nuevo.
 
+**En inglés:** [PRC AI 2.0 en YouTube](https://www.youtube.com/watch?v=7vM_9QslKjo),
+en el mismo canal, público, el 2026-11-19 (2:09). Ver «El video en inglés»,
+al final.
+
 Un video corto (2:13, 1920×1080, 30 fps, en español) con lo más relevante
 de PRC AI 2.0, narrado. La voz cuenta lo que hace cada escena, así que se
 sigue sin leer la terminal; y como en LinkedIn el video arranca sin sonido,
@@ -127,3 +131,39 @@ transcripción, unos 5 centavos con las tomas repetidas.
    ```
 
 El MP4 no va en git: `docs/video/renders/` está en `.gitignore`.
+
+## El video en inglés
+
+El mismo video, con el programa en inglés: es otro proyecto HyperFrames en
+[`en/`](en), con sus capturas en [`capturas/en/`](capturas/en), su
+narración en [`en/narracion.txt`](en/narracion.txt) y su voz en
+`en/assets/voz/`. La regla es la misma: lo que sale en la terminal es salida
+real del programa (con `AI_LANG=en`), y solo cambia el ritmo.
+
+- **El negocio** es una cafetería inventada de EE. UU. con dos locales,
+  Linden Street Coffee House, de `tests\negocio.ps1 -Crear <carpeta> -Idioma en`,
+  con precios en dólares; el catálogo de pasteles es un PDF y la factura
+  escaneada es la trampa.
+- **La consulta web** lee la población y la superficie de Seattle de
+  seattle.gov. La dirección se pega en la lista de páginas, que el programa
+  permite («paste another address»): la búsqueda devolvía páginas distintas
+  cada vez, y una (census.gov) contestaba 403.
+- **La negrita del modelo** (`**45°F**`) sale en negrita, como en la
+  terminal: en la captura, con la salida redirigida, venía con los
+  asteriscos. Las capturas en español no tienen ninguna.
+- **La voz** es la misma (`cedar`), con el estilo en inglés de EE. UU.;
+  Whisper comprueba cada toma en inglés. Las cifras van en cifras, como las
+  escribe Whisper.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tests\negocio.ps1 -Crear $env:TEMP\linden -Idioma en
+robocopy "$env:TEMP\linden\Linden Street Coffee House" D:\MyBusiness /E /MOVE
+powershell -NoProfile -ExecutionPolicy Bypass -File docs\video\capturar.ps1 -Idioma en -Entrada docs\video\capturas\en\3-preferences-documents.txt -Salida docs\video\capturas\en\3-preferences-documents.out
+powershell -NoProfile -ExecutionPolicy Bypass -File docs\video\voz.ps1 -Idioma en -Dir docs\video\en
+powershell -NoProfile -ExecutionPolicy Bypass -File docs\video\montar.ps1 -Idioma en
+cd docs\video\en
+npx --yes hyperframes@0.8.221 render -o renders\prc-ai-2.0-en.mp4
+```
+
+Las escenas en inglés (rótulo, título, pie y las líneas de cada captura)
+están en `montar.ps1`, en el bloque `if ($Idioma -eq 'en')`.

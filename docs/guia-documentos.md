@@ -1,3 +1,5 @@
+**Español** · [English](documents-guide.md)
+
 # Guía: que la terminal conteste con los documentos de tu negocio
 
 Esta guía es para quien lleva un negocio y quiere preguntarle a la terminal

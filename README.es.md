@@ -21,8 +21,9 @@ que lo genera, y el cliente lo pinta segun llega.
 [PRC AI 2.0 en YouTube](https://www.youtube.com/watch?v=FhrSBxF6vFE). En
 él se ve el chat local, la búsqueda en internet, los comandos y consultas
 guardados, y cómo aprende de los documentos de un negocio y los olvida. Lo
-que sale en la terminal es salida real del programa. Cómo se hizo:
-[`docs/video/GUION.md`](docs/video/GUION.md).
+que sale en la terminal es salida real del programa. También hay una
+[versión en inglés](https://www.youtube.com/watch?v=7vM_9QslKjo), con el programa en inglés y una cafetería
+inventada. Cómo se hicieron: [`docs/video/GUION.md`](docs/video/GUION.md).
 
 ## Características
 
@@ -1096,7 +1097,7 @@ tests/negocio-en.ps1 el negocio de prueba en ingles (lo carga negocio.ps1
                     con -Idioma en)
 HISTORIAL.md        que cambio en cada version, por que y como se probo
 docs/guia-documentos.md  guia de uso de los documentos, para el dueno de
-                    un negocio
+                    un negocio (en ingles: docs/documents-guide.md)
 docs/video/         el video de presentacion: guion, narracion y su voz,
                     capturas reales de la terminal y la composicion
                     HyperFrames que lo renderiza
