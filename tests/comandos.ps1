@@ -153,6 +153,92 @@ $src = [IO.File]::ReadAllText((Join-Path $Raiz 'lib\comandos.ps1'))
 $codigo = (($src -split "`n") | Where-Object { $_ -notmatch '^\s*#' }) -join "`n"
 Ver 'el texto del usuario nunca se ejecuta: sin Invoke-Expression, AddScript ni ScriptBlock::Create' ($codigo -notmatch 'Invoke-Expression|\biex\b|AddScript|ScriptBlock\]::Create|\.Invoke\(\)|Start-Process')
 
+# ---- en ingles ---------------------------------------------------------------
+# Lo que escribe el programa cambia; lo que escribe el usuario (o el modelo)
+# se reconoce en los dos idiomas.
+Set-AIIdioma en
+$p = Get-AIComandoPlan 'Remove-Item C:\x'
+Ver 'en: veredicto de las reglas' (-not $p.Ok -and $p.Motivo -eq '"Remove-Item" is not in the list of read-only commands') $p.Motivo
+$p = Get-AIComandoPlan 'irm https://api.ipify.org'
+Ver 'en: un alias' ($p.Motivo -eq '"irm" is an alias: write the full name, Invoke-RestMethod') $p.Motivo
+$p = Get-AIComandoPlan 'Get-Date $x'
+Ver 'en: la tabla de nodos, al usarla' ($p.Motivo -eq 'variables are not allowed ($something)') $p.Motivo
+$p = Get-AIComandoPlan 'ipconfig /release'
+Ver 'en: forma de un programa' ($p.Motivo -eq '"ipconfig /release" is not one of the read-only forms allowed for ipconfig') $p.Motivo
+Ver 'en: la regla que pasa sigue pasando' ((Get-AIComandoPlan 'Get-Process | Sort-Object CPU -Descending').Ok)
+Ver 'en: direccion' ((Test-AIComandoUrl 'http://api.ipify.org') -eq 'the address must start with https://')
+Ver 'en: nombre' ((Test-AIComandoNombre 'IP') -like 'the name goes in lowercase*')
+Ver 'en: nombre reservado, tambien en ingles' ((Test-AIComandoNombre 'add') -eq '"add" cannot be a name: it is a /command word' -and (Test-AIComandoNombre 'remove') -and (Test-AIComandoNombre 'agregar'))
+$r = Invoke-AIComandoPlan (Get-AIComandoPlan 'Get-Process | Where-Object Name -eq no-existe')
+Ver 'en: sin resultados' ($r.Ok -and $r.Vacio -and $r.Salida -eq '(the command returned nothing)') $r.Salida
+Ver 'en: documentacion en ingles' ((Get-AIComandoDocUrl (Get-AIComandoPlan 'ipconfig /all')) -eq 'https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/ipconfig')
+$o = (@{ tools = @(Get-AIComandoTool $lista) } | ConvertTo-Json -Depth 10 -Compress) | ConvertFrom-Json
+Ver 'en: la herramienta' ($o.tools[0].function.description -like "Runs on the user's computer*" -and (@($o.tools[0].function.parameters.properties.nombre.enum) -join ',') -eq 'ip-publica,top-cpu')
+Ver 'en: pedido con la clave traducida' ((Find-AIComandoPedido '{"name":"ip-publica"}' $lista).Nombre -eq 'ip-publica')
+$f = Join-Path ([IO.Path]::GetTempPath()) ("comandos-prueba-" + [Guid]::NewGuid().ToString('N') + '.json')
+[IO.File]::WriteAllText($f, '[{"nombre":"Otro Malo","comando":"Get-Date"},{"nombre":"x","comando":""}]')
+$c = Read-AIComandos $f
+Ver 'en: rechazados al cargar' (($c.Rechazados -join ' / ') -eq 'Otro Malo: the name goes in lowercase, without accents or spaces, with hyphens if needed (for example public-ip) / x: has no command') ($c.Rechazados -join ' / ')
+Remove-Item $f
+$x = Invoke-AIComandoGuardado ([pscustomobject]@{ Nombre = 'manipulado'; Comando = 'Remove-Item C:\x'; Descripcion = '' })
+Ver 'en: al modelo, en ingles' ($x.ParaModelo -eq 'The saved command "manipulado" could not be run: it no longer passes the rules ("Remove-Item" is not in the list of read-only commands). Say so and do not make up the data.') $x.ParaModelo
+# la segunda opinion: RIESGO o RISK, en cualquier idioma
+foreach ($t in 'RISK: it sends data out', '**Risk** - it deletes files', 'RIESGO: borra ficheros') { Ver "en: el revisor avisa: $t" (Test-AIComandoRiesgo $t) }
+Ver 'en: el revisor no avisa' (-not (Test-AIComandoRiesgo 'It only reads the date. It sends nothing out.'))
+$rv = Get-AIComandoRevisorMensajes 'Get-Date' ''
+Ver 'en: el revisor, en ingles' ($rv[1].content -like '*start the answer with the word RISK.' -and $rv[0].content -like '*in English*' -and $rv[1].content -notmatch 'RIESGO')
+# la guia y lo que contesta el modelo
+$g = Get-AIComandoGuia
+Ver 'en: la guia' ($g -match '(?m)^COMMAND: ' -and $g -match '(?m)^NAME: ' -and $g -match '(?m)^IMPOSSIBLE: ' -and $g -notmatch 'COMANDO:' -and $g -match 'Get-CimInstance')
+$p = ConvertFrom-AIComandoPropuesta "COMMAND: Get-PSDrive -PSProvider FileSystem`nNAME: free space on the disks"
+Ver 'en: propuesta' ($p.Comando -eq 'Get-PSDrive -PSProvider FileSystem' -and $p.Nombre -eq 'free-space') "<$($p.Comando)> <$($p.Nombre)>"
+Ver 'en: propuesta con etiquetas en espanol' ((ConvertFrom-AIComandoPropuesta "COMANDO: Get-Date`nNOMBRE: fecha").Comando -eq 'Get-Date')
+$p = ConvertFrom-AIComandoPropuesta 'IMPOSSIBLE: it would need to delete files'
+Ver 'en: propuesta imposible' ($p.Imposible -eq 'it would need to delete files' -and -not $p.Comando)
+# nombres propuestos con las palabras del usuario
+foreach ($par in @(@('see the free space on the disks', 'free-space'), @('show my public IP', 'public-ip'), @('check if the antivirus is active', 'antivirus'), @('how much RAM is installed', 'ram-installed'),
+                   @('ver el espacio libre de los discos', 'espacio-libre'), @('ip-publica-obtener', 'ip-publica'))) {
+    Ver "nombre corto: $($par[0])" ((ConvertTo-AIComandoNombreCorto $par[0]) -eq $par[1]) (ConvertTo-AIComandoNombreCorto $par[0])
+}
+# parece un comando: los alias que son palabras inglesas, solo si lo parecen
+Ver 'en: una frase que empieza por sort no es un comando' (-not (Test-AIPareceComando 'sort the processes by CPU'))
+Ver 'en: una frase que empieza por date no es un comando' (-not (Test-AIPareceComando 'date of the last boot'))
+Ver 'en: sort con parametros si' (Test-AIPareceComando 'sort CPU -Descending')
+Ver 'en: date solo si' (Test-AIPareceComando 'date')
+Ver 'en: una frase no' (-not (Test-AIPareceComando 'the three processes that use the most memory'))
+# pedir un comando con una frase en ingles (y en espanol, con el ingles activo)
+foreach ($l in @(
+        '||see my public IP=add a command to see my public IP'
+        '||shows the free space on the disks=add me a command that shows the free space on the disks'
+        '||check if the antivirus is on=save a command to check if the antivirus is on'
+        '|top-cpu|see the processes=can you add a command to see the processes called top cpu?'
+        'Get-DnsClientServerAddress -AddressFamily IPv4|dns-servers|=save this command as dns-servers: Get-DnsClientServerAddress -AddressFamily IPv4'
+        'Invoke-RestMethod -Uri https://api.ipify.org|public-ip|=please add a command named "public IP": Invoke-RestMethod -Uri https://api.ipify.org'
+        '||=I want to save a command'
+        '||the latest lottery results=add a web query for the latest lottery results'
+        '||see https://example.com=add a command to see https://example.com'
+        ('||ver mi IP p' + [char]0xFA + 'blica=agr' + [char]0xE9 + 'game un comando para ver mi IP p' + [char]0xFA + 'blica')
+        '-=create a command to undo the last git commit'
+        '-=how do I add a command to the PATH?'
+        '-=what command do I use to see my IP?'
+        '-=give me a command to list files'
+        '-=save this in your memory: my name is Ana'
+        '-=add two plus two'
+        '-=the command failed, save it')) {
+    $i = $l.IndexOf('='); $esp = $l.Substring(0, $i); $frase = $l.Substring($i + 1)
+    $pp = Get-AIComandoPeticion $frase
+    $got = if ($pp) { "$($pp.Comando)|$($pp.Nombre)|$($pp.Dato)" } else { '-' }
+    Ver "en: peticion: $frase" ($got -eq $esp) "esperado <$esp> sale <$got>"
+}
+# el atajo con nombres en ingles
+$en2 = @([pscustomobject]@{ Nombre = 'public-ip'; Comando = 'Invoke-RestMethod -Uri https://api.ipify.org'; Descripcion = '' }
+         [pscustomobject]@{ Nombre = 'free-space'; Comando = 'Get-PSDrive -PSProvider FileSystem'; Descripcion = '' })
+Ver 'en: atajo' ((At 'show me my public IP' $en2) -eq 'public-ip') (At 'show me my public IP' $en2)
+Ver 'en: atajo, otro' ((At 'how much free space do I have?' $en2) -eq 'free-space') (At 'how much free space do I have?' $en2)
+Ver 'en: atajo, nada que ver' ((At 'hello' $en2) -eq '-')
+Set-AIIdioma es
+Ver 'de vuelta al espanol' ((Get-AIComandoPlan 'Remove-Item C:\x').Motivo -eq ([char]0xAB + 'Remove-Item' + [char]0xBB + ' no est' + [char]0xE1 + ' en la lista de comandos de solo lectura'))
+
 # ---- con red (opcional) ----------------------------------------------------
 if ($Red) {
     $ipify = [pscustomobject]@{ Nombre = 'ip-publica'; Comando = 'Invoke-RestMethod -Uri https://api.ipify.org'; Descripcion = 'mi IP publica' }

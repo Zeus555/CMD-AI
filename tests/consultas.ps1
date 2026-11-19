@@ -131,6 +131,37 @@ Ver 'web es un nombre reservado'        ([bool](Test-AIComandoNombre 'web'))
 $x = Invoke-AIComandoGuardado ([pscustomobject]@{ Nombre = 'mala'; Tipo = 'web'; Url = 'http://example.com'; Campos = @((C 'a' 'A')); Registros = 1 })
 Ver 'ejecutar: una direccion http no se pide' (-not $x.Ok -and $x.ParaModelo -match 'no inventes') $x.Motivo
 
+# ---- en ingles -----------------------------------------------------------------------
+# Lo que escribe el programa cambia; lo que teclea el usuario o contesta el
+# modelo se reconoce en los dos idiomas.
+Set-AIIdioma en
+Ver 'en: campos que faltan'             ((Test-AIConsultaCampos @()) -eq 'the fields are missing (name=label)')
+Ver 'en: rotulo con el dato'            ((Test-AIConsultaCampos @((C 'draw' 'Draw 2304'))) -eq 'the label of "draw" ("Draw 2304") has digits: it must be the fixed text that comes before the value, not the value')
+Ver 'en: registros'                     ((Test-AIConsultaCampos @((C 'a' 'X')) 11) -eq 'records go from 1 to 10')
+foreach ($t in 'add a command to get the latest lottery results from the internet', 'add a command that reads the lottery page',
+               'add a web query for the dollar price', 'save a command for the weather from a website', 'add a command to get the price from https://example.com/x') {
+    Ver "en: pedida web: $t" (Test-AIConsultaPedida $t)
+}
+foreach ($t in 'add a command to see my public IP', 'add a command for the processes that use the most memory') {
+    Ver "en: pedida no web: $t" (-not (Test-AIConsultaPedida $t))
+}
+$p = ConvertFrom-AIConsultaPropuesta "NAME: Lottery Results`nDESCRIPTION: The last draw`n**FIELD draw:** ""Sorteo""`nFIELD Draw date: Fecha:`nRECORDS: 3"
+Ver 'en: propuesta'                     ((@($p.Campos | ForEach-Object { "$($_.Campo)=$($_.Rotulo)" }) -join ' ') -eq 'draw=Sorteo draw_date=Fecha:' -and $p.Nombre -eq 'lottery-results' -and $p.Descripcion -eq 'The last draw' -and $p.Registros -eq 3) "<$((@($p.Campos | ForEach-Object { "$($_.Campo)=$($_.Rotulo)" }) -join ' '))> <$($p.Nombre)> <$($p.Descripcion)> <$($p.Registros)>"
+$p = ConvertFrom-AIConsultaPropuesta 'NODATA: the page has no results'
+Ver 'en: propuesta: no hay'             ($p.NoHay -eq 'the page has no results' -and -not $p.Campos.Count)
+$v = Test-AIConsultaPropuesta @{ Campos = @((C 'sorteo' 'Sorteo'), (C 'bote' 'Bote acumulado:')); Registros = 1 } $texto
+Ver 'en: rotulo que no esta en la pagina' ($v.Motivo -eq 'the label "Bote acumulado:" of bote is not on the page: copy it exactly from the text') $v.Motivo
+Ver 'en: sin campos'                    ((Test-AIConsultaPropuesta @{ Campos = @(); Registros = 1 } $texto).Motivo -eq 'you gave no FIELD line')
+$cf = ConvertFrom-AIConsultaCampos 'draw=Sorteo winner="Ganador:" records=4'
+Ver 'en: teclear records='              ($cf.Registros -eq 4 -and $cf.Campos.Count -eq 2 -and (Format-AIConsultaCampos $cf.Campos $cf.Registros) -eq 'draw="Sorteo" winner="Ganador:" records=4') (Format-AIConsultaCampos $cf.Campos $cf.Registros)
+Ver 'en: teclear registros= sigue valiendo' ((ConvertFrom-AIConsultaCampos 'a=X registros=2').Registros -eq 2)
+$g = Get-AIConsultaGuia
+Ver 'en: la guia'                       ($g -match '(?m)^FIELD field_name: label' -and $g -match '(?m)^NODATA: ' -and $g -notmatch 'CAMPO')
+$x = Invoke-AIComandoGuardado ([pscustomobject]@{ Nombre = 'bad'; Tipo = 'web'; Url = 'http://example.com'; Campos = @((C 'a' 'A')); Registros = 1 })
+Ver 'en: ejecutar: una direccion http'  (-not $x.Ok -and $x.ParaModelo -eq 'The saved web query "bad" could not be done: the address must start with https://. Say so and do not make up the data.') $x.ParaModelo
+Set-AIIdioma es
+Ver 'de vuelta al espanol'              ((Test-AIConsultaCampos @()) -eq ('faltan los campos (nombre=r' + [char]0xF3 + 'tulo)'))
+
 # ---- con red: la pagina de verdad ------------------------------------------------------
 if ($Red) {
     $q = [pscustomobject]@{ Nombre = 'loteria-nicaragua'; Tipo = 'web'; Url = 'https://loterianacional.com.ni/resultados/'; Registros = 2; Descripcion = 'prueba'
