@@ -1,0 +1,15 @@
+
+  PRC AI 2.0  Gemma 4 E4B (local) / gemma-4-e4b  -  searches the internet when needed
+  bye to quit  -  /help for the commands
+
+User > explain in two lines the advantage of running an AI model on my own computer
+ai > Running an AI model locally offers enhanced **privacy** as your data never leaves your machine. It also provides **lower latency** and **offline capability**, making it independent of internet connection speed.
+User > what's the weather like today in Seattle?
+ai > searching: weather in Seattle today
+ai > The search results provide current and hourly forecasts for Seattle, WA. As of the data retrieved, the temperature is around **45°F**, and the conditions are **Cloudy** with a high chance of cloud cover.
+   sources: https://weather.com/us/washington/city/seattle/today  https://www.accuweather.com/en/us/seattle/98104/hourly-weather-forecast/351409
+User > how much RAM does this computer have and how much is free?
+ai > reading from this computer: memory
+ai > Your computer has 31.8 GB of RAM in total, with 12.5 GB currently free.
+User > bye
+bye

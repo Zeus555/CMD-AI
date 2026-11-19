@@ -1,0 +1,106 @@
+{
+    "intro":  {
+                  "huella":  "fc66ae8a5855eb4c",
+                  "duracion":  5.832,
+                  "cobertura":  0.933,
+                  "toma":  1,
+                  "texto":  "PRC AI 2.0. An artificial intelligence in the Windows terminal, on your own computer.",
+                  "oido":  "PRC-AI 2.0, an artificial intelligence in a Windows terminal on your own computer."
+              },
+    "local":  {
+                  "huella":  "cb33164fd7df1c1c",
+                  "duracion":  7.248,
+                  "cobertura":  1,
+                  "toma":  1,
+                  "texto":  "The model, Gemma 4, runs on the laptop itself. No key, no cloud, and the conversation never leaves your computer.",
+                  "oido":  "The model, Gemma 4, runs on the laptop itself. No key, no cloud, and the conversation never leaves your computer."
+              },
+    "web":  {
+                "huella":  "3c24d78ab0e7b880",
+                "duracion":  5.664,
+                "cobertura":  1,
+                "toma":  1,
+                "texto":  "When a question needs current data, it searches the internet, reads the pages and cites its sources.",
+                "oido":  "When a question needs current data, it searches the internet, reads the pages, and cites its sources."
+            },
+    "equipo":  {
+                   "huella":  "a99cd304959263da",
+                   "duracion":  4.656,
+                   "cobertura":  1,
+                   "toma":  1,
+                   "texto":  "And what the computer already knows, like its free memory, it reads straight from Windows.",
+                   "oido":  "and what the computer already knows, like it\u0027s free memory, it reads straight from Windows."
+               },
+    "comandos":  {
+                     "huella":  "b3742494974ceb1a",
+                     "duracion":  7.632,
+                     "cobertura":  1,
+                     "toma":  1,
+                     "texto":  "You can ask for a new command just by chatting. Read-only: fixed rules check it, it tests it and saves it. From then on, it uses it when you ask.",
+                     "oido":  "You can ask for a new command just by chatting. Read-only. Fixed rules check it. It tests it and saves it. From then on, it uses it when you ask."
+                 },
+    "consultas":  {
+                      "huella":  "c7aee1bc197e1fde",
+                      "duracion":  5.76,
+                      "cobertura":  1,
+                      "toma":  1,
+                      "texto":  "Web pages work the same way: it picks the page, pulls out the data you ask for, and shows it to you before saving.",
+                      "oido":  "Web pages work the same way. It picks the page, pulls out the data you ask for, and shows it to you before saving."
+                  },
+    "preferencias":  {
+                         "huella":  "cbc7cc6f709c5ddb",
+                         "duracion":  4.248,
+                         "cobertura":  1,
+                         "toma":  1,
+                         "texto":  "It also remembers how you want it to answer, in this conversation and the next ones.",
+                         "oido":  "It also remembers how you want it to answer in this conversation and the next ones."
+                     },
+    "aprende":  {
+                    "huella":  "4b94abfa5409dd3b",
+                    "duracion":  9.312,
+                    "cobertura":  1,
+                    "toma":  1,
+                    "texto":  "And the newest part: it learns from your business folder. It reads Word, Excel, PowerPoint and PDF, and tells you what it can\u0027t read, like a scanned invoice.",
+                    "oido":  "And the newest part, it learns from your business folder. It reads Word, Excel, PowerPoint, and PDF, and tells you what it can\u0027t read, like a scanned invoice."
+                },
+    "pregunta":  {
+                     "huella":  "cc64a6aa6c8c42e3",
+                     "duracion":  14.088,
+                     "cobertura":  0.981,
+                     "toma":  1,
+                     "texto":  "You ask, and it answers with what your documents say, and which one it comes from: a whole carrot cake is 48 dollars, according to the PDF catalog. And if something isn\u0027t there, like an employee\u0027s pay, it doesn\u0027t make it up: it tells you it\u0027s not in the documents.",
+                     "oido":  "You ask, and it answers with what your documents say and which one it comes from. A whole carrot cake is $48, according to the PDF catalog. And if something isn\u0027t there, like an employee\u0027s pay, it doesn\u0027t make it up. It tells you it\u0027s not in the documents."
+                 },
+    "buscar":  {
+                   "huella":  "1f3f16b5364cbe80",
+                   "duracion":  6.024,
+                   "cobertura":  1,
+                   "toma":  1,
+                   "texto":  "With documents search you can see where each answer comes from, without asking the model. Here, the price table from the PDF.",
+                   "oido":  "With document search, you can see where each answer comes from, without asking the model. Here, the price table from the PDF."
+               },
+    "olvida":  {
+                   "huella":  "803b4f21bc1dd909",
+                   "duracion":  10.392,
+                   "cobertura":  1,
+                   "toma":  1,
+                   "texto":  "It also forgets. Ask it to forget the extensions: it shows what it will forget and waits for your yes. Your files aren\u0027t touched, and in a new conversation that data is gone.",
+                   "oido":  "It also forgets. Ask it to forget the extensions. It shows what it will forget and waits for your yes. Your files aren\u0027t touched. And in a new conversation, that data is gone."
+               },
+    "recuerda":  {
+                     "huella":  "b560eed8a232e0a5",
+                     "duracion":  5.616,
+                     "cobertura":  1,
+                     "toma":  1,
+                     "texto":  "And it can be undone: what was forgotten stays on a list, and restore brings it back.",
+                     "oido":  "and it can be undone. What Was Forgotten stays on a list, and Restore brings it back."
+                 },
+    "final":  {
+                  "huella":  "7985c55f9630d03d",
+                  "duracion":  7.584,
+                  "cobertura":  0.92,
+                  "toma":  1,
+                  "texto":  "PRC AI 2.0. It learns from your business documents, forgets what you ask it to, and if something isn\u0027t there, it tells you.",
+                  "oido":  "PRCAI 2.0. It learns from your business documents, forgets what you ask it to, and if something isn\u0027t there, it tells you."
+              }
+}

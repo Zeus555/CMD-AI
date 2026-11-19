@@ -1,0 +1,83 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #F3EFE6; font-family: 'Inter', sans-serif; }
+    #pregunta-head { position: absolute; left: 120px; top: 62px; width: 1680px; }
+    #pregunta-kicker { font-weight: 700; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; color: #A85C14; }
+    #pregunta-titulo { font-weight: 700; font-size: 56px; line-height: 1.1; letter-spacing: -0.02em; color: #1D1B18; margin-top: 12px; }
+    #pregunta-pie { font-weight: 400; font-size: 27px; line-height: 1.35; color: #5B554C; margin-top: 12px; }
+    #pregunta-term { position: absolute; left: 120px; top: 282px; width: 1680px; height: 730px; background: #15171B; border-radius: 14px; overflow: hidden; box-shadow: 0 28px 60px rgba(60, 40, 10, 0.22); }
+    #pregunta-term .bar { height: 44px; background: #23262C; display: flex; align-items: center; padding: 0 18px; gap: 10px; }
+    #pregunta-term .dot { width: 14px; height: 14px; border-radius: 50%; }
+    #pregunta-term .bar-t { margin-left: 14px; font: 500 17px 'JetBrains Mono', monospace; color: #8B9099; }
+    #pregunta-cuerpo { padding: 22px 32px; font: 400 24px/1.45 'JetBrains Mono', monospace; color: #E4DFD4; }
+    #pregunta-term .ln { opacity: 0; position: relative; white-space: pre-wrap; word-break: break-word; }
+    #pregunta-term .tx { position: relative; }
+    #pregunta-term .u { color: #F6F2EA; }
+    #pregunta-term .u .pr { color: #7CC7B2; }
+    #pregunta-term .ia .pr { color: #8B9099; }
+    #pregunta-term .dim { color: #A3A8B0; }
+    #pregunta-term .gap { color: #7C8087; }
+    #pregunta-term .ch { display: none; }
+    #pregunta-term .cur { display: inline-block; width: 12px; height: 1.1em; background: #7CC7B2; vertical-align: -0.2em; opacity: 0; }
+    #pregunta-term .hl-bg { position: absolute; left: -14px; right: -14px; top: -1px; bottom: -1px; background: rgba(232, 160, 72, 0.17); border-left: 4px solid #E8A048; transform-origin: left center; }
+    #pregunta-nota { position: absolute; left: 120px; top: 1028px; font-weight: 400; font-size: 22px; color: #6A645A; }
+  </style>
+  <div id="root" data-composition-id="pregunta" data-width="1920" data-height="1080">
+    <div id="pregunta-head">
+      <div id="pregunta-kicker">7 &#183; Your business documents</div>
+      <div id="pregunta-titulo">It answers with what they say, and from which one</div>
+      <div id="pregunta-pie">From a PDF too. And if something isn&#39;t in the documents, it says so: it doesn&#39;t make it up.</div>
+    </div>
+    <div id="pregunta-term" data-layout-allow-overflow>
+      <div class="bar"><span class="dot" style="background:#E5675B"></span><span class="dot" style="background:#E8B04A"></span><span class="dot" style="background:#5DBB72"></span><span class="bar-t" data-layout-ignore>AI  ·  PowerShell</span></div>
+      <div id="pregunta-cuerpo">
+          <div class="ln u" id="pregunta-l1"><span class="pr">User &gt; </span><span class="ch">W</span><span class="ch">h</span><span class="ch">a</span><span class="ch">t</span><span class="ch"> </span><span class="ch">t</span><span class="ch">i</span><span class="ch">m</span><span class="ch">e</span><span class="ch"> </span><span class="ch">d</span><span class="ch">o</span><span class="ch">e</span><span class="ch">s</span><span class="ch"> </span><span class="ch">t</span><span class="ch">h</span><span class="ch">e</span><span class="ch"> </span><span class="ch">R</span><span class="ch">i</span><span class="ch">v</span><span class="ch">e</span><span class="ch">r</span><span class="ch">s</span><span class="ch">i</span><span class="ch">d</span><span class="ch">e</span><span class="ch"> </span><span class="ch">l</span><span class="ch">o</span><span class="ch">c</span><span class="ch">a</span><span class="ch">t</span><span class="ch">i</span><span class="ch">o</span><span class="ch">n</span><span class="ch"> </span><span class="ch">o</span><span class="ch">p</span><span class="ch">e</span><span class="ch">n</span><span class="ch"> </span><span class="ch">o</span><span class="ch">n</span><span class="ch"> </span><span class="ch">S</span><span class="ch">u</span><span class="ch">n</span><span class="ch">d</span><span class="ch">a</span><span class="ch">y</span><span class="ch">s</span><span class="ch">?</span><span class="cur" id="pregunta-l1-cur"></span></div>
+          <div class="ln ia" id="pregunta-l2"><span class="tx"><span class="pr">ai &gt; </span>checking your documents: Menu and prices.xlsx, Procedures\Opening and closing.docx, About us.docx</span></div>
+          <div class="ln ia" id="pregunta-l3"><span class="tx"><span class="pr">ai &gt; </span>The Riverside location opens at 8:00 AM on Sundays. This information comes from Menu and prices.xlsx.</span></div>
+          <div class="ln dim" id="pregunta-l4"><span class="tx">   documents: Menu and prices.xlsx  Procedures\Opening and closing.docx  About us.docx</span></div>
+          <div class="ln u" id="pregunta-l5"><span class="pr">User &gt; </span><span class="ch">H</span><span class="ch">o</span><span class="ch">w</span><span class="ch"> </span><span class="ch">m</span><span class="ch">u</span><span class="ch">c</span><span class="ch">h</span><span class="ch"> </span><span class="ch">i</span><span class="ch">s</span><span class="ch"> </span><span class="ch">a</span><span class="ch"> </span><span class="ch">w</span><span class="ch">h</span><span class="ch">o</span><span class="ch">l</span><span class="ch">e</span><span class="ch"> </span><span class="ch">c</span><span class="ch">a</span><span class="ch">r</span><span class="ch">r</span><span class="ch">o</span><span class="ch">t</span><span class="ch"> </span><span class="ch">c</span><span class="ch">a</span><span class="ch">k</span><span class="ch">e</span><span class="ch">?</span><span class="cur" id="pregunta-l5-cur"></span></div>
+          <div class="ln ia" id="pregunta-l6"><span class="tx"><span class="pr">ai &gt; </span>checking your documents: Cakes and pastries catalog.pdf, Menu and prices.xlsx</span></div>
+          <div class="ln ia" id="pregunta-l7"><span class="hl-bg"></span><span class="tx"><span class="pr">ai &gt; </span>A whole carrot cake is $48.00. This comes from Cakes and pastries catalog.pdf.</span></div>
+          <div class="ln dim" id="pregunta-l8"><span class="tx">   documents: Cakes and pastries catalog.pdf  Menu and prices.xlsx</span></div>
+          <div class="ln u" id="pregunta-l9"><span class="pr">User &gt; </span><span class="ch">H</span><span class="ch">o</span><span class="ch">w</span><span class="ch"> </span><span class="ch">m</span><span class="ch">u</span><span class="ch">c</span><span class="ch">h</span><span class="ch"> </span><span class="ch">d</span><span class="ch">o</span><span class="ch">e</span><span class="ch">s</span><span class="ch"> </span><span class="ch">M</span><span class="ch">e</span><span class="ch">g</span><span class="ch">a</span><span class="ch">n</span><span class="ch"> </span><span class="ch">R</span><span class="ch">e</span><span class="ch">y</span><span class="ch">e</span><span class="ch">s</span><span class="ch"> </span><span class="ch">m</span><span class="ch">a</span><span class="ch">k</span><span class="ch">e</span><span class="ch">?</span><span class="cur" id="pregunta-l9-cur"></span></div>
+          <div class="ln ia" id="pregunta-l10"><span class="tx"><span class="pr">ai &gt; </span>checking your documents: Procedures\Opening and closing.docx, Cakes and pastries catalog.pdf, Employees.csv</span></div>
+          <div class="ln ia" id="pregunta-l11"><span class="hl-bg"></span><span class="tx"><span class="pr">ai &gt; </span>Megan Reyes&#39; hourly pay is not stated in the documents. Her role is Cashier in the Downtown location. This comes from Employees.csv.</span></div>
+          <div class="ln dim" id="pregunta-l12"><span class="tx">   documents: Procedures\Opening and closing.docx  Cakes and pastries catalog.pdf  Employees.csv</span></div>
+      </div>
+    </div>
+    <div id="pregunta-nota">Real output of PRC AI 2.0 with Gemma 4 E4B on the laptop itself · the model's waits have been shortened</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo('#pregunta-kicker', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 0);
+      tl.fromTo('#pregunta-titulo', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 0.08);
+      tl.fromTo('#pregunta-pie', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.35);
+      tl.fromTo('#pregunta-term', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.2);
+      tl.set('#pregunta-l1', { opacity: 1 }, 1);
+      tl.set('#pregunta-l1-cur', { opacity: 1 }, 1);
+      tl.fromTo('#pregunta-l1 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 1.2);
+      tl.set('#pregunta-l1-cur', { opacity: 0 }, 2.22);
+      tl.fromTo('#pregunta-l2', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.32);
+      tl.fromTo('#pregunta-l3', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.48);
+      tl.fromTo('#pregunta-l4', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.64);
+      tl.set('#pregunta-l5', { opacity: 1 }, 5.8);
+      tl.set('#pregunta-l5-cur', { opacity: 1 }, 5.8);
+      tl.fromTo('#pregunta-l5 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 6);
+      tl.set('#pregunta-l5-cur', { opacity: 0 }, 6.71);
+      tl.fromTo('#pregunta-l6', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 6.81);
+      tl.fromTo('#pregunta-l7', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 6.97);
+      tl.fromTo('#pregunta-l7 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 7.22);
+      tl.fromTo('#pregunta-l8', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 7.13);
+      tl.set('#pregunta-l9', { opacity: 1 }, 10.29);
+      tl.set('#pregunta-l9-cur', { opacity: 1 }, 10.29);
+      tl.fromTo('#pregunta-l9 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 10.49);
+      tl.set('#pregunta-l9-cur', { opacity: 0 }, 11.18);
+      tl.fromTo('#pregunta-l10', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 11.28);
+      tl.fromTo('#pregunta-l11', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 11.44);
+      tl.fromTo('#pregunta-l11 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 11.69);
+      tl.fromTo('#pregunta-l12', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 11.6);
+      window.__timelines["pregunta"] = tl;
+    })();
+  </script>
+</template>

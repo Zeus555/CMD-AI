@@ -1,0 +1,75 @@
+
+  PRC AI 2.0  Gemma 4 E4B (local) / gemma-4-e4b  -  searches the internet when needed
+  bye to quit  -  /help for the commands
+
+User > remember to always answer me in short sentences
+  preference: Always answer me in short sentences
+  Shall I save it for this and future conversations? (y/n) y
+saved. I will keep it in mind in this and future conversations (/preferences lists them).
+User > learn from the documents in D:\MyBusiness
+ai > I'm going to read the documents in D:\MyBusiness to answer you with what they say. I don't change them or send them anywhere: what I read stays on this computer.
+ai > There are 14 I can read (3 Word, 2 OpenDocument, 2 text, 2 PDF, 1 RTF, 1 HTML, 1 Excel, 1 CSV, 1 PowerPoint).
+ai > What are they about, in a few words? That way I know when to look at them; for example "my hardware store: services, staff, opening hours and procedures". (Enter: "MyBusiness"; "cancel" to leave it)
+User > my coffee shop: menu, prices, staff, hours and procedures
+  reading 1 of 14: About us.docx                                        reading 2 of 14: Cakes and pastries catalog.pdf                       reading 3 of 14: Employees.csv                                        reading 4 of 14: Food safety.rtf                                      reading 5 of 14: Menu and prices.xlsx                                 reading 6 of 14: Minimum inventory.ods                                reading 7 of 14: Needs and goals 2027.pptx                            reading 8 of 14: Suppliers.html                                       reading 9 of 14: Human resources\Employee handbook.odt                reading 10 of 14: Human resources\Vacation and leave.docx             reading 11 of 14: Invoices\Flour invoice November.pdf                 reading 12 of 14: Procedures\Event orders.txt                         reading 13 of 14: Procedures\Handling complaints.md                   reading 14 of 14: Procedures\Opening and closing.docx                                                                                     ai > Done: I read 13 documents (30 passages) in 1.8 s. Ask me anything about my coffee shop: menu, prices, staff, hours and procedures and I'll tell you which document each fact comes from. If you change or add files in the folder, I read them again on my own.
+ai > I could not read these:
+  Invoices\Flour invoice November.pdf: it has no text (is it a scanned image?)
+User > What time does the Riverside location open on Sundays?
+ai > checking your documents: Menu and prices.xlsx, Procedures\Opening and closing.docx, About us.docx
+ai > The Riverside location opens at 8:00 AM on Sundays. This information comes from Menu and prices.xlsx.
+   documents: Menu and prices.xlsx  Procedures\Opening and closing.docx  About us.docx
+User > How much is a whole carrot cake?
+ai > checking your documents: Cakes and pastries catalog.pdf, Menu and prices.xlsx
+ai > A whole carrot cake is $48.00. This comes from Cakes and pastries catalog.pdf.
+   documents: Cakes and pastries catalog.pdf  Menu and prices.xlsx
+User > How much does Megan Reyes make?
+ai > checking your documents: Procedures\Opening and closing.docx, Cakes and pastries catalog.pdf, Employees.csv
+ai > Megan Reyes' hourly pay is not stated in the documents. Her role is Cashier in the Downtown location. This comes from Employees.csv.
+   documents: Procedures\Opening and closing.docx  Cakes and pastries catalog.pdf  Employees.csv
+User > /documents search carrot cake
+  1. Cakes and pastries catalog.pdf > Cakes and pastries catalog > Prices  (4.76 points)
+     Cake | Slice | Whole (12 slices)
+     Carrot cake | $5.50 | $48.00
+     Chocolate hazelnut | $6.25 | $58.00
+     Lemon blueberry | $5.75 | $52.00
+     Black Forest | $6.50 | $62.00
+  2. Menu and prices.xlsx > Sheet: Bakery  (2.71 points)
+     Item: Sourdough loaf | Price: $8.00 | Unit: loaf | Effective since: 10/15/2026
+     Item: Baguette | Price: $4.25 | Unit: each | Effective since: 10/15/2026
+     Item: Croissant | Price: $3.75 | Unit: each | Effective since: 10/15/2026
+     Item: Blueberry muffin | Price: $3.25 | Unit: each | Effective since: 10/15/2026
+     Item: Carrot cake | Price: $5.50 | Unit: slice | Effective since: 10/15/2026
+  3. Cakes and pastries catalog.pdf > Cakes and pastries catalog  (2.36 points)
+     All our cakes are baked at the Downtown location with fresh ingredients.
+     Whole cakes must be ordered 3 days in advance.
+  4. Cakes and pastries catalog.pdf > Cakes and pastries catalog > Decorations  (2.15 points)
+     A name or message on the cake is free.
+     An edible photo costs $12.00 extra.
+     Fondant figures are quoted separately, depending on the design.
+(the model would get these with that question on its own; coverage 1)
+User > forget about the extension
+ai > I'm going to forget what mentions "extension" (6 lines of Employees.csv). Your files are not touched.
+  for example:
+  - Employees.csv: Extension: 101
+  - Employees.csv: Extension: 102
+  - Employees.csv: Extension: 103
+  - Employees.csv: Extension: 200
+  - Employees.csv: Extension: 201
+    and 1 more
+ai > Shall I forget it? ("yes" or "no")
+User > yes
+ai > Forgotten. If you change your mind: /documents forgotten and /documents restore <number>.
+ai > What I already told you in this conversation is still in its memory; /new clears it.
+User > /new
+memory cleared
+User > What is Anna Walsh's extension?
+ai > checking your documents: Procedures\Opening and closing.docx, Employees.csv
+ai > The provided documents do not state Anna Walsh's extension.
+   documents: Procedures\Opening and closing.docx  Employees.csv
+User > /documents forgotten
+  1. what mentions "extension"  (2026-11-19)
+(/documents restore <number> undoes one)
+User > /documents restore 1
+using again: what mentions "extension"
+User > bye
+bye

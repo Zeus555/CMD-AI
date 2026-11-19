@@ -1,0 +1,72 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #F3EFE6; font-family: 'Inter', sans-serif; }
+    #aprende-head { position: absolute; left: 120px; top: 62px; width: 1680px; }
+    #aprende-kicker { font-weight: 700; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; color: #A85C14; }
+    #aprende-titulo { font-weight: 700; font-size: 56px; line-height: 1.1; letter-spacing: -0.02em; color: #1D1B18; margin-top: 12px; }
+    #aprende-pie { font-weight: 400; font-size: 27px; line-height: 1.35; color: #5B554C; margin-top: 12px; }
+    #aprende-term { position: absolute; left: 120px; top: 282px; width: 1680px; height: 730px; background: #15171B; border-radius: 14px; overflow: hidden; box-shadow: 0 28px 60px rgba(60, 40, 10, 0.22); }
+    #aprende-term .bar { height: 44px; background: #23262C; display: flex; align-items: center; padding: 0 18px; gap: 10px; }
+    #aprende-term .dot { width: 14px; height: 14px; border-radius: 50%; }
+    #aprende-term .bar-t { margin-left: 14px; font: 500 17px 'JetBrains Mono', monospace; color: #8B9099; }
+    #aprende-cuerpo { padding: 22px 32px; font: 400 24px/1.45 'JetBrains Mono', monospace; color: #E4DFD4; }
+    #aprende-term .ln { opacity: 0; position: relative; white-space: pre-wrap; word-break: break-word; }
+    #aprende-term .tx { position: relative; }
+    #aprende-term .u { color: #F6F2EA; }
+    #aprende-term .u .pr { color: #7CC7B2; }
+    #aprende-term .ia .pr { color: #8B9099; }
+    #aprende-term .dim { color: #A3A8B0; }
+    #aprende-term .gap { color: #7C8087; }
+    #aprende-term .ch { display: none; }
+    #aprende-term .cur { display: inline-block; width: 12px; height: 1.1em; background: #7CC7B2; vertical-align: -0.2em; opacity: 0; }
+    #aprende-term .hl-bg { position: absolute; left: -14px; right: -14px; top: -1px; bottom: -1px; background: rgba(232, 160, 72, 0.17); border-left: 4px solid #E8A048; transform-origin: left center; }
+    #aprende-nota { position: absolute; left: 120px; top: 1028px; font-weight: 400; font-size: 22px; color: #6A645A; }
+  </style>
+  <div id="root" data-composition-id="aprende" data-width="1920" data-height="1080">
+    <div id="aprende-head">
+      <div id="aprende-kicker">7 &#183; Your business documents</div>
+      <div id="aprende-titulo">It learns from a folder of documents</div>
+      <div id="aprende-pie">Word, Excel, PowerPoint, PDF, text... What it can&#39;t read, like a scan, it says. It doesn&#39;t train the model: it searches them.</div>
+    </div>
+    <div id="aprende-term" data-layout-allow-overflow>
+      <div class="bar"><span class="dot" style="background:#E5675B"></span><span class="dot" style="background:#E8B04A"></span><span class="dot" style="background:#5DBB72"></span><span class="bar-t" data-layout-ignore>AI  ·  PowerShell</span></div>
+      <div id="aprende-cuerpo">
+          <div class="ln u" id="aprende-l1"><span class="pr">User &gt; </span><span class="ch">l</span><span class="ch">e</span><span class="ch">a</span><span class="ch">r</span><span class="ch">n</span><span class="ch"> </span><span class="ch">f</span><span class="ch">r</span><span class="ch">o</span><span class="ch">m</span><span class="ch"> </span><span class="ch">t</span><span class="ch">h</span><span class="ch">e</span><span class="ch"> </span><span class="ch">d</span><span class="ch">o</span><span class="ch">c</span><span class="ch">u</span><span class="ch">m</span><span class="ch">e</span><span class="ch">n</span><span class="ch">t</span><span class="ch">s</span><span class="ch"> </span><span class="ch">i</span><span class="ch">n</span><span class="ch"> </span><span class="ch">D</span><span class="ch">:</span><span class="ch">\</span><span class="ch">M</span><span class="ch">y</span><span class="ch">B</span><span class="ch">u</span><span class="ch">s</span><span class="ch">i</span><span class="ch">n</span><span class="ch">e</span><span class="ch">s</span><span class="ch">s</span><span class="cur" id="aprende-l1-cur"></span></div>
+          <div class="ln ia" id="aprende-l2"><span class="tx"><span class="pr">ai &gt; </span>I&#39;m going to read the documents in D:\MyBusiness to answer you with what they say. I don&#39;t change them or send them anywhere: what I read stays on this computer.</span></div>
+          <div class="ln ia" id="aprende-l3"><span class="hl-bg"></span><span class="tx"><span class="pr">ai &gt; </span>There are 14 I can read (3 Word, 2 OpenDocument, 2 text, 2 PDF, 1 RTF, 1 HTML, 1 Excel, 1 CSV, 1 PowerPoint).</span></div>
+          <div class="ln ia" id="aprende-l4"><span class="tx"><span class="pr">ai &gt; </span>What are they about, in a few words? That way I know when to look at them; for example &quot;my hardware store: services, staff, opening hours and procedures&quot;. (Enter: &quot;MyBusiness&quot;; &quot;cancel&quot; to leave it)</span></div>
+          <div class="ln u" id="aprende-l5"><span class="pr">User &gt; </span><span class="ch">m</span><span class="ch">y</span><span class="ch"> </span><span class="ch">c</span><span class="ch">o</span><span class="ch">f</span><span class="ch">f</span><span class="ch">e</span><span class="ch">e</span><span class="ch"> </span><span class="ch">s</span><span class="ch">h</span><span class="ch">o</span><span class="ch">p</span><span class="ch">:</span><span class="ch"> </span><span class="ch">m</span><span class="ch">e</span><span class="ch">n</span><span class="ch">u</span><span class="ch">,</span><span class="ch"> </span><span class="ch">p</span><span class="ch">r</span><span class="ch">i</span><span class="ch">c</span><span class="ch">e</span><span class="ch">s</span><span class="ch">,</span><span class="ch"> </span><span class="ch">s</span><span class="ch">t</span><span class="ch">a</span><span class="ch">f</span><span class="ch">f</span><span class="ch">,</span><span class="ch"> </span><span class="ch">h</span><span class="ch">o</span><span class="ch">u</span><span class="ch">r</span><span class="ch">s</span><span class="ch"> </span><span class="ch">a</span><span class="ch">n</span><span class="ch">d</span><span class="ch"> </span><span class="ch">p</span><span class="ch">r</span><span class="ch">o</span><span class="ch">c</span><span class="ch">e</span><span class="ch">d</span><span class="ch">u</span><span class="ch">r</span><span class="ch">e</span><span class="ch">s</span><span class="cur" id="aprende-l5-cur"></span></div>
+          <div class="ln ia" id="aprende-l6"><span class="tx"><span class="pr">ai &gt; </span>Done: I read 13 documents (30 passages) in 1.8 s. Ask me anything about my coffee shop: menu, prices, staff, hours and procedures and I&#39;ll tell you which document each fact comes from. If you change or add files in the folder, I read them again on my own.</span></div>
+          <div class="ln ia" id="aprende-l7"><span class="tx"><span class="pr">ai &gt; </span>I could not read these:</span></div>
+          <div class="ln dim" id="aprende-l8"><span class="hl-bg"></span><span class="tx">  Invoices\Flour invoice November.pdf: it has no text (is it a scanned image?)</span></div>
+      </div>
+    </div>
+    <div id="aprende-nota">Real output of PRC AI 2.0 with Gemma 4 E4B on the laptop itself · the model's waits have been shortened</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo('#aprende-kicker', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 0);
+      tl.fromTo('#aprende-titulo', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 0.08);
+      tl.fromTo('#aprende-pie', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.35);
+      tl.fromTo('#aprende-term', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.2);
+      tl.set('#aprende-l1', { opacity: 1 }, 1);
+      tl.set('#aprende-l1-cur', { opacity: 1 }, 1);
+      tl.fromTo('#aprende-l1 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 1.2);
+      tl.set('#aprende-l1-cur', { opacity: 0 }, 2.04);
+      tl.fromTo('#aprende-l2', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.14);
+      tl.fromTo('#aprende-l3', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.3);
+      tl.fromTo('#aprende-l3 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 2.55);
+      tl.fromTo('#aprende-l4', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2.46);
+      tl.set('#aprende-l5', { opacity: 1 }, 5.62);
+      tl.set('#aprende-l5-cur', { opacity: 1 }, 5.62);
+      tl.fromTo('#aprende-l5 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 5.82);
+      tl.set('#aprende-l5-cur', { opacity: 0 }, 6.88);
+      tl.fromTo('#aprende-l6', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 6.98);
+      tl.fromTo('#aprende-l7', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 7.14);
+      tl.fromTo('#aprende-l8', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 7.3);
+      tl.fromTo('#aprende-l8 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 7.55);
+      window.__timelines["aprende"] = tl;
+    })();
+  </script>
+</template>

@@ -1,0 +1,65 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #F3EFE6; font-family: 'Inter', sans-serif; }
+    #recuerda-head { position: absolute; left: 120px; top: 62px; width: 1680px; }
+    #recuerda-kicker { font-weight: 700; font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; color: #A85C14; }
+    #recuerda-titulo { font-weight: 700; font-size: 56px; line-height: 1.1; letter-spacing: -0.02em; color: #1D1B18; margin-top: 12px; }
+    #recuerda-pie { font-weight: 400; font-size: 27px; line-height: 1.35; color: #5B554C; margin-top: 12px; }
+    #recuerda-term { position: absolute; left: 120px; top: 282px; width: 1680px; height: 730px; background: #15171B; border-radius: 14px; overflow: hidden; box-shadow: 0 28px 60px rgba(60, 40, 10, 0.22); }
+    #recuerda-term .bar { height: 44px; background: #23262C; display: flex; align-items: center; padding: 0 18px; gap: 10px; }
+    #recuerda-term .dot { width: 14px; height: 14px; border-radius: 50%; }
+    #recuerda-term .bar-t { margin-left: 14px; font: 500 17px 'JetBrains Mono', monospace; color: #8B9099; }
+    #recuerda-cuerpo { padding: 22px 32px; font: 400 24px/1.45 'JetBrains Mono', monospace; color: #E4DFD4; }
+    #recuerda-term .ln { opacity: 0; position: relative; white-space: pre-wrap; word-break: break-word; }
+    #recuerda-term .tx { position: relative; }
+    #recuerda-term .u { color: #F6F2EA; }
+    #recuerda-term .u .pr { color: #7CC7B2; }
+    #recuerda-term .ia .pr { color: #8B9099; }
+    #recuerda-term .dim { color: #A3A8B0; }
+    #recuerda-term .gap { color: #7C8087; }
+    #recuerda-term .ch { display: none; }
+    #recuerda-term .cur { display: inline-block; width: 12px; height: 1.1em; background: #7CC7B2; vertical-align: -0.2em; opacity: 0; }
+    #recuerda-term .hl-bg { position: absolute; left: -14px; right: -14px; top: -1px; bottom: -1px; background: rgba(232, 160, 72, 0.17); border-left: 4px solid #E8A048; transform-origin: left center; }
+    #recuerda-nota { position: absolute; left: 120px; top: 1028px; font-weight: 400; font-size: 22px; color: #6A645A; }
+  </style>
+  <div id="root" data-composition-id="recuerda" data-width="1920" data-height="1080">
+    <div id="recuerda-head">
+      <div id="recuerda-kicker">8 &#183; Forgetting</div>
+      <div id="recuerda-titulo">And it can be undone</div>
+      <div id="recuerda-pie">What was forgotten stays on a list: /documents restore uses it again.</div>
+    </div>
+    <div id="recuerda-term" data-layout-allow-overflow>
+      <div class="bar"><span class="dot" style="background:#E5675B"></span><span class="dot" style="background:#E8B04A"></span><span class="dot" style="background:#5DBB72"></span><span class="bar-t" data-layout-ignore>AI  ·  PowerShell</span></div>
+      <div id="recuerda-cuerpo">
+          <div class="ln u" id="recuerda-l1"><span class="pr">User &gt; </span><span class="ch">/</span><span class="ch">d</span><span class="ch">o</span><span class="ch">c</span><span class="ch">u</span><span class="ch">m</span><span class="ch">e</span><span class="ch">n</span><span class="ch">t</span><span class="ch">s</span><span class="ch"> </span><span class="ch">f</span><span class="ch">o</span><span class="ch">r</span><span class="ch">g</span><span class="ch">o</span><span class="ch">t</span><span class="ch">t</span><span class="ch">e</span><span class="ch">n</span><span class="cur" id="recuerda-l1-cur"></span></div>
+          <div class="ln dim" id="recuerda-l2"><span class="tx">  1. what mentions &quot;extension&quot;  (2026-11-19)</span></div>
+          <div class="ln dim" id="recuerda-l3"><span class="tx">(/documents restore &lt;number&gt; undoes one)</span></div>
+          <div class="ln u" id="recuerda-l4"><span class="pr">User &gt; </span><span class="ch">/</span><span class="ch">d</span><span class="ch">o</span><span class="ch">c</span><span class="ch">u</span><span class="ch">m</span><span class="ch">e</span><span class="ch">n</span><span class="ch">t</span><span class="ch">s</span><span class="ch"> </span><span class="ch">r</span><span class="ch">e</span><span class="ch">s</span><span class="ch">t</span><span class="ch">o</span><span class="ch">r</span><span class="ch">e</span><span class="ch"> </span><span class="ch">1</span><span class="cur" id="recuerda-l4-cur"></span></div>
+          <div class="ln ia" id="recuerda-l5"><span class="hl-bg"></span><span class="tx">using again: what mentions &quot;extension&quot;</span></div>
+      </div>
+    </div>
+    <div id="recuerda-nota">Real output of PRC AI 2.0 with Gemma 4 E4B on the laptop itself · the model's waits have been shortened</div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo('#recuerda-kicker', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power3.out' }, 0);
+      tl.fromTo('#recuerda-titulo', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power3.out' }, 0.08);
+      tl.fromTo('#recuerda-pie', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.35);
+      tl.fromTo('#recuerda-term', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, 0.2);
+      tl.set('#recuerda-l1', { opacity: 1 }, 1);
+      tl.set('#recuerda-l1-cur', { opacity: 1 }, 1);
+      tl.fromTo('#recuerda-l1 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 1.2);
+      tl.set('#recuerda-l1-cur', { opacity: 0 }, 1.74);
+      tl.fromTo('#recuerda-l2', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 1.84);
+      tl.fromTo('#recuerda-l3', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 2);
+      tl.set('#recuerda-l4', { opacity: 1 }, 3.66);
+      tl.set('#recuerda-l4-cur', { opacity: 1 }, 3.66);
+      tl.fromTo('#recuerda-l4 .ch', { display: 'none' }, { display: 'inline', duration: 0.001, stagger: 0.0143 }, 3.86);
+      tl.set('#recuerda-l4-cur', { opacity: 0 }, 4.39);
+      tl.fromTo('#recuerda-l5', { opacity: 0 }, { opacity: 1, duration: 0.18 }, 4.49);
+      tl.fromTo('#recuerda-l5 .hl-bg', { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: 'power2.out' }, 4.74);
+      window.__timelines["recuerda"] = tl;
+    })();
+  </script>
+</template>

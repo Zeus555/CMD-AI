@@ -590,7 +590,7 @@ function Invoke-AITurn {
     if ($script:Equipo -and -not $ForceQuery) {
         $pre = Find-AIEquipoGroups $UserText
         if ($pre.Count) {
-            Write-AINote (L "leyendo de este equipo: $($pre -join ', ')" "reading from this computer: $($pre -join ', ')") $PrefixWidth -Reprefix:$avisoEnFila
+            Write-AINote (L "leyendo de este equipo: $($pre -join ', ')" "reading from this computer: $(Format-AIEquipoGrupos $pre)") $PrefixWidth -Reprefix:$avisoEnFila
             $avisoEnFila = $false
             $anexo = (Get-AIEquipoText $pre -ParaModelo).Text
             $lecturas = 1
@@ -763,7 +763,7 @@ function Invoke-AITurn {
                 elseif ($tc.Name -eq 'datos_equipo' -and $daEq) {
                     $lecturas++
                     $grupos = ConvertTo-AIEquipoGroups $tc.Arguments
-                    Write-AINote (L "leyendo de este equipo: $($grupos -join ', ')" "reading from this computer: $($grupos -join ', ')") $PrefixWidth -Reprefix:$avisoEnFila
+                    Write-AINote (L "leyendo de este equipo: $($grupos -join ', ')" "reading from this computer: $(Format-AIEquipoGrupos $grupos)") $PrefixWidth -Reprefix:$avisoEnFila
                     $avisoEnFila = $false
                     $txt = (Get-AIEquipoText $grupos -ParaModelo).Text
                 }
@@ -1047,7 +1047,7 @@ function Show-AIDocsBusqueda {
         Write-Host "  $($c.Bot)$k. $donde$($c.Off)$($c.Dim)  ($($t.Puntos) $(L 'puntos' 'points'))$($c.Off)"
         foreach ($l in ($t.Texto -split "`n")) { Write-Host "     $l" }
     }
-    $va = if ($h.Relevante) { (L 'viajarían solos con esa pregunta' 'they would go along with that question on their own') } else { (L 'con esa pregunta no viajarían solos (el modelo puede pedirlos)' 'with that question they would not go along on their own (the model can ask for them)') }
+    $va = if ($h.Relevante) { (L 'viajarían solos con esa pregunta' 'the model would get these with that question on its own') } else { (L 'con esa pregunta no viajarían solos (el modelo puede pedirlos)' 'the model would not get these with that question on its own (it can ask for them)') }
     Write-Host "$($c.Dim)($va; $(L 'cobertura' 'coverage') $($h.Cobertura))$($c.Off)"
 }
 

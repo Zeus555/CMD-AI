@@ -133,7 +133,12 @@ $http.DefaultRequestHeaders.Authorization = New-Object System.Net.Http.Headers.A
 
 function Send-Peticion([scriptblock]$hacer) {
     for ($n = 1; ; $n++) {
-        $r = $http.SendAsync((& $hacer)).GetAwaiter().GetResult()
+        # Un corte de la red (sin respuesta HTTP) tambien se reintenta.
+        try { $r = $http.SendAsync((& $hacer)).GetAwaiter().GetResult() }
+        catch {
+            if ($n -ge 3) { throw "OpenAI: $($_.Exception.InnerException.Message)" }
+            Start-Sleep -Seconds (4 * $n); continue
+        }
         if ($r.IsSuccessStatusCode) { return $r }
         $codigo = [int]$r.StatusCode
         $cuerpo = $r.Content.ReadAsStringAsync().GetAwaiter().GetResult()

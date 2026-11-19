@@ -72,7 +72,41 @@ $NOTA = 'Salida real de PRC AI 2.0 con Gemma 4 E4B en la propia laptop · las es
 #  cafeteria de tests\negocio.ps1 -Idioma en).
 if ($Idioma -eq 'en') {
     $NOTA = 'Real output of PRC AI 2.0 with Gemma 4 E4B on the laptop itself · the model''s waits have been shortened'
-    throw 'faltan las escenas en ingles'
+    $escenas = @(
+        @{ Id = 'local'; Kicker = '1 · On your computer'; Titulo = 'Local chat with Gemma 4 E4B'
+           Pie = 'The model runs on the laptop itself: no key, no cloud, and the conversation goes nowhere.'
+           Captura = '1-chat-web-computer.out'; Lineas = '2-6'; Resalta = @('Gemma 4 E4B (local)') }
+        @{ Id = 'web'; Kicker = '2 · Internet, only when needed'; Titulo = 'It searches the internet when the question needs it'
+           Pie = 'The model decides whether it needs current data; it searches, reads the pages and cites the sources.'
+           Captura = '1-chat-web-computer.out'; Lineas = '7-10'; Resalta = @('ai > searching:', 'sources:') }
+        @{ Id = 'equipo'; Kicker = '3 · What the computer already knows'; Titulo = 'It knows facts about this computer'
+           Pie = 'Time, battery, memory, disks... read from Windows itself, without the internet.'
+           Captura = '1-chat-web-computer.out'; Lineas = '11-13'; Resalta = @('reading from this computer') }
+        @{ Id = 'comandos'; Kicker = '4 · Saved commands'; Titulo = 'It saves commands as you chat'
+           Pie = 'Read-only: fixed rules check it, it tests it and saves it. From then on it uses it when you ask.'
+           Captura = '2-commands-queries.out'; Lineas = '5,8,10-12,41-45'; Resalta = @('rules:    passes', 'running the saved command') }
+        @{ Id = 'consultas'; Kicker = '5 · Web queries'; Titulo = 'Data from a page, as JSON'
+           Pie = 'It picks the page (or you paste it), takes the data by its labels and shows it to you before saving.'
+           Captura = '2-commands-queries.out'; Lineas = '46,49,51-52,63,66,68-69,71-74'; Resalta = @('"population"', '"area"') }
+        @{ Id = 'preferencias'; Kicker = '6 · Preferences'; Titulo = 'It remembers how you want answers'
+           Pie = 'For this conversation and the next ones.'
+           Captura = '3-preferences-documents.out'; Lineas = '5-8'; Resalta = @('saved.') }
+        @{ Id = 'aprende'; Kicker = '7 · Your business documents'; Titulo = 'It learns from a folder of documents'
+           Pie = 'Word, Excel, PowerPoint, PDF, text... What it can''t read, like a scan, it says. It doesn''t train the model: it searches them.'
+           Captura = '3-preferences-documents.out'; Lineas = '9-16'; Resalta = @('There are 14 I can read', 'it has no text') }
+        @{ Id = 'pregunta'; Kicker = '7 · Your business documents'; Titulo = 'It answers with what they say, and from which one'
+           Pie = 'From a PDF too. And if something isn''t in the documents, it says so: it doesn''t make it up.'
+           Captura = '3-preferences-documents.out'; Lineas = '17-28'; Resalta = @('A whole carrot cake is $48.00', 'not stated in the documents') }
+        @{ Id = 'buscar'; Kicker = '7 · Your business documents'; Titulo = 'Check where every answer comes from'
+           Pie = '/documents search shows the excerpts the model would see, without asking it: here, the PDF''s table.'
+           Captura = '3-preferences-documents.out'; Lineas = '29-35,49'; Resalta = @('Carrot cake | $5.50 | $48.00') }
+        @{ Id = 'olvida'; Kicker = '8 · Forgetting'; Titulo = 'And it forgets what you ask it to'
+           Pie = 'It shows what it will forget and asks for a yes. Your files aren''t touched: it forgets what it read.'
+           Captura = '3-preferences-documents.out'; Lineas = '50-67'; Resalta = @('going to forget', 'Forgotten.') }
+        @{ Id = 'recuerda'; Kicker = '8 · Forgetting'; Titulo = 'And it can be undone'
+           Pie = 'What was forgotten stays on a list: /documents restore uses it again.'
+           Captura = '3-preferences-documents.out'; Lineas = '69-73'; Resalta = @('using again') }
+    )
 }
 $DUR_INTRO = 4.5
 $DUR_FINAL = 6.0
@@ -175,6 +209,9 @@ function New-Escena($e) {
             $txt = $l.Texto
             if ($txt.StartsWith($PIA)) { $cuerpo = '<span class="pr">' + (& $enc $PIA) + '</span>' + (& $enc $txt.Substring($PIA.Length)) }
             else { $cuerpo = (& $enc $txt) }
+            # La negrita del modelo (**x**): la terminal la pinta en negrita;
+            # en la captura, con la salida redirigida, sale tal cual.
+            $cuerpo = [regex]::Replace($cuerpo, '\*\*(.+?)\*\*', '<b>$1</b>')
             if (-not $txt) { $cuerpo = '&#8203;' }
             [void]$html.AppendLine("          <div class=""ln $clase"" id=""$lid"">$hl<span class=""tx"">$cuerpo</span></div>")
             [void]$js.AppendLine("      tl.fromTo('#$lid', { opacity: 0 }, { opacity: 1, duration: 0.18 }, $([Math]::Round($t, 2)));")

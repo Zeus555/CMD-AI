@@ -45,6 +45,12 @@
 . (Join-Path $PSScriptRoot 'idioma.ps1')
 
 $AI_EQUIPO_GRUPOS = @('bateria', 'red', 'equipo', 'sistema', 'procesador', 'memoria', 'disco', 'grafica')
+# Los nombres de los grupos son claves (el modelo los pide asi): para
+# ensenarlos se traducen.
+$AI_EQUIPO_GRUPOS_EN = @{ bateria = 'battery'; red = 'network'; equipo = 'computer'; sistema = 'system'; procesador = 'processor'; memoria = 'memory'; disco = 'disk'; grafica = 'graphics' }
+function Format-AIEquipoGrupos([string[]]$Grupos) {
+    return (@($Grupos | ForEach-Object { if ($script:AI_IDIOMA -eq 'en' -and $AI_EQUIPO_GRUPOS_EN.ContainsKey($_)) { $AI_EQUIPO_GRUPOS_EN[$_] } else { $_ } }) -join ', ')
+}
 
 # Como se llama cada grupo cuando hay que decir que no se pudo leer.
 $AI_EQUIPO_NOMBRE = @{

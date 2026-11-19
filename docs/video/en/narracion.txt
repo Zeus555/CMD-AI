@@ -1,0 +1,20 @@
+# Narration for the English video: one line per scene, "id: what the voice says".
+#
+# voz.ps1 -Idioma en -Dir docs\video\en turns it into assets\voz\<id>.mp3 and
+# montar.ps1 -Idioma en makes a scene longer if its voice doesn't fit. If you
+# change a line, run voz.ps1 again (it only redoes the lines that changed),
+# then montar.ps1.
+
+intro: PRC AI 2.0. An artificial intelligence in the Windows terminal, on your own computer.
+local: The model, Gemma 4, runs on the laptop itself. No key, no cloud, and the conversation never leaves your computer.
+web: When a question needs current data, it searches the internet, reads the pages and cites its sources.
+equipo: And what the computer already knows, like its free memory, it reads straight from Windows.
+comandos: You can ask for a new command just by chatting. Read-only: fixed rules check it, it tests it and saves it. From then on, it uses it when you ask.
+consultas: Web pages work the same way: it picks the page, pulls out the data you ask for, and shows it to you before saving.
+preferencias: It also remembers how you want it to answer, in this conversation and the next ones.
+aprende: And the newest part: it learns from your business folder. It reads Word, Excel, PowerPoint and PDF, and tells you what it can't read, like a scanned invoice.
+pregunta: You ask, and it answers with what your documents say, and which one it comes from: a whole carrot cake is 48 dollars, according to the PDF catalog. And if something isn't there, like an employee's pay, it doesn't make it up: it tells you it's not in the documents.
+buscar: With documents search you can see where each answer comes from, without asking the model. Here, the price table from the PDF.
+olvida: It also forgets. Ask it to forget the extensions: it shows what it will forget and waits for your yes. Your files aren't touched, and in a new conversation that data is gone.
+recuerda: And it can be undone: what was forgotten stays on a list, and restore brings it back.
+final: PRC AI 2.0. It learns from your business documents, forgets what you ask it to, and if something isn't there, it tells you.
