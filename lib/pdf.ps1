@@ -25,6 +25,27 @@
 #  Comentarios y expresiones regulares en ASCII (ver tools\build.ps1).
 # ---------------------------------------------------------------------------
 
+. (Join-Path $PSScriptRoot 'idioma.ps1')
+
+# Los motivos para no leer un PDF, en los dos idiomas. Van en una tabla y no
+# sueltos con L porque documentos.ps1 los guarda en su indice.tsv y, si se
+# cambia de idioma, los vuelve a escribir en el nuevo (ConvertTo-AIDocMotivo):
+# tiene que conocer las dos versiones. {0} es un dato.
+$script:AIPdfMensajes = [ordered]@{
+    pdfNoEs      = @('el fichero está dañado o no es un PDF', 'the file is damaged or is not a PDF')
+    pdfProtegido = @('el PDF está protegido (con contraseña o contra copia); ábrelo y, si te deja, imprímelo en «Microsoft Print to PDF» para tener una copia sin protección',
+                     'the PDF is protected (with a password or against copying); open it and, if it lets you, print it to "Microsoft Print to PDF" to get an unprotected copy')
+    pdfPaginas   = @('el PDF está dañado: no se encuentran sus páginas', "the PDF is damaged: its pages can't be found")
+    pdfLetras    = @('el PDF usa tipos de letra que no sé descifrar sin riesgo de leer mal; si tienes el original (Word, Excel), ponlo en la carpeta en su lugar',
+                     "the PDF uses fonts I can't decode without the risk of misreading; if you have the original (Word, Excel), put it in the folder instead")
+    pdfStream    = @('un stream comprimido esta danado', 'a compressed stream is damaged')
+    pdfAviso     = @(('{0} letras no se pudieron descifrar y salen como ' + [char]0xFFFD), ('{0} letters could not be decoded and show as ' + [char]0xFFFD))
+}
+function Get-AIPdfMensaje([string]$Clave, [object[]]$Datos = @()) {
+    $p = $script:AIPdfMensajes[$Clave]
+    return [string]::Format((L $p[0] $p[1]), $Datos)
+}
+
 $AI_PDF_MAX_PAGINAS  = 2000
 $AI_PDF_MAX_TEXTO    = 1600000   # se deja de leer pasado esto (documentos.ps1 recorta a 1,5 M)
 $AI_PDF_MAX_DESCONOC = 0.05      # letras sin descifrar: por encima, no se lee
@@ -294,7 +315,7 @@ function Expand-AIPdfFlate([string]$Datos) {
     $ds = New-Object IO.Compression.DeflateStream($ms, [IO.Compression.CompressionMode]::Decompress)
     $out = New-Object IO.MemoryStream
     try { $ds.CopyTo($out) }
-    catch { if ($out.Length -eq 0) { throw 'un stream comprimido esta danado' } }   # lo leido hasta el dano vale
+    catch { if ($out.Length -eq 0) { throw (Get-AIPdfMensaje 'pdfStream') } }   # lo leido hasta el dano vale
     finally { $ds.Dispose() }
     return $script:AIPdfL1.GetString($out.ToArray())
 }
@@ -838,18 +859,18 @@ function Test-AIPdfLegible([string]$Texto) {
 }
 
 function Read-AIPdf {
-    <#  El texto de un PDF: @{ Texto; Aviso }. Lanza un error (en castellano,
+    <#  El texto de un PDF: @{ Texto; Aviso }. Lanza un error (en el idioma activo,
         para el usuario) si no se puede leer sin riesgo de leer mal.  #>
     param([string]$Ruta)
     $s = $script:AIPdfL1.GetString([IO.File]::ReadAllBytes($Ruta))
     $p = $s.IndexOf('%PDF-')
-    if ($p -lt 0 -or $p -gt 1024) { throw 'el fichero está dañado o no es un PDF' }
+    if ($p -lt 0 -or $p -gt 1024) { throw (Get-AIPdfMensaje 'pdfNoEs') }
     if ([regex]::IsMatch($s, '/Encrypt\s*(?:\d+\s+\d+\s+R|<<)')) {
-        throw 'el PDF está protegido (con contraseña o contra copia); ábrelo y, si te deja, imprímelo en «Microsoft Print to PDF» para tener una copia sin protección'
+        throw (Get-AIPdfMensaje 'pdfProtegido')
     }
     $doc = New-AIPdfDoc $s
     $pags = Get-AIPdfPaginas $doc
-    if (-not $pags.Count) { throw 'el PDF está dañado: no se encuentran sus páginas' }
+    if (-not $pags.Count) { throw (Get-AIPdfMensaje 'pdfPaginas') }
     $E = @{
         Doc = $doc; Lineas = (New-Object 'System.Collections.Generic.List[object]'); Linea = $null; Hay = $false
         UX = 0.0; UY = 0.0; UT = 0.0; Largo = 0; Glifos = 0; Desconocidos = 0
@@ -877,8 +898,8 @@ function Read-AIPdf {
     $desc = $E.Desconocidos / $E.Glifos
     $texto = Format-AIPdfLineas $E.Lineas
     if ($desc -gt $AI_PDF_MAX_DESCONOC -or -not (Test-AIPdfLegible $texto)) {
-        throw 'el PDF usa tipos de letra que no sé descifrar sin riesgo de leer mal; si tienes el original (Word, Excel), ponlo en la carpeta en su lugar'
+        throw (Get-AIPdfMensaje 'pdfLetras')
     }
-    $aviso = if ($E.Desconocidos) { "$($E.Desconocidos) letras no se pudieron descifrar y salen como " + [char]0xFFFD } else { '' }
+    $aviso = if ($E.Desconocidos) { Get-AIPdfMensaje 'pdfAviso' @($E.Desconocidos) } else { '' }
     return @{ Texto = $texto; Aviso = $aviso }
 }
